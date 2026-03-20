@@ -1,0 +1,672 @@
+import { useEffect, useMemo, useState } from 'react';
+import type { ColumnDef } from '@tanstack/react-table';
+import {
+  Download,
+  Pencil,
+  ShieldCheck,
+  UserCog,
+  UserPlus,
+  Users,
+  UserX,
+} from 'lucide-react';
+import { DataTable } from '@/components/shared/DataTable';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from '@/lib/toast';
+import { formatRelativeTime } from '@/lib/utils';
+
+type StaffRole = 'manager' | 'sales' | 'warehouse' | 'accountant';
+type StaffStatus = 'active' | 'inactive';
+type StaffRoleFilter = 'all' | StaffRole;
+type StaffStatusFilter = 'all' | StaffStatus;
+
+interface StaffMember {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: StaffRole;
+  status: StaffStatus;
+  branch: string;
+  createdAt: Date;
+  lastActiveAt?: Date;
+}
+
+interface StaffFormState {
+  id?: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: StaffRole;
+  status: StaffStatus;
+  branch: string;
+}
+
+const roleLabelMap: Record<StaffRole, string> = {
+  manager: 'Quản lý',
+  sales: 'Bán hàng',
+  warehouse: 'Kho',
+  accountant: 'Kế toán',
+};
+
+const roleFilterLabelMap: Record<StaffRoleFilter, string> = {
+  all: 'Tất cả vai trò',
+  manager: 'Quản lý',
+  sales: 'Bán hàng',
+  warehouse: 'Kho',
+  accountant: 'Kế toán',
+};
+
+const statusFilterLabelMap: Record<StaffStatusFilter, string> = {
+  all: 'Tất cả trạng thái',
+  active: 'Đang làm việc',
+  inactive: 'Tạm khóa',
+};
+
+const statusLabelMap: Record<StaffStatus, string> = {
+  active: 'Đang làm việc',
+  inactive: 'Tạm khóa',
+};
+
+const mockStaff: StaffMember[] = [
+  {
+    id: 's1',
+    name: 'Nguyen Minh Anh',
+    email: 'minh.anh@routine.vn',
+    phone: '0901122334',
+    role: 'manager',
+    status: 'active',
+    branch: 'Routine Q1',
+    createdAt: new Date('2025-04-04'),
+    lastActiveAt: new Date(),
+  },
+  {
+    id: 's2',
+    name: 'Tran Gia Bao',
+    email: 'gia.bao@routine.vn',
+    phone: '0912233445',
+    role: 'sales',
+    status: 'active',
+    branch: 'Routine Q1',
+    createdAt: new Date('2025-09-12'),
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 48),
+  },
+  {
+    id: 's3',
+    name: 'Le Thanh Hoa',
+    email: 'thanh.hoa@routine.vn',
+    phone: '0923344556',
+    role: 'sales',
+    status: 'active',
+    branch: 'Routine Thu Duc',
+    createdAt: new Date('2025-10-08'),
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 12),
+  },
+  {
+    id: 's4',
+    name: 'Pham Bao Ngoc',
+    email: 'bao.ngoc@routine.vn',
+    phone: '0934455667',
+    role: 'warehouse',
+    status: 'active',
+    branch: 'Routine Thu Duc',
+    createdAt: new Date('2025-07-17'),
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 90),
+  },
+  {
+    id: 's5',
+    name: 'Doan Quoc Viet',
+    email: 'quoc.viet@routine.vn',
+    phone: '0945566778',
+    role: 'accountant',
+    status: 'inactive',
+    branch: 'Back Office',
+    createdAt: new Date('2025-03-22'),
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
+  },
+  {
+    id: 's6',
+    name: 'Vu Nhat Linh',
+    email: 'nhat.linh@routine.vn',
+    phone: '0956677889',
+    role: 'warehouse',
+    status: 'active',
+    branch: 'Routine Q1',
+    createdAt: new Date('2025-11-03'),
+    lastActiveAt: new Date(Date.now() - 1000 * 60 * 25),
+  },
+];
+
+function createDefaultForm(): StaffFormState {
+  return {
+    name: '',
+    email: '',
+    phone: '',
+    role: 'sales',
+    status: 'active',
+    branch: '',
+  };
+}
+
+function normalize(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase();
+}
+
+function initialsOfName(name: string): string {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+export function StaffPage() {
+  useEffect(() => {
+    document.title = 'Nhân viên | Routine';
+  }, []);
+
+  const [staffList, setStaffList] = useState<StaffMember[]>(mockStaff);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<StaffRoleFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StaffStatusFilter>('all');
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [savingForm, setSavingForm] = useState(false);
+  const [formState, setFormState] = useState<StaffFormState>(createDefaultForm());
+
+  const totalStaff = staffList.length;
+  const activeStaff = staffList.filter((item) => item.status === 'active').length;
+  const inactiveStaff = totalStaff - activeStaff;
+  const managerCount = staffList.filter((item) => item.role === 'manager').length;
+
+  const thisMonth = new Date().getMonth();
+  const thisYear = new Date().getFullYear();
+  const createdThisMonth = staffList.filter((item) => {
+    const date = item.createdAt;
+    return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
+  }).length;
+
+  const filteredStaff = useMemo(() => {
+    const query = normalize(searchTerm.trim());
+
+    return staffList
+      .filter((staff) => {
+        const bySearch =
+          query.length === 0 ||
+          normalize(staff.name).includes(query) ||
+          normalize(staff.phone).includes(query) ||
+          normalize(staff.email).includes(query);
+
+        const byRole = roleFilter === 'all' || staff.role === roleFilter;
+        const byStatus = statusFilter === 'all' || staff.status === statusFilter;
+
+        return bySearch && byRole && byStatus;
+      })
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }, [roleFilter, searchTerm, staffList, statusFilter]);
+
+  const openCreateModal = () => {
+    setFormState(createDefaultForm());
+    setFormOpen(true);
+  };
+
+  const openEditModal = (staff: StaffMember) => {
+    setFormState({
+      id: staff.id,
+      name: staff.name,
+      email: staff.email,
+      phone: staff.phone,
+      role: staff.role,
+      status: staff.status,
+      branch: staff.branch,
+    });
+    setFormOpen(true);
+  };
+
+  const toggleStaffStatus = (staff: StaffMember) => {
+    const nextStatus: StaffStatus = staff.status === 'active' ? 'inactive' : 'active';
+    setStaffList((prev) =>
+      prev.map((item) =>
+        item.id === staff.id
+          ? {
+              ...item,
+              status: nextStatus,
+              lastActiveAt: nextStatus === 'active' ? new Date() : item.lastActiveAt,
+            }
+          : item,
+      ),
+    );
+
+    toast.success(
+      nextStatus === 'active' ? 'Đã kích hoạt nhân viên' : 'Đã tạm khóa nhân viên',
+      `${staff.name} - ${roleLabelMap[staff.role]}`,
+    );
+  };
+
+  const handleSaveStaff = async () => {
+    if (!formState.name.trim()) {
+      toast.error('Vui lòng nhập họ tên nhân viên');
+      return;
+    }
+
+    if (!/^0[0-9]{9}$/.test(formState.phone.trim())) {
+      toast.error('Số điện thoại không hợp lệ', 'Định dạng đúng: 0xxxxxxxxx');
+      return;
+    }
+
+    if (!/^\S+@\S+\.\S+$/.test(formState.email.trim())) {
+      toast.error('Email không hợp lệ');
+      return;
+    }
+
+    if (!formState.branch.trim()) {
+      toast.error('Vui lòng nhập chi nhánh làm việc');
+      return;
+    }
+
+    setSavingForm(true);
+    await new Promise((resolve) => window.setTimeout(resolve, 450));
+
+    if (formState.id) {
+      setStaffList((prev) =>
+        prev.map((item) =>
+          item.id === formState.id
+            ? {
+                ...item,
+                name: formState.name.trim(),
+                email: formState.email.trim(),
+                phone: formState.phone.trim(),
+                role: formState.role,
+                status: formState.status,
+                branch: formState.branch.trim(),
+              }
+            : item,
+        ),
+      );
+      toast.success('Cập nhật nhân viên thành công');
+    } else {
+      const created: StaffMember = {
+        id: `s-${Date.now()}`,
+        name: formState.name.trim(),
+        email: formState.email.trim(),
+        phone: formState.phone.trim(),
+        role: formState.role,
+        status: formState.status,
+        branch: formState.branch.trim(),
+        createdAt: new Date(),
+        lastActiveAt: formState.status === 'active' ? new Date() : undefined,
+      };
+
+      setStaffList((prev) => [created, ...prev]);
+      toast.success('Thêm nhân viên thành công');
+    }
+
+    setSavingForm(false);
+    setFormOpen(false);
+  };
+
+  const columns: ColumnDef<StaffMember>[] = [
+    {
+      id: 'staff',
+      header: 'NHÂN VIÊN',
+      accessorFn: (row) => row.name,
+      cell: ({ row }) => {
+        const staff = row.original;
+        return (
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EEF3FD] text-[13px] font-semibold text-[var(--color-accent)]">
+              {initialsOfName(staff.name)}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-[14px] font-medium text-[var(--color-text-primary)]">{staff.name}</p>
+              <p className="truncate text-xs text-[var(--color-text-secondary)]">{staff.email}</p>
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: 'role',
+      header: 'VAI TRÒ',
+      cell: ({ row }) => (
+        <span className="inline-flex rounded-full bg-[#F7F6F4] px-2.5 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
+          {roleLabelMap[row.original.role]}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'phone',
+      header: 'SỐ ĐIỆN THOẠI',
+      cell: ({ row }) => (
+        <span className="font-[var(--font-mono)] text-[13px] text-[var(--color-text-secondary)]">{row.original.phone}</span>
+      ),
+    },
+    {
+      accessorKey: 'branch',
+      header: 'CHI NHÁNH',
+      cell: ({ row }) => <span className="text-[13px] text-[var(--color-text-primary)]">{row.original.branch}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'TRẠNG THÁI',
+      cell: ({ row }) => {
+        const isActive = row.original.status === 'active';
+        return (
+          <span
+            className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium"
+            style={{
+              backgroundColor: isActive ? 'var(--color-success-bg)' : '#F3F2F0',
+              color: isActive ? 'var(--color-success)' : 'var(--color-text-secondary)',
+            }}
+          >
+            {isActive ? 'Đang làm việc' : 'Tạm khóa'}
+          </span>
+        );
+      },
+    },
+    {
+      id: 'lastActiveAt',
+      header: 'HOẠT ĐỘNG GẦN NHẤT',
+      accessorFn: (row) => row.lastActiveAt,
+      cell: ({ row }) => (
+        <span className="text-[13px] text-[var(--color-text-secondary)]">
+          {row.original.lastActiveAt ? formatRelativeTime(row.original.lastActiveAt) : 'Chưa có'}
+        </span>
+      ),
+    },
+    {
+      id: 'actions',
+      header: '',
+      enableSorting: false,
+      cell: ({ row }) => {
+        const staff = row.original;
+        const isActive = staff.status === 'active';
+
+        return (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              className="rounded-[6px] p-1.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg)]"
+              onClick={(event) => {
+                event.stopPropagation();
+                openEditModal(staff);
+              }}
+            >
+              <Pencil size={16} />
+            </button>
+            <button
+              type="button"
+              className="rounded-[6px] p-1.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-bg)] hover:text-[var(--color-error)]"
+              onClick={(event) => {
+                event.stopPropagation();
+                toggleStaffStatus(staff);
+              }}
+            >
+              <UserX size={16} />
+            </button>
+            {!isActive ? (
+              <span className="rounded-[6px] bg-[#F7F6F4] px-2 py-1 text-[10px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)]">
+                Tạm khóa
+              </span>
+            ) : null}
+          </div>
+        );
+      },
+    },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <section className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">Nhân viên</h1>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-9 gap-2"
+            onClick={() => toast.success('Đang xuất danh sách nhân viên...')}
+          >
+            <Download size={16} />
+            Xuất Excel
+          </Button>
+          <Button className="h-9 gap-2" onClick={openCreateModal}>
+            <UserPlus size={16} />
+            Thêm nhân viên
+          </Button>
+        </div>
+      </section>
+
+      <section className="grid gap-3 md:grid-cols-4">
+        <div className="flex h-[88px] items-center gap-4 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[var(--color-accent-light)] text-[var(--color-accent)]">
+            <Users size={18} />
+          </div>
+          <div>
+            <p className="text-xs text-[var(--color-text-secondary)]">Tổng nhân viên</p>
+            <p className="text-[22px] font-semibold text-[var(--color-text-primary)]">{totalStaff}</p>
+          </div>
+        </div>
+
+        <div className="flex h-[88px] items-center gap-4 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[var(--color-accent-light)] text-[var(--color-accent)]">
+            <ShieldCheck size={18} />
+          </div>
+          <div>
+            <p className="text-xs text-[var(--color-text-secondary)]">Đang làm việc</p>
+            <p className="text-[22px] font-semibold text-[var(--color-text-primary)]">{activeStaff}</p>
+          </div>
+        </div>
+
+        <div className="flex h-[88px] items-center gap-4 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#FFF8E7] text-[#D97706]">
+            <UserCog size={18} />
+          </div>
+          <div>
+            <p className="text-xs text-[var(--color-text-secondary)]">Quản lý</p>
+            <p className="text-[22px] font-semibold text-[var(--color-text-primary)]">{managerCount}</p>
+          </div>
+        </div>
+
+        <div className="flex h-[88px] items-center gap-4 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#FEEEEE] text-[var(--color-error)]">
+            <UserX size={18} />
+          </div>
+          <div>
+            <p className="text-xs text-[var(--color-text-secondary)]">Tạm khóa</p>
+            <p className="text-[22px] font-semibold text-[var(--color-text-primary)]">{inactiveStaff}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
+        <div className="grid gap-2 md:grid-cols-[1fr_220px_200px_auto]">
+          <Input
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Tìm theo tên, email, số điện thoại"
+            className="h-9"
+          />
+
+          <Select value={roleFilter} onValueChange={(value) => setRoleFilter((value ?? 'all') as StaffRoleFilter)}>
+            <SelectTrigger className="h-9">
+              <SelectValue>{roleFilterLabelMap[roleFilter]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả vai trò</SelectItem>
+              <SelectItem value="manager">Quản lý</SelectItem>
+              <SelectItem value="sales">Bán hàng</SelectItem>
+              <SelectItem value="warehouse">Kho</SelectItem>
+              <SelectItem value="accountant">Kế toán</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter((value ?? 'all') as StaffStatusFilter)}>
+            <SelectTrigger className="h-9">
+              <SelectValue>{statusFilterLabelMap[statusFilter]}</SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="active">Đang làm việc</SelectItem>
+              <SelectItem value="inactive">Tạm khóa</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="ghost"
+            className="h-9"
+            onClick={() => {
+              setSearchTerm('');
+              setRoleFilter('all');
+              setStatusFilter('all');
+            }}
+          >
+            Xóa lọc
+          </Button>
+        </div>
+
+        <p className="mt-2 text-xs text-[var(--color-text-muted)]">
+          Mới trong tháng: {createdThisMonth} nhân viên
+        </p>
+      </section>
+
+      <DataTable
+        data={filteredStaff}
+        columns={columns}
+        pageSize={8}
+        onRowClick={(staff) => openEditModal(staff)}
+        emptyState={{
+          icon: Users,
+          title: 'Không tìm thấy nhân viên',
+          description: 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.',
+          action: (
+            <Button size="sm" onClick={openCreateModal}>
+              Thêm nhân viên
+            </Button>
+          ),
+        }}
+      />
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>{formState.id ? 'Cập nhật nhân viên' : 'Thêm nhân viên mới'}</DialogTitle>
+            <DialogDescription>
+              Quản lý thông tin tài khoản nội bộ cho nhân viên của cửa hàng.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="staff-name">Họ tên</Label>
+              <Input
+                id="staff-name"
+                value={formState.name}
+                onChange={(event) => setFormState((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="Nhập họ tên nhân viên"
+              />
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="staff-email">Email công việc</Label>
+                <Input
+                  id="staff-email"
+                  value={formState.email}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, email: event.target.value }))}
+                  placeholder="ten@routine.vn"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="staff-phone">Số điện thoại</Label>
+                <Input
+                  id="staff-phone"
+                  value={formState.phone}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, phone: event.target.value }))}
+                  placeholder="0xxxxxxxxx"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Vai trò</Label>
+                <Select
+                  value={formState.role}
+                  onValueChange={(value) => setFormState((prev) => ({ ...prev, role: value as StaffRole }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue>{roleLabelMap[formState.role]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manager">Quản lý</SelectItem>
+                    <SelectItem value="sales">Bán hàng</SelectItem>
+                    <SelectItem value="warehouse">Kho</SelectItem>
+                    <SelectItem value="accountant">Kế toán</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Trạng thái</Label>
+                <Select
+                  value={formState.status}
+                  onValueChange={(value) =>
+                    setFormState((prev) => ({ ...prev, status: value as StaffStatus }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue>{statusLabelMap[formState.status]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Đang làm việc</SelectItem>
+                    <SelectItem value="inactive">Tạm khóa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="staff-branch">Chi nhánh</Label>
+              <Input
+                id="staff-branch"
+                value={formState.branch}
+                onChange={(event) => setFormState((prev) => ({ ...prev, branch: event.target.value }))}
+                placeholder="Ví dụ: Routine Q1"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>
+              Huy
+            </Button>
+            <Button onClick={handleSaveStaff} disabled={savingForm}>
+              {savingForm ? 'Đang lưu...' : formState.id ? 'Lưu thay đổi' : 'Tạo nhân viên'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

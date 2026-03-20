@@ -1,0 +1,32 @@
+# node
+**/node_modules
+**/dist
+**/.vite
+
+# logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+
+# env
+**/.env
+**/.env.*
+
+# java
+**/target
+**/.classpath
+**/.project
+**/.settings
+**/.mvn
+!**/.mvn/wrapper/maven-wrapper.properties
+
+# idea / vscode
+**/.idea
+**/.DS_Store
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# build
+**/build

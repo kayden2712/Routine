@@ -1,0 +1,212 @@
+import { Heart, Lock, Minus, Plus, Trash2, X } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Button } from '@/components/ui/button'
+import { formatVnd } from '@/lib/utils'
+import { useCartStore } from '@/store/cartStore'
+import { useWishlistStore } from '@/store/wishlistStore'
+
+export const CartPage = () => {
+  const navigate = useNavigate()
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist)
+  const items = useCartStore((state) => state.items)
+  const updateQuantity = useCartStore((state) => state.updateQuantity)
+  const removeFromCart = useCartStore((state) => state.removeFromCart)
+  const getSubtotal = useCartStore((state) => state.getSubtotal)
+
+  const [promoCode, setPromoCode] = useState('')
+  const [appliedPromoCode, setAppliedPromoCode] = useState('')
+
+  const subtotal = getSubtotal()
+  const totalProducts = useMemo(() => items.reduce((total, item) => total + item.quantity, 0), [items])
+  const promoDiscount = appliedPromoCode ? Math.round(subtotal * 0.1) : 0
+  const total = Math.max(0, subtotal - promoDiscount)
+
+  const freeShippingTarget = 1000000
+  const remainingForFreeShipping = Math.max(0, freeShippingTarget - subtotal)
+  const shippingProgress = Math.min(100, (subtotal / freeShippingTarget) * 100)
+
+  if (!items.length) {
+    return (
+      <section className="mx-auto max-w-[1100px] px-4 py-10 sm:px-8">
+        <p className="text-sm text-[var(--text-secondary)]">Trang chủ / Giỏ hàng</p>
+        <div className="mt-6 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-10 text-center">
+          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Giỏ hàng trống</h1>
+          <p className="mt-3 text-sm text-[var(--text-secondary)]">Khám phá bộ sưu tập mới và thêm sản phẩm bạn yêu thích.</p>
+          <Button asChild className="mt-6 h-11 rounded-lg px-6 text-sm font-semibold">
+            <Link to="/san-pham">Xem sản phẩm</Link>
+          </Button>
+        </div>
+      </section>
+    )
+  }
+
+  return (
+    <section className="mx-auto max-w-[1100px] px-4 py-10 sm:px-8">
+      <p className="text-sm text-[var(--text-secondary)]">Trang chủ / Giỏ hàng</p>
+
+      <div className="mt-5 flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-[24px] font-semibold text-[var(--text-primary)]">Giỏ hàng ({totalProducts} sản phẩm)</h1>
+      </div>
+
+      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div>
+          <Link
+            to="/san-pham"
+            className="mb-4 inline-flex text-[13px] text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+          >
+            ← Tiếp tục mua sắm
+          </Link>
+
+          <div className="space-y-3">
+            {items.map((item) => (
+              <article
+                key={`${item.productId}-${item.size}-${item.color}`}
+                className="flex gap-4 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-5"
+              >
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  className="h-[100px] w-[80px] rounded-lg bg-[#E8E5E0] object-cover"
+                />
+
+                <div className="flex min-w-0 flex-1 justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="truncate text-[14px] font-medium text-[var(--text-primary)]">{item.name}</p>
+                    <p className="mt-1 text-[12px] text-[var(--text-secondary)]">
+                      Màu: {item.color} | Size: {item.size}
+                    </p>
+                    <p className="mt-2 text-[15px] font-bold text-[var(--text-primary)]">{formatVnd(item.price)}</p>
+
+                    <div className="mt-4 flex items-center gap-4 text-[12px] text-[var(--text-secondary)]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          toggleWishlist(item.productId)
+                          removeFromCart(item.productId, item.size, item.color)
+                        }}
+                        className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--text-primary)]"
+                      >
+                        <Heart size={12} />
+                        Lưu vào yêu thích
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => removeFromCart(item.productId, item.size, item.color)}
+                        className="inline-flex items-center gap-1.5 transition-colors hover:text-[var(--text-primary)]"
+                      >
+                        <Trash2 size={12} />
+                        Xóa
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-end justify-between">
+                    <button
+                      type="button"
+                      aria-label="Xóa sản phẩm"
+                      onClick={() => removeFromCart(item.productId, item.size, item.color)}
+                      className="text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+                    >
+                      <X size={14} />
+                    </button>
+
+                    <p className="text-[14px] font-semibold text-[var(--text-primary)]">{formatVnd(item.price * item.quantity)}</p>
+
+                    <div className="inline-flex overflow-hidden rounded-md border border-[var(--line-strong)]">
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.productId, item.size, item.color, item.quantity - 1)}
+                        className="inline-flex h-8 w-8 items-center justify-center text-[var(--text-secondary)] transition-colors hover:bg-[var(--line-soft)] hover:text-[var(--text-primary)]"
+                      >
+                        <Minus size={14} />
+                      </button>
+
+                      <span className="inline-flex h-8 w-8 items-center justify-center border-x border-[var(--line)] text-[13px] text-[var(--text-primary)]">
+                        {item.quantity}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.productId, item.size, item.color, item.quantity + 1)}
+                        className="inline-flex h-8 w-8 items-center justify-center text-[var(--text-secondary)] transition-colors hover:bg-[var(--line-soft)] hover:text-[var(--text-primary)]"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <aside className="h-fit rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-6 lg:sticky lg:top-20">
+          <h2 className="text-[16px] font-semibold text-[var(--text-primary)]">Tóm tắt đơn hàng</h2>
+
+          <div className="mt-4 text-[14px]">
+            <div className="flex items-center justify-between border-b border-[var(--line-soft)] py-2">
+              <span className="text-[var(--text-secondary)]">Tạm tính ({totalProducts} sp):</span>
+              <span className="text-[var(--text-primary)]">{formatVnd(subtotal)}</span>
+            </div>
+
+            <div className="flex items-center justify-between border-b border-[var(--line-soft)] py-2">
+              <span className="text-[var(--text-secondary)]">Phí vận chuyển:</span>
+              <span className="font-medium text-[#16A34A]">Miễn phí ✓</span>
+            </div>
+
+            {promoDiscount > 0 && (
+              <div className="flex items-center justify-between border-b border-[var(--line-soft)] py-2">
+                <span className="text-[var(--text-secondary)]">Giảm giá:</span>
+                <span className="font-medium text-[#DC2626]">-{formatVnd(promoDiscount)}</span>
+              </div>
+            )}
+
+            <div className="mt-3 flex items-center justify-between border-t border-[var(--line)] pt-3">
+              <span className="text-[16px] font-bold text-[var(--text-primary)]">Tổng cộng:</span>
+              <span className="text-[16px] font-bold text-[var(--text-primary)]">{formatVnd(total)}</span>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <p className="text-[11px] text-[var(--text-secondary)]">
+              {remainingForFreeShipping > 0
+                ? `Thêm ${formatVnd(remainingForFreeShipping)} để được freeship`
+                : 'Bạn đã đủ điều kiện miễn phí vận chuyển'}
+            </p>
+            <div className="mt-1.5 h-[3px] rounded-[2px] bg-[var(--line-soft)]">
+              <div className="h-full rounded-[2px] bg-[var(--text-primary)]" style={{ width: `${shippingProgress}%` }} />
+            </div>
+          </div>
+
+          <div className="mt-5 flex gap-2">
+            <input
+              value={promoCode}
+              onChange={(event) => setPromoCode(event.target.value.toUpperCase())}
+              placeholder="Mã giảm giá"
+              className="rf-input h-10 min-w-0 flex-1 rounded-lg px-3 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setAppliedPromoCode(promoCode.trim() ? promoCode : '')}
+              className="inline-flex h-10 items-center justify-center rounded-lg border border-[var(--line)] px-4 text-[13px] text-[var(--text-primary)] transition-colors hover:bg-[var(--line-soft)]"
+            >
+              Áp dụng
+            </button>
+          </div>
+
+          <Button onClick={() => navigate('/checkout')} className="mt-4 h-12 w-full rounded-lg text-[14px] font-semibold">
+            Tiến hành thanh toán
+          </Button>
+
+          <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] text-[var(--text-secondary)]">
+            <Lock size={12} />
+            Thanh toán bảo mật
+          </p>
+        </aside>
+      </div>
+    </section>
+  )
+}
+
