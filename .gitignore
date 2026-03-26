@@ -1,32 +1,70 @@
-# node
+# ========================
+# NODE
+# ========================
 **/node_modules
 **/dist
 **/.vite
+**/.cache
 
-# logs
+# ========================
+# LOGS
+# ========================
 **/npm-debug.log*
 **/yarn-debug.log*
 **/yarn-error.log*
 **/pnpm-debug.log*
+*.log
 
-# env
+# ========================
+# ENV / SECRET
+# ========================
 **/.env
 **/.env.*
+.env
+.env.*
 
-# java
+# ========================
+# JAVA / SPRING
+# ========================
 **/target
+**/*.class
+**/*.jar
+**/*.war
+
+# Eclipse
 **/.classpath
 **/.project
 **/.settings
+
+# Maven wrapper
 **/.mvn
 !**/.mvn/wrapper/maven-wrapper.properties
 
-# idea / vscode
+# ========================
+# IDE
+# ========================
 **/.idea
 **/.DS_Store
+
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
 
-# build
+# ========================
+# BUILD
+# ========================
 **/build
+
+# ========================
+# AI AGENT (QUAN TRỌNG)
+# ========================
+.agent/memory/
+.agent/memory/**
+.agent/logs/
+.agent/logs/**
+
+# ========================
+# TEST / GENERATED FILES
+# ========================
+test.txt
+*.tmp
