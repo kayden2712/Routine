@@ -54,14 +54,11 @@
 # BUILD
 # ========================
 **/build
+# ignore toàn bộ agent
+.agent/
 
-# ========================
-# AI AGENT (QUAN TRỌNG)
-# ========================
-.agent/memory/
-.agent/memory/**
-.agent/logs/
-.agent/logs/**
+# ignore toàn bộ vscode
+.vscode/
 
 # ========================
 # TEST / GENERATED FILES
