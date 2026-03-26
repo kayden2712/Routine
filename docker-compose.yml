@@ -9,7 +9,7 @@ services:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: routine_db
       MYSQL_USER: routine_user
-      MYSQL_PASSWORD: routine_password
+      MYSQL_PASSWORD: 12345
     ports:
       - "3306:3306"
     volumes:
@@ -28,7 +28,7 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/routine_db?useSSL=false&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: routine_user
-      SPRING_DATASOURCE_PASSWORD: routine_password
+      SPRING_DATASOURCE_PASSWORD: 12345
     ports:
       - "8080:8080"
     depends_on:
