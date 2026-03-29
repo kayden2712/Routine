@@ -1,6 +1,17 @@
 package com.example.be.service;
 
+import java.math.BigDecimal;
+
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.example.be.dto.request.LoginRequest;
+import com.example.be.dto.request.RefreshTokenRequest;
 import com.example.be.dto.request.RegisterCustomerRequest;
 import com.example.be.dto.request.RegisterUserRequest;
 import com.example.be.dto.response.AuthResponse;
@@ -11,16 +22,8 @@ import com.example.be.exception.BadRequestException;
 import com.example.be.repository.CustomerRepository;
 import com.example.be.repository.UserRepository;
 import com.example.be.security.JwtTokenProvider;
-import lombok.RequiredArgsConstructor;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -52,15 +55,7 @@ public class AuthService {
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         
-        String token = tokenProvider.generateAdminToken(authentication);
-        
-        return AuthResponse.builder()
-                .token(token)
-                .id(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole().name())
-                .build();
+        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication), tokenProvider.generateRefreshToken(authentication));
     }
     
     public AuthResponse loginUser(LoginRequest request) {
@@ -72,15 +67,7 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("User not found"));
         
-        String token = tokenProvider.generateAdminToken(authentication);
-        
-        return AuthResponse.builder()
-                .token(token)
-                .id(user.getId())
-                .email(user.getEmail())
-                .fullName(user.getFullName())
-                .role(user.getRole().name())
-                .build();
+        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication), tokenProvider.generateRefreshToken(authentication));
     }
     
     @Transactional
@@ -109,15 +96,7 @@ public class AuthService {
         );
         SecurityContextHolder.getContext().setAuthentication(authentication);
         
-        String token = tokenProvider.generateCustomerToken(authentication);
-        
-        return AuthResponse.builder()
-                .token(token)
-                .id(customer.getId())
-                .email(customer.getEmail())
-                .fullName(customer.getFullName())
-                .role("CUSTOMER")
-                .build();
+        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication), tokenProvider.generateRefreshToken(authentication));
     }
     
     public AuthResponse loginCustomer(LoginRequest request) {
@@ -129,14 +108,61 @@ public class AuthService {
         Customer customer = customerRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("Customer not found"));
         
-        String token = tokenProvider.generateCustomerToken(authentication);
-        
+        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication), tokenProvider.generateRefreshToken(authentication));
+    }
+
+    public AuthResponse refreshToken(RefreshTokenRequest request) {
+        if (!tokenProvider.validateRefreshToken(request.getRefreshToken())) {
+            throw new BadRequestException("Invalid refresh token");
+        }
+
+        String email = tokenProvider.getEmailFromToken(request.getRefreshToken());
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            Authentication authentication = new UsernamePasswordAuthenticationToken(email, null);
+            return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication), tokenProvider.generateRefreshTokenByEmail(email));
+        }
+
+        Customer customer = customerRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("User not found for refresh token"));
+        Authentication authentication = new UsernamePasswordAuthenticationToken(email, null);
+        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication), tokenProvider.generateRefreshTokenByEmail(email));
+    }
+
+    public AuthResponse getCurrentUser(String email) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            return buildUserAuthResponse(user, null, null);
+        }
+
+        Customer customer = customerRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Current user not found"));
+        return buildCustomerAuthResponse(customer, null, null);
+    }
+
+    private AuthResponse buildUserAuthResponse(User user, String token, String refreshToken) {
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
+                .id(user.getId())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole().name())
+                .phone(user.getPhone())
+                .branch(user.getBranch())
+                .build();
+    }
+
+    private AuthResponse buildCustomerAuthResponse(Customer customer, String token, String refreshToken) {
+        return AuthResponse.builder()
+                .token(token)
+                .refreshToken(refreshToken)
                 .id(customer.getId())
                 .email(customer.getEmail())
                 .fullName(customer.getFullName())
                 .role("CUSTOMER")
+                .phone(customer.getPhone())
+                .tier(customer.getTier() != null ? customer.getTier().name() : null)
                 .build();
     }
 }

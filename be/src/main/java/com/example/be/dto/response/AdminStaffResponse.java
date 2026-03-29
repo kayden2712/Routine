@@ -1,5 +1,7 @@
 package com.example.be.dto.response;
 
+import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -9,16 +11,14 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class AuthResponse {
-    private String token;
-    private String refreshToken;
-    @Builder.Default
-    private String type = "Bearer";
+public class AdminStaffResponse {
     private Long id;
-    private String email;
     private String fullName;
-    private String role;
+    private String email;
     private String phone;
-    private String tier;
     private String branch;
+    private String role;
+    private Boolean isActive;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

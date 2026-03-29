@@ -1,13 +1,23 @@
 package com.example.be.entity;
 
-import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "users", indexes = {
-    @Index(name = "idx_email", columnList = "email"),
-    @Index(name = "idx_role", columnList = "role")
+    @Index(name = "idx_user_email", columnList = "email"),
+    @Index(name = "idx_user_phone", columnList = "phone"),
+    @Index(name = "idx_user_role", columnList = "role")
 })
 @Data
 @NoArgsConstructor
@@ -27,6 +37,12 @@ public class User extends BaseEntity {
     @Column(name = "full_name", nullable = false)
     @NotBlank
     private String fullName;
+
+    @Column(length = 20, unique = true)
+    private String phone;
+
+    @Column(length = 100)
+    private String branch;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

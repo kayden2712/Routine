@@ -1,16 +1,24 @@
 package com.example.be.controller;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 import com.example.be.dto.request.LoginRequest;
+import com.example.be.dto.request.RefreshTokenRequest;
 import com.example.be.dto.request.RegisterCustomerRequest;
 import com.example.be.dto.request.RegisterUserRequest;
 import com.example.be.dto.response.ApiResponse;
 import com.example.be.dto.response.AuthResponse;
 import com.example.be.service.AuthService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/auth")
@@ -42,5 +50,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> loginCustomer(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.loginCustomer(request);
         return ResponseEntity.ok(ApiResponse.success("Login successful", response));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
+        AuthResponse response = authService.refreshToken(request);
+        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", response));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<AuthResponse>> me(Authentication authentication) {
+        AuthResponse response = authService.getCurrentUser(authentication.getName());
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

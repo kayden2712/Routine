@@ -1,7 +1,5 @@
 package com.example.be.config;
 
-import com.example.be.security.JwtAuthenticationFilter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -19,6 +17,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import com.example.be.security.JwtAuthenticationFilter;
+
+import lombok.RequiredArgsConstructor;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -34,7 +36,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/customer/register", "/auth/customer/login", "/auth/admin/login").permitAll()
+                .requestMatchers("/auth/customer/register", "/auth/customer/login", "/auth/admin/login", "/auth/refresh").permitAll()
                 .requestMatchers("/products/**").permitAll()
                 .requestMatchers("/categories/**").permitAll()
                 .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
