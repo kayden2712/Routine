@@ -21,4 +21,7 @@ public class AuthResponse {
     private String phone;
     private String tier;
     private String branch;
+    private String address;
+    private String district;
+    private String city;
 }

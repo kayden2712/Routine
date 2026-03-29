@@ -6,8 +6,10 @@ import type { CustomerUser } from '@/types/customer.types'
 interface CustomerAuthState {
   user: CustomerUser | null
   isAuthenticated: boolean
+  authError: string
   login: (email: string, password: string) => Promise<boolean>
-  register: (fullName: string, email: string, password: string) => Promise<boolean>
+  register: (fullName: string, email: string, password: string, phone: string) => Promise<boolean>
+  setUser: (user: CustomerUser) => void
   logout: () => void
 }
 
@@ -16,33 +18,41 @@ export const useCustomerAuthStore = create<CustomerAuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      authError: '',
       login: async (email, password) => {
         if (!email || !password) {
+          set({ authError: 'Vui long nhap email va mat khau.' })
           return false
         }
 
         try {
           const user = await customerLoginApi(email, password)
-          set({ isAuthenticated: true, user })
+          set({ isAuthenticated: true, user, authError: '' })
           return true
-        } catch {
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Dang nhap that bai.'
+          set({ authError: message })
           return false
         }
       },
-      register: async (fullName, email, password) => {
-        if (!fullName || !email || !password) {
+      register: async (fullName, email, password, phone) => {
+        if (!fullName || !email || !password || !phone) {
+          set({ authError: 'Vui long nhap day du thong tin.' })
           return false
         }
 
         try {
-          const user = await customerRegisterApi(fullName, email, password)
-          set({ isAuthenticated: true, user })
+          const user = await customerRegisterApi(fullName, email, password, phone)
+          set({ isAuthenticated: true, user, authError: '' })
           return true
-        } catch {
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Dang ky that bai.'
+          set({ authError: message })
           return false
         }
       },
-      logout: () => set({ user: null, isAuthenticated: false }),
+      setUser: (user) => set({ user, isAuthenticated: true }),
+      logout: () => set({ user: null, isAuthenticated: false, authError: '' }),
     }),
     {
       name: 'routine-customer-auth',

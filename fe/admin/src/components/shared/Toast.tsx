@@ -19,6 +19,15 @@ interface ToastState {
 const useToastStore = create<ToastState>((set) => ({
   messages: [],
   push: (kind, title, description) => {
+    const fingerprint = `${kind}::${title}::${description ?? ''}`;
+    const duplicateExists = useToastStore
+      .getState()
+      .messages.some((message) => `${message.kind}::${message.title}::${message.description ?? ''}` === fingerprint);
+
+    if (duplicateExists) {
+      return;
+    }
+
     const id = `${Date.now()}-${Math.random()}`;
     set((state) => ({
       messages: [...state.messages, { id, kind, title, description }],
@@ -55,22 +64,29 @@ export function AppToaster() {
   const dismiss = useToastStore((state) => state.dismiss);
 
   return (
-    <div className="fixed right-4 top-4 z-50 space-y-2">
+    <div className="pointer-events-none fixed right-4 top-4 z-[2147483647] space-y-2">
       {messages.map((message) => (
         <button
           key={message.id}
           type="button"
           onClick={() => dismiss(message.id)}
           className={cn(
-            'w-72 rounded-md border p-3 text-left shadow-sm',
+            'pointer-events-auto w-80 rounded-lg border p-3 text-left shadow-xl ring-1 backdrop-blur-none transition-all',
             message.kind === 'success'
-              ? 'border-[var(--color-success)] bg-[var(--color-success-bg)]'
-              : 'border-[var(--color-error)] bg-[var(--color-error-bg)]',
+              ? 'border-emerald-700/80 bg-emerald-50 text-emerald-950 ring-emerald-700/20'
+              : 'border-red-700/80 bg-red-50 text-red-950 ring-red-700/20',
           )}
         >
-          <p className="text-sm font-semibold">{message.title}</p>
+          <p className="text-sm font-semibold leading-5">{message.title}</p>
           {message.description ? (
-            <p className="text-xs text-muted-foreground">{message.description}</p>
+            <p
+              className={cn(
+                'mt-1 text-xs leading-4',
+                message.kind === 'success' ? 'text-emerald-900/90' : 'text-red-900/90',
+              )}
+            >
+              {message.description}
+            </p>
           ) : null}
         </button>
       ))}

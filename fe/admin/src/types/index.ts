@@ -15,12 +15,16 @@ export interface Product {
   code: string;
   name: string;
   category: string;
+  gender: 'male' | 'female';
   price: number;
   costPrice: number;
   stock: number;
   minStock: number;
   status: 'active' | 'inactive' | 'out_of_stock';
   imageUrl?: string;
+  imageUrls?: string[];
+  sizes?: string[];
+  colors?: string[];
   variants?: ProductVariant[];
   createdAt: Date;
 }

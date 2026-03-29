@@ -27,6 +27,7 @@ import {
   updateStaffApi,
   updateStaffStatusApi,
 } from '@/lib/backendApi';
+import { exportRowsToExcel } from '@/lib/excel';
 import {
   Select,
   SelectContent,
@@ -36,6 +37,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from '@/lib/toast';
 import { formatRelativeTime } from '@/lib/utils';
+import { format } from 'date-fns';
 
 type StaffRole = 'manager' | 'sales' | 'warehouse' | 'accountant';
 type StaffStatus = 'active' | 'inactive';
@@ -59,6 +61,7 @@ interface StaffFormState {
   name: string;
   email: string;
   phone: string;
+  password: string;
   role: StaffRole;
   status: StaffStatus;
   branch: string;
@@ -95,6 +98,7 @@ function createDefaultForm(): StaffFormState {
     name: '',
     email: '',
     phone: '',
+    password: '',
     role: 'sales',
     status: 'active',
     branch: '',
@@ -186,6 +190,7 @@ export function StaffPage() {
       name: staff.name,
       email: staff.email,
       phone: staff.phone,
+      password: '',
       role: staff.role,
       status: staff.status,
       branch: staff.branch,
@@ -235,6 +240,11 @@ export function StaffPage() {
       return;
     }
 
+    if (!formState.id && formState.password.length < 8) {
+      toast.error('Mật khẩu nhân viên phải có ít nhất 8 ký tự');
+      return;
+    }
+
     setSavingForm(true);
 
     try {
@@ -253,6 +263,7 @@ export function StaffPage() {
           name: formState.name.trim(),
           email: formState.email.trim(),
           phone: formState.phone.trim(),
+          password: formState.password,
           role: formState.role,
           status: formState.status,
           branch: formState.branch.trim(),
@@ -268,6 +279,25 @@ export function StaffPage() {
     } finally {
       setSavingForm(false);
     }
+  };
+
+  const handleExportExcel = () => {
+    exportRowsToExcel({
+      fileName: 'nhan-vien',
+      sheetName: 'NhanVien',
+      headers: ['Ho ten', 'Email', 'So dien thoai', 'Vai tro', 'Trang thai', 'Chi nhanh', 'Ngay tao'],
+      rows: filteredStaff.map((item) => [
+        item.name,
+        item.email,
+        item.phone,
+        roleLabelMap[item.role],
+        item.status === 'active' ? 'Dang lam viec' : 'Tam khoa',
+        item.branch,
+        format(item.createdAt, 'dd/MM/yyyy'),
+      ]),
+    });
+
+    toast.success('Da xuat file Excel nhan vien');
   };
 
   const columns: ColumnDef<StaffMember>[] = [
@@ -389,7 +419,7 @@ export function StaffPage() {
           <Button
             variant="outline"
             className="h-9 gap-2"
-            onClick={() => toast.success('Đang xuất danh sách nhân viên...')}
+            onClick={handleExportExcel}
           >
             <Download size={16} />
             Xuất Excel
@@ -552,6 +582,22 @@ export function StaffPage() {
                 />
               </div>
             </div>
+
+            {!formState.id ? (
+              <div className="grid gap-2">
+                <Label htmlFor="staff-password">Mật khẩu đăng nhập</Label>
+                <Input
+                  id="staff-password"
+                  type="password"
+                  value={formState.password}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, password: event.target.value }))}
+                  placeholder="Tối thiểu 8 ký tự"
+                />
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Nhân viên sẽ dùng mật khẩu này để đăng nhập lần đầu.
+                </p>
+              </div>
+            ) : null}
 
             <div className="grid gap-2 md:grid-cols-2">
               <div className="grid gap-2">

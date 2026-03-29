@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   ArrowDownUp,
   ChevronDown,
+  Download,
   Package,
   Pencil,
   Plus,
@@ -33,39 +34,35 @@ import {
 } from '@/components/ui/select';
 import { cn, formatVND } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { exportRowsToExcel } from '@/lib/excel';
 import { useAuthStore } from '@/store/authStore';
 import { useProductStore } from '@/store/productStore';
 import type { Product } from '@/types';
 
 type SortMode = 'newest' | 'price-desc' | 'price-asc' | 'stock-low';
 type ProductStatusFilter = 'all' | 'active' | 'out_of_stock' | 'inactive';
+const PRODUCT_SAVE_TIMEOUT_MS = 5000;
 
 interface ProductFormState {
   id?: string;
   name: string;
   code: string;
   category: string;
+  gender: 'male' | 'female';
   price: string;
   costPrice: string;
   stock: string;
   description: string;
   minStock: string;
-  imageUrl?: string;
-  selectedSizes: string[];
-  selectedColors: string[];
+  imageUrls: string[];
+  variants: Array<{
+    size: string;
+    color: string;
+    stock: string;
+  }>;
 }
 
-const SIZE_OPTIONS = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL'];
-const COLOR_OPTIONS = [
-  { name: 'black', hex: '#111827' },
-  { name: 'white', hex: '#FFFFFF' },
-  { name: 'navy', hex: '#1E3A8A' },
-  { name: 'beige', hex: '#D6BC9A' },
-  { name: 'grey', hex: '#9CA3AF' },
-  { name: 'red', hex: '#DC2626' },
-  { name: 'green', hex: '#16A34A' },
-  { name: 'blue', hex: '#2563EB' },
-];
+const SIZE_OPTIONS = ['M', 'S', 'XL', 'XXL', 'L'] as const;
 
 const CATEGORY_LABELS: Record<string, string> = {
   'Ao so mi': 'Áo sơ mi',
@@ -117,23 +114,50 @@ function productStatusFromStock(stock: number): Product['status'] {
   return 'active';
 }
 
+function createEmptyVariantForm() {
+  return {
+    size: SIZE_OPTIONS[0],
+    color: 'black',
+    stock: '0',
+  };
+}
+
 function createEmptyForm(defaultCategory: string): ProductFormState {
   return {
     name: '',
     code: '',
     category: defaultCategory,
+    gender: 'male',
     price: '',
     costPrice: '',
     stock: '0',
     description: '',
     minStock: '5',
-    selectedSizes: [],
-    selectedColors: [],
+    imageUrls: [],
+    variants: [createEmptyVariantForm()],
   };
 }
 
 function generateCode(): string {
   return `SP${Math.floor(100 + Math.random() * 900)}`;
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+
+    promise
+      .then((value) => {
+        window.clearTimeout(timer);
+        resolve(value);
+      })
+      .catch((error: unknown) => {
+        window.clearTimeout(timer);
+        reject(error);
+      });
+  });
 }
 
 export function ProductsPage() {
@@ -172,6 +196,7 @@ export function ProductsPage() {
   const [formState, setFormState] = useState<ProductFormState>(() =>
     createEmptyForm(categories[0] ?? 'Ao so mi'),
   );
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
@@ -257,33 +282,63 @@ export function ProductsPage() {
       return;
     }
 
+    const variants = (product.variants ?? []).length > 0
+      ? (product.variants ?? []).map((variant) => ({
+          size: variant.size || SIZE_OPTIONS[0],
+          color: variant.color || 'black',
+          stock: String(Math.max(0, Number(variant.stock ?? 0))),
+        }))
+      : [createEmptyVariantForm()];
+
+    const totalStock = variants.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0);
+
     setFormState({
       id: product.id,
       name: product.name,
       code: product.code,
       category: product.category,
+      gender: product.gender,
       price: String(product.price),
       costPrice: String(product.costPrice ?? 0),
-      stock: String(product.stock),
+      stock: String(totalStock),
       description: '',
       minStock: String(product.minStock),
-      imageUrl: product.imageUrl,
-      selectedSizes: product.variants?.map((variant) => variant.size) ?? [],
-      selectedColors: product.variants?.map((variant) => variant.color.toLowerCase()) ?? [],
+      imageUrls:
+        (product.imageUrls ?? []).length > 0
+          ? (product.imageUrls ?? []).filter((url) => String(url ?? '').trim().length > 0)
+          : product.imageUrl
+            ? [product.imageUrl]
+            : [],
+      variants,
     });
     setVariantOpen(false);
     setFormOpen(true);
   };
 
-  const onFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const onFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) {
+      return;
+    }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setFormState((prev) => ({ ...prev, imageUrl: String(reader.result ?? '') }));
-    };
-    reader.readAsDataURL(file);
+    const readFile = (file: File) =>
+      new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result ?? ''));
+        reader.readAsDataURL(file);
+      });
+
+    const nextImages = (await Promise.all(files.map((file) => readFile(file))))
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0);
+
+    setFormState((prev) => ({
+      ...prev,
+      imageUrls: Array.from(new Set([...prev.imageUrls, ...nextImages])),
+    }));
+
+    // Allow re-selecting the same file(s) by resetting input value.
+    event.target.value = '';
   };
 
   const saveForm = async () => {
@@ -299,54 +354,97 @@ export function ProductsPage() {
 
     const parsedPrice = Number(formState.price);
     const parsedCost = Number(formState.costPrice || 0);
-    const parsedStock = Number(formState.stock || 0);
     const parsedMinStock = Number(formState.minStock || 0);
 
-    if (Number.isNaN(parsedPrice) || Number.isNaN(parsedStock)) {
-      toast.error('Giá bán và số lượng phải là số hợp lệ');
+    const normalizedVariants = formState.variants
+      .map((variant, index) => ({
+        id: `v-${formState.code}-${index + 1}`,
+        size: variant.size.trim().toUpperCase(),
+        color: variant.color.trim().toLowerCase(),
+        stock: Math.max(0, Number(variant.stock || 0)),
+      }))
+      .filter((variant) => variant.size.length > 0 && variant.color.length > 0);
+
+    const parsedStock = normalizedVariants.reduce((sum, variant) => sum + variant.stock, 0);
+
+    if (Number.isNaN(parsedPrice)) {
+      toast.error('Giá bán phải là số hợp lệ');
+      return;
+    }
+
+    if (normalizedVariants.length === 0) {
+      toast.error('Vui lòng nhập ít nhất 1 biến thể size/màu.');
+      return;
+    }
+
+    const duplicateKeys = new Set<string>();
+    for (const variant of normalizedVariants) {
+      const key = `${variant.size}::${variant.color}`;
+      if (duplicateKeys.has(key)) {
+        toast.error(`Biến thể bị trùng: ${variant.size}/${variant.color}`);
+        return;
+      }
+      duplicateKeys.add(key);
+    }
+
+    if (parsedStock <= 0) {
+      toast.error('Vui lòng nhập số lượng cho ít nhất 1 biến thể');
       return;
     }
 
     setFormLoading(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 700));
 
-    const variants = formState.selectedSizes.flatMap((size, index) => {
-      const color = formState.selectedColors[index % Math.max(1, formState.selectedColors.length)] ?? 'black';
-      return {
-        id: `v-${formState.code}-${index + 1}`,
-        size,
-        color,
-        stock: parsedStock,
-      };
-    });
+    const variants = normalizedVariants;
+    const sizes = Array.from(new Set(variants.map((variant) => variant.size)));
+    const colors = Array.from(new Set(variants.map((variant) => variant.color)));
+    const normalizedImageUrls = formState.imageUrls
+      .map((url) => String(url ?? '').trim())
+      .filter((url) => url.length > 0);
 
     const baseProduct: Product = {
       id: formState.id ?? `p-${Date.now()}`,
       code: formState.code.trim().toUpperCase(),
       name: formState.name.trim(),
       category: formState.category,
+      gender: formState.gender,
       price: parsedPrice,
       costPrice: parsedCost,
       stock: parsedStock,
       minStock: parsedMinStock,
       status: productStatusFromStock(parsedStock),
-      imageUrl: formState.imageUrl,
+      imageUrl: normalizedImageUrls[0],
+      imageUrls: normalizedImageUrls,
+      sizes,
+      colors,
       variants,
       createdAt: formState.id
         ? products.find((item) => item.id === formState.id)?.createdAt ?? new Date()
         : new Date(),
     };
 
-    if (formState.id) {
-      await updateProduct(baseProduct);
-      toast.success('Cập nhật sản phẩm thành công');
-    } else {
-      await addProduct(baseProduct);
-      toast.success('Thêm sản phẩm thành công');
-    }
+    try {
+      if (formState.id) {
+        await withTimeout(
+          updateProduct(baseProduct),
+          PRODUCT_SAVE_TIMEOUT_MS,
+          'Lưu sản phẩm quá 5 giây, vui lòng thử lại.',
+        );
+        toast.success('Cập nhật sản phẩm thành công');
+      } else {
+        await withTimeout(
+          addProduct(baseProduct),
+          PRODUCT_SAVE_TIMEOUT_MS,
+          'Lưu sản phẩm quá 5 giây, vui lòng thử lại.',
+        );
+        toast.success('Thêm sản phẩm thành công');
+      }
 
-    setFormLoading(false);
-    setFormOpen(false);
+      setFormOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Lưu sản phẩm thất bại');
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   const deleteSingle = () => {
@@ -372,6 +470,25 @@ export function ProductsPage() {
     void removeProducts(selectedIds);
     toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
     setSelectedIds([]);
+  };
+
+  const handleExportExcel = () => {
+    exportRowsToExcel({
+      fileName: 'san-pham',
+      sheetName: 'SanPham',
+      headers: ['Ma SP', 'Ten san pham', 'Danh muc', 'Gia ban', 'Gia von', 'Ton kho', 'Trang thai'],
+      rows: filteredProducts.map((item) => [
+        item.code,
+        item.name,
+        item.category,
+        item.price,
+        item.costPrice,
+        item.stock,
+        item.status,
+      ]),
+    });
+
+    toast.success('Da xuat file Excel san pham');
   };
 
   const changeBulkCategory = () => {
@@ -425,74 +542,122 @@ export function ProductsPage() {
     {
       id: 'image',
       accessorKey: 'imageUrl',
-      header: '',
+      header: () => <div className="text-center">ẢNH</div>,
       size: 64,
       enableSorting: false,
       cell: ({ row }) => {
         const product = row.original;
 
         return product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="h-10 w-10 rounded-[8px] object-cover"
-          />
+          <div className="flex justify-center">
+            <img
+              src={product.imageUrl}
+              alt={product.name}
+              className="h-10 w-10 rounded-[8px] object-cover"
+            />
+          </div>
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF3FD] text-sm font-semibold text-[var(--color-accent)]">
-            {product.name.charAt(0).toUpperCase()}
+          <div className="flex justify-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF3FD] text-sm font-semibold text-[var(--color-accent)]">
+              {product.name.charAt(0).toUpperCase()}
+            </div>
           </div>
         );
       },
     },
     {
       accessorKey: 'code',
-      header: 'MÃ SP',
+      header: () => <div className="justify-center text-center">MÃ SP</div>,
       size: 100,
       cell: ({ row }) => (
-        <span className="font-[var(--font-mono)] text-[13px] text-[var(--color-text-secondary)]">
-          {row.original.code}
-        </span>
+        <div className="text-center">
+          <span className="font-[var(--font-mono)] text-[13px] text-[var(--color-text-secondary)]">
+            {row.original.code}
+          </span>
+        </div>
       ),
     },
     {
       accessorKey: 'name',
-      header: 'TÊN SẢN PHẨM',
+      header: () => <div className="text-center">TÊN SẢN PHẨM</div>,
       cell: ({ row }) => (
-        <button
-          type="button"
-          className="truncate text-left text-[14px] font-medium text-[var(--color-text-primary)] hover:underline"
-          onClick={(event) => {
-            event.stopPropagation();
-            setDetailProduct(row.original);
-          }}
-        >
-          {row.original.name}
-        </button>
+        <div className="text-center">
+          <button
+            type="button"
+            className="max-w-[240px] truncate text-[14px] font-medium text-[var(--color-text-primary)] hover:underline"
+            onClick={(event) => {
+              event.stopPropagation();
+              setDetailProduct(row.original);
+            }}
+          >
+            {row.original.name}
+          </button>
+        </div>
       ),
     },
     {
       accessorKey: 'category',
-      header: 'DANH MỤC',
+      header: () => <div className="text-center">DANH MỤC</div>,
       size: 130,
       cell: ({ row }) => (
-        <span className="inline-flex rounded-full bg-[#F0EDFF] px-2.5 py-1 text-xs font-medium text-[#6D4BD8]">
-          {row.original.category}
-        </span>
+        <div className="text-center">
+          <span className="inline-flex rounded-full bg-[#F0EDFF] px-2.5 py-1 text-xs font-medium text-[#6D4BD8]">
+            {row.original.category}
+          </span>
+        </div>
       ),
     },
     {
+      accessorKey: 'gender',
+      header: () => <div className="text-center">GIỚI TÍNH</div>,
+      size: 110,
+      cell: ({ row }) => (
+        <div className="text-center text-[13px] font-medium text-[var(--color-text-primary)]">
+          {row.original.gender === 'female' ? 'Đồ nữ' : 'Đồ nam'}
+        </div>
+      ),
+    },
+    {
+      id: 'sizes',
+      header: () => <div className="text-center">SIZE</div>,
+      size: 160,
+      cell: ({ row }) => (
+        <div className="text-center text-[13px] text-[var(--color-text-secondary)]">
+          {(row.original.sizes && row.original.sizes.length > 0
+            ? row.original.sizes
+            : row.original.variants?.map((variant) => variant.size) ?? []
+          ).join(', ') || '-'}
+        </div>
+      ),
+    },
+    {
+      id: 'variantStocks',
+      header: () => <div className="text-center">SIZE / MÀU / TỒN</div>,
+      size: 260,
+      cell: ({ row }) => {
+        const variants = row.original.variants ?? [];
+        return (
+          <div className="text-center text-[12px] text-[var(--color-text-secondary)]">
+            {variants.length > 0
+              ? variants.map((variant) => `${variant.size}/${variant.color}:${variant.stock}`).join(' | ')
+              : '-'}
+          </div>
+        );
+      },
+    },
+    {
       accessorKey: 'price',
-      header: 'GIÁ BÁN',
+      header: () => <div className="text-center">GIÁ BÁN</div>,
       size: 130,
       cell: ({ row }) => (
-        <div className="text-right font-[var(--font-mono)] text-[14px] font-semibold text-[var(--color-text-primary)]">
+        <div className="text-center font-[var(--font-mono)] text-[14px] font-semibold text-[var(--color-text-primary)]">
           {formatVND(row.original.price)}
         </div>
       ),
     },
     {
       id: 'stock',
-      header: 'TỒN KHO',
+      header: () => <div className="text-center">TỒN KHO</div>,
       size: 120,
       accessorFn: (row) => row.stock,
       cell: ({ row }) => {
@@ -500,7 +665,7 @@ export function ProductsPage() {
         const progress = Math.min(100, (stock / Math.max(1, row.original.minStock * 3)) * 100);
 
         return (
-          <div>
+          <div className="flex flex-col items-center">
             <p className="mb-1 text-sm font-semibold text-[var(--color-text-primary)]">{stock}</p>
             <div className="h-1 w-[60px] rounded-[2px] bg-[#F0EEE9]">
               <div
@@ -514,16 +679,21 @@ export function ProductsPage() {
     },
     {
       accessorKey: 'status',
-      header: 'TRẠNG THÁI',
+      header: () => <div className="text-center">TRẠNG THÁI</div>,
       size: 130,
-      cell: ({ row }) => <StatusBadge status={row.original.status} variant="product" />,
+      cell: ({ row }) => (
+        <div className="text-center">
+          <StatusBadge status={row.original.status} variant="product" />
+        </div>
+      ),
     },
     {
       id: 'actions',
+      header: () => <div className="text-center">THAO TÁC</div>,
       size: 80,
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex items-center justify-end gap-1">
+        <div className="flex items-center justify-center gap-1">
           <button
             type="button"
             onClick={(event) => {
@@ -576,6 +746,14 @@ export function ProductsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-9 gap-2"
+            onClick={handleExportExcel}
+          >
+            <Download size={16} />
+            Xuất Excel
+          </Button>
           <Button
             variant="outline"
             className="h-9 gap-2"
@@ -701,7 +879,7 @@ export function ProductsPage() {
       ) : null}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-[680px] p-0" showCloseButton={!formLoading}>
+        <DialogContent className="w-[min(96vw,1100px)] sm:max-w-[1100px] max-h-[92vh] overflow-y-auto p-0" showCloseButton={!formLoading}>
           <DialogHeader className="border-b border-[var(--color-border)] p-5">
             <DialogTitle className="text-[20px] font-semibold text-[var(--color-text-primary)]">
               {formState.id ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới'}
@@ -711,12 +889,12 @@ export function ProductsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-5 p-5 md:grid-cols-[220px,1fr]">
-            <div>
+          <div className="grid items-start gap-5 p-5 sm:grid-cols-[220px,minmax(0,1fr)]">
+            <div className="sm:w-[220px]">
               <label className="block h-[220px] cursor-pointer rounded-[12px] border border-dashed border-[var(--color-border-strong)] bg-[var(--color-bg)] p-3">
-                {formState.imageUrl ? (
+                {formState.imageUrls[0] ? (
                   <img
-                    src={formState.imageUrl}
+                    src={formState.imageUrls[0]}
                     alt="preview"
                     className="h-full w-full rounded-[10px] object-cover"
                   />
@@ -727,16 +905,50 @@ export function ProductsPage() {
                     <p className="text-[11px] text-[var(--color-text-muted)]">PNG, JPG tối đa 5MB</p>
                   </div>
                 )}
-                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={onFileChange} />
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  multiple
+                  className="hidden"
+                  onChange={onFileChange}
+                />
               </label>
-              {formState.imageUrl ? (
-                <button
-                  type="button"
-                  className="mt-2 text-sm text-[var(--color-error)] hover:underline"
-                  onClick={() => setFormState((prev) => ({ ...prev, imageUrl: undefined }))}
-                >
-                  Xóa ảnh
-                </button>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2 h-8 w-full gap-1"
+                onClick={() => imageInputRef.current?.click()}
+              >
+                <Plus size={14} />
+                Thêm ảnh
+              </Button>
+
+              <p className="mt-2 text-xs text-[var(--color-text-muted)]">Ảnh đầu tiên là ảnh đại diện sản phẩm.</p>
+
+              {formState.imageUrls.length > 0 ? (
+                <div className="mt-3 grid grid-cols-4 gap-2">
+                  {formState.imageUrls.map((imageUrl, index) => (
+                    <div key={`${imageUrl}-${index}`} className="relative overflow-hidden rounded-[8px] border border-[var(--color-border)]">
+                      <img src={imageUrl} alt={`Ảnh ${index + 1}`} className="h-12 w-full object-cover" />
+                      <button
+                        type="button"
+                        className="absolute right-1 top-1 rounded-[4px] bg-black/55 px-1 text-[10px] text-white hover:bg-black/70"
+                        onClick={() =>
+                          setFormState((prev) => ({
+                            ...prev,
+                            imageUrls: prev.imageUrls.filter((_, i) => i !== index),
+                          }))
+                        }
+                        aria-label={`Xóa ảnh ${index + 1}`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
               ) : null}
             </div>
 
@@ -791,6 +1003,26 @@ export function ProductsPage() {
                 </div>
 
                 <div>
+                  <Label>Giới tính*</Label>
+                  <Select
+                    value={formState.gender}
+                    onValueChange={(value) =>
+                      setFormState((prev) => ({ ...prev, gender: (value as 'male' | 'female') ?? prev.gender }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1 h-9 w-full">
+                      <SelectValue>{formState.gender === 'female' ? 'Đồ nữ' : 'Đồ nam'}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Đồ nam</SelectItem>
+                      <SelectItem value="female">Đồ nữ</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
                   <Label>Giá bán* (₫)</Label>
                   <div className="relative mt-1">
                     <Input
@@ -819,13 +1051,14 @@ export function ProductsPage() {
                 </div>
 
                 <div>
-                  <Label>Số lượng*</Label>
+                  <Label>Tổng số lượng*</Label>
                   <Input
                     type="number"
-                    value={formState.stock}
-                    onChange={(event) => setFormState((prev) => ({ ...prev, stock: event.target.value }))}
-                    className="mt-1 h-9"
+                    value={formState.variants.reduce((sum, variant) => sum + Math.max(0, Number(variant.stock) || 0), 0)}
+                    readOnly
+                    className="mt-1 h-9 bg-[var(--color-bg)]"
                   />
+                  <p className="mt-1 text-xs text-[var(--color-text-muted)]">Tự động tính từ từng dòng biến thể</p>
                 </div>
               </div>
 
@@ -867,63 +1100,104 @@ export function ProductsPage() {
             {variantOpen ? (
               <div className="space-y-4 border-t border-[var(--color-border)] p-4">
                 <div>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Size</p>
-                  <div className="flex flex-wrap gap-2">
-                    {SIZE_OPTIONS.map((size) => {
-                      const active = formState.selectedSizes.includes(size);
-                      return (
-                        <button
-                          key={size}
-                          type="button"
-                          onClick={() =>
-                            setFormState((prev) => ({
-                              ...prev,
-                              selectedSizes: active
-                                ? prev.selectedSizes.filter((item) => item !== size)
-                                : [...prev.selectedSizes, size],
-                            }))
-                          }
-                          className={cn(
-                            'rounded-full border px-3 py-1 text-xs',
-                            active
-                              ? 'border-[var(--color-accent)] bg-[var(--color-accent-light)] text-[var(--color-accent)]'
-                              : 'border-[var(--color-border)] text-[var(--color-text-secondary)]',
-                          )}
-                        >
-                          {size}
-                        </button>
-                      );
-                    })}
+                  <div className="mb-2 flex items-center justify-between">
+                    <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Biến thể nhập tay</p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1"
+                      onClick={() =>
+                        setFormState((prev) => ({
+                          ...prev,
+                          variants: [...prev.variants, createEmptyVariantForm()],
+                        }))
+                      }
+                    >
+                      <Plus size={14} />
+                      Thêm biến thể
+                    </Button>
                   </div>
-                </div>
 
-                <div>
-                  <p className="mb-2 text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Màu</p>
-                  <div className="flex flex-wrap gap-2">
-                    {COLOR_OPTIONS.map((color) => {
-                      const active = formState.selectedColors.includes(color.name);
-                      return (
+                  <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(420px,1fr))]">
+                    {formState.variants.map((variant, index) => (
+                      <div key={`variant-row-${index}`} className="flex h-full items-center gap-2 rounded-[8px] border border-[var(--color-border)] p-2">
+                        <Select
+                          value={variant.size || SIZE_OPTIONS[0]}
+                          onValueChange={(value) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              variants: prev.variants.map((item, i) =>
+                                i === index ? { ...item, size: value ?? item.size } : item,
+                              ),
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="h-8 w-[92px] min-w-[92px]">
+                            <SelectValue>{variant.size || 'Size'}</SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {SIZE_OPTIONS.map((size) => (
+                              <SelectItem key={size} value={size}>
+                                {size}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+
+                        <Input
+                          value={variant.color}
+                          onChange={(event) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              variants: prev.variants.map((item, i) =>
+                                i === index ? { ...item, color: event.target.value } : item,
+                              ),
+                            }))
+                          }
+                          placeholder="Màu"
+                          className="h-8 min-w-[140px] flex-1"
+                        />
+
+                        <Input
+                          type="number"
+                          min={0}
+                          value={variant.stock}
+                          onChange={(event) =>
+                            setFormState((prev) => ({
+                              ...prev,
+                              variants: prev.variants.map((item, i) =>
+                                i === index ? { ...item, stock: event.target.value } : item,
+                              ),
+                            }))
+                          }
+                          placeholder="Số lượng"
+                          className="h-8 w-[90px] min-w-[90px]"
+                        />
+
                         <button
-                          key={color.name}
                           type="button"
                           onClick={() =>
                             setFormState((prev) => ({
                               ...prev,
-                              selectedColors: active
-                                ? prev.selectedColors.filter((item) => item !== color.name)
-                                : [...prev.selectedColors, color.name],
+                              variants:
+                                prev.variants.length > 1
+                                  ? prev.variants.filter((_, i) => i !== index)
+                                  : [createEmptyVariantForm()],
                             }))
                           }
-                          className={cn(
-                            'h-6 w-6 rounded-full border-2',
-                            active ? 'border-[var(--color-accent)]' : 'border-white ring-1 ring-[var(--color-border)]',
-                          )}
-                          style={{ backgroundColor: color.hex }}
-                          aria-label={color.name}
-                        />
-                      );
-                    })}
+                          className="flex h-8 w-8 items-center justify-center rounded-[6px] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-error-bg)] hover:text-[var(--color-error)]"
+                          aria-label="Xóa biến thể"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
+
+                  <p className="text-xs text-[var(--color-text-muted)]">
+                    Có thể nhập nhiều size cho 1 màu, và nhiều màu cho 1 size.
+                  </p>
                 </div>
               </div>
             ) : null}
@@ -949,12 +1223,26 @@ export function ProductsPage() {
                 <DialogDescription>{detailProduct.code}</DialogDescription>
               </DialogHeader>
 
-              {detailProduct.imageUrl ? (
-                <img
-                  src={detailProduct.imageUrl}
-                  alt={detailProduct.name}
-                  className="h-48 w-full rounded-[10px] border border-[var(--color-border)] object-cover"
-                />
+              {(detailProduct.imageUrls ?? []).length > 0 || detailProduct.imageUrl ? (
+                <div className="space-y-2">
+                  <img
+                    src={detailProduct.imageUrls?.[0] ?? detailProduct.imageUrl}
+                    alt={detailProduct.name}
+                    className="h-48 w-full rounded-[10px] border border-[var(--color-border)] object-cover"
+                  />
+                  {(detailProduct.imageUrls ?? []).length > 1 ? (
+                    <div className="grid grid-cols-5 gap-2">
+                      {detailProduct.imageUrls?.slice(1).map((imageUrl, index) => (
+                        <img
+                          key={`${detailProduct.id}-extra-${index}`}
+                          src={imageUrl}
+                          alt={`${detailProduct.name} ${index + 2}`}
+                          className="h-14 w-full rounded-[8px] border border-[var(--color-border)] object-cover"
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               ) : (
                 <div className="flex h-48 w-full items-center justify-center rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)]">
                   <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#EEF3FD] text-2xl font-semibold text-[var(--color-accent)]">
@@ -968,6 +1256,15 @@ export function ProductsPage() {
                   Danh mục: <span className="font-medium">{detailProduct.category}</span>
                 </p>
                 <p>
+                  Giới tính: <span className="font-medium">{detailProduct.gender === 'female' ? 'Đồ nữ' : 'Đồ nam'}</span>
+                </p>
+                <p>
+                  Size: <span className="font-medium">{(detailProduct.sizes ?? []).join(', ') || '-'}</span>
+                </p>
+                <p>
+                  Màu: <span className="font-medium">{(detailProduct.colors ?? []).join(', ') || '-'}</span>
+                </p>
+                <p>
                   Giá bán: <span className="font-medium">{formatVND(detailProduct.price)}</span>
                 </p>
                 <p>
@@ -976,6 +1273,20 @@ export function ProductsPage() {
                 <p>
                   Trạng thái: <StatusBadge status={detailProduct.status} variant="product" />
                 </p>
+                <div>
+                  <p className="font-medium text-[var(--color-text-primary)]">Tồn kho theo biến thể:</p>
+                  <div className="mt-1 space-y-1 text-[var(--color-text-secondary)]">
+                    {(detailProduct.variants ?? []).length > 0 ? (
+                      detailProduct.variants?.map((variant) => (
+                        <p key={variant.id}>
+                          {variant.size} / {variant.color}: {variant.stock}
+                        </p>
+                      ))
+                    ) : (
+                      <p>-</p>
+                    )}
+                  </div>
+                </div>
               </div>
             </>
           ) : null}

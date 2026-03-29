@@ -10,9 +10,43 @@ export const CustomerRegisterPage = () => {
   const register = useCustomerAuthStore((state) => state.register)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [error, setError] = useState('')
+
+  const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  const isValidPhone = (value: string) => /^0\d{9,10}$/.test(value)
+  const isStrongPassword = (value: string) =>
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^A-Za-z0-9]/.test(value)
+
+  const normalizeAuthError = (raw: string) => {
+    if (!raw) {
+      return ''
+    }
+
+    if (raw.includes('Validation failed')) {
+      return 'Thông tin chưa hợp lệ. Vui lòng kiểm tra lại email, số điện thoại và mật khẩu.'
+    }
+
+    if (raw.includes('Invalid email format')) {
+      return 'Email không hợp lệ. Ví dụ đúng: tung@gmail.com'
+    }
+
+    if (raw.includes('Phone number is already registered')) {
+      return 'Số điện thoại này đã được đăng ký.'
+    }
+
+    if (raw.includes('Email is already registered')) {
+      return 'Email này đã được đăng ký.'
+    }
+
+    return raw
+  }
 
   return (
     <section className="flex min-h-[calc(100vh-170px)] items-center justify-center py-10">
@@ -53,51 +87,90 @@ export const CustomerRegisterPage = () => {
           onSubmit={async (event) => {
             event.preventDefault()
             setError('')
+
+            if (!fullName.trim()) {
+              setError('Vui lòng nhập họ và tên.')
+              return
+            }
+
+            if (!isValidEmail(email.trim())) {
+              setError('Email không hợp lệ. Ví dụ đúng: tung@gmail.com')
+              return
+            }
+
+            if (!isValidPhone(phone.trim())) {
+              setError('Số điện thoại không hợp lệ (bắt đầu bằng 0, 10-11 số).')
+              return
+            }
+
+            if (!isStrongPassword(password)) {
+              setError('Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.')
+              return
+            }
+
             if (!acceptTerms) {
               setError('Vui lòng đồng ý điều khoản để tiếp tục.')
               return
             }
 
-            const success = await register(fullName, email, password)
+            const normalizedEmail = email.trim().toLowerCase()
+            const normalizedPhone = phone.trim()
+            const success = await register(fullName.trim(), normalizedEmail, password, normalizedPhone)
             if (success) {
               navigate('/tai-khoan')
               return
             }
 
-            setError('Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.')
+            const latestError = useCustomerAuthStore.getState().authError
+            setError(normalizeAuthError(latestError) || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.')
           }}
         >
           <div className="relative">
-            <User size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <User size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
             <input
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Họ và tên"
-              className="rf-input h-11 w-full rounded-lg pl-10 pr-3 text-sm"
+              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-3 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
             />
           </div>
 
           <div className="relative">
-            <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <Mail size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
             <input
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               type="email"
-              placeholder="Email"
-              className="rf-input h-11 w-full rounded-lg pl-10 pr-3 text-sm"
+              placeholder="ten@gmail.com"
+              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-3 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
             />
           </div>
 
           <div className="relative">
-            <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+            <User size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              type="tel"
+              placeholder="So dien thoai"
+              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-3 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
+            />
+          </div>
+
+          <div className="relative">
+            <Lock size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/70" />
             <input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               type="password"
               placeholder="Mật khẩu"
-              className="rf-input h-11 w-full rounded-lg pl-10 pr-3 text-sm"
+              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-3 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
             />
           </div>
+
+          <p className="text-[12px] text-white/45">
+            Mật khẩu phải gồm ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
+          </p>
 
           <label className="mt-1 flex items-start gap-2 text-[12px] text-white/50">
             <input

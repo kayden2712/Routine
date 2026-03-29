@@ -6,6 +6,7 @@ import type { User, UserRole } from '@/types';
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  authError: string;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => void;
 }
@@ -15,16 +16,25 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      authError: '',
       login: async (email, password, role) => {
-        const user = await adminLogin(email, password);
-        if (user.role !== role) {
-          throw new Error('Vai trò không khớp với tài khoản đăng nhập');
+        try {
+          const user = await adminLogin(email, password);
+          if (user.role !== role) {
+            const roleError = 'Vai tro khong khop voi tai khoan dang nhap';
+            set({ authError: roleError });
+            throw new Error(roleError);
+          }
+          set({ user, isAuthenticated: true, authError: '' });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Dang nhap that bai';
+          set({ authError: message });
+          throw error;
         }
-        set({ user, isAuthenticated: true });
       },
       logout: () => {
         localStorage.removeItem('routine-auth');
-        set({ user: null, isAuthenticated: false });
+        set({ user: null, isAuthenticated: false, authError: '' });
       },
     }),
     {

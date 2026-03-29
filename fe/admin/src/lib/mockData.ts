@@ -65,6 +65,8 @@ function pick<T>(arr: T[], index: number): T {
   return arr[index % arr.length];
 }
 
+const femaleCategories = new Set(['Vay', 'Dam', 'Chan vay', 'Blazer']);
+
 export const products: Product[] = productSeed.map((item, index) => {
   const stock = 6 + ((index * 7) % 30);
   const minStock = 8 + (index % 5);
@@ -75,6 +77,7 @@ export const products: Product[] = productSeed.map((item, index) => {
     code: `${item.code}-${String(index + 1).padStart(3, '0')}`,
     name: item.name,
     category: item.category,
+    gender: femaleCategories.has(item.category) ? 'female' : 'male',
     price: item.price,
     costPrice: item.cost,
     stock,

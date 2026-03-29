@@ -63,6 +63,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
         { label: 'Tao hoa don', to: '/pos', icon: ShoppingCart },
         { label: 'San pham', to: '/products', icon: Package },
         { label: 'Khach hang', to: '/customers', icon: Users },
+        { label: 'Cai dat', to: '/settings', icon: Settings },
       ],
     },
   ],
@@ -72,6 +73,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
       items: [
         { label: 'Kho hang', to: '/inventory', icon: Warehouse },
         { label: 'San pham', to: '/products', icon: Package },
+        { label: 'Cai dat', to: '/settings', icon: Settings },
       ],
     },
   ],
@@ -81,6 +83,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
       items: [
         { label: 'Bao cao', to: '/reports', icon: BarChart3 },
         { label: 'Hoa don', to: '/invoices', icon: Receipt },
+        { label: 'Cai dat', to: '/settings', icon: Settings },
       ],
     },
   ],

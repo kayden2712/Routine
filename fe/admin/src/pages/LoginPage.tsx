@@ -40,7 +40,7 @@ const roleOptions: RoleOption[] = [
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, user, login } = useAuthStore();
+  const { isAuthenticated, user, login, authError } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('manager');
@@ -187,7 +187,7 @@ export function LoginPage() {
               <div className="animate-[slideFadeIn_0.2s_ease] rounded-[8px] border border-[#FECACA] bg-[var(--color-error-bg)] px-[14px] py-[10px] text-[14px] text-[var(--color-error)]">
                 <div className="flex items-center gap-2">
                   <AlertCircle size={16} />
-                  <span>Email hoặc mật khẩu không đúng</span>
+                  <span>{authError || 'Email hoặc mật khẩu không đúng'}</span>
                 </div>
               </div>
             ) : null}
@@ -203,10 +203,7 @@ export function LoginPage() {
 
             <div className="mt-6 border-t border-[var(--color-border)] pt-6 text-center">
               <p className="text-[13px] text-[var(--color-text-secondary)]">
-                Chưa có tài khoản?{' '}
-                <a href="/register" className="font-medium text-[var(--color-accent)] hover:underline">
-                  Đăng ký ngay
-                </a>
+                Quản lý nhân viên được thực hiện trong mục Nhan vien sau khi đăng nhập.
               </p>
             </div>
           </form>

@@ -105,24 +105,59 @@ export function ReportsPage() {
   const [draftFrom, setDraftFrom] = useState(format(subDays(today, 29), 'yyyy-MM-dd'));
   const [draftTo, setDraftTo] = useState(format(today, 'yyyy-MM-dd'));
   const [revenueMode, setRevenueMode] = useState<RevenuePeriodMode>('week');
+  const [isLoading, setIsLoading] = useState(true);
+  const [canViewCustomers, setCanViewCustomers] = useState(true);
   const [ordersData, setOrdersData] = useState<Order[]>([]);
   const [productsData, setProductsData] = useState<Product[]>([]);
   const [customersData, setCustomersData] = useState<Customer[]>([]);
 
   useEffect(() => {
     const loadData = async () => {
-      const [orders, products, customers] = await Promise.all([
+      setIsLoading(true);
+      const [ordersResult, productsResult, customersResult] = await Promise.allSettled([
         fetchOrdersApi(),
         fetchProductsApi(),
         fetchCustomersApi(),
       ]);
-      setOrdersData(orders);
-      setProductsData(products);
-      setCustomersData(customers);
+
+      if (ordersResult.status === 'fulfilled') {
+        setOrdersData(ordersResult.value);
+      } else {
+        toast.error(ordersResult.reason instanceof Error ? ordersResult.reason.message : 'Không thể tải dữ liệu đơn hàng');
+      }
+
+      if (productsResult.status === 'fulfilled') {
+        setProductsData(productsResult.value);
+      } else {
+        toast.error(productsResult.reason instanceof Error ? productsResult.reason.message : 'Không thể tải dữ liệu sản phẩm');
+      }
+
+      if (customersResult.status === 'fulfilled') {
+        setCustomersData(customersResult.value);
+        setCanViewCustomers(true);
+      } else {
+        const message = customersResult.reason instanceof Error ? customersResult.reason.message : '';
+        const isPermissionError = message.toLowerCase().includes('permission');
+        setCustomersData([]);
+        setCanViewCustomers(!isPermissionError);
+        if (!isPermissionError) {
+          toast.error(message || 'Không thể tải dữ liệu khách hàng');
+        }
+      }
+
+      setIsLoading(false);
     };
 
     void loadData();
   }, []);
+
+  const productById = useMemo(() => {
+    const map = new Map<string, Product>();
+    productsData.forEach((product) => {
+      map.set(product.id, product);
+    });
+    return map;
+  }, [productsData]);
 
   const revenueByDay = useMemo(() => {
     const map = new Map<string, { parsedDate: Date; revenue: number; orders: number }>();
@@ -150,7 +185,7 @@ export function ReportsPage() {
     return revenueByDay
       .filter((item) => inRange(item.parsedDate, dateRange))
       .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
-  }, [dateRange]);
+  }, [dateRange, revenueByDay]);
 
   const revenueSeries = useMemo<RevenueRow[]>(() => {
     const source =
@@ -192,7 +227,7 @@ export function ReportsPage() {
 
     filteredOrders.forEach((order) => {
       order.items.forEach((item) => {
-        const product = productsData.find((p) => p.id === item.productId);
+        const mappedProduct = productById.get(item.productId);
         const existing = map.get(item.productId);
         if (existing) {
           existing.sold += item.quantity;
@@ -205,9 +240,9 @@ export function ReportsPage() {
           name: item.productName,
           sold: item.quantity,
           revenue: item.subtotal,
-          stock: product?.stock ?? 0,
+          stock: mappedProduct?.stock ?? 0,
           performance: 0,
-          category: product?.category ?? 'Khác',
+          category: mappedProduct?.category ?? 'Khác',
         });
       });
     });
@@ -219,7 +254,7 @@ export function ReportsPage() {
       ...row,
       performance: Math.round((row.sold / maxSold) * 100),
     }));
-  }, [filteredOrders, productsData]);
+  }, [filteredOrders, productById]);
 
   const categoryPieData = useMemo(() => {
     const map = new Map<string, number>();
@@ -239,18 +274,24 @@ export function ReportsPage() {
   }, [topProducts]);
 
   const newCustomersSeries = useMemo(() => {
-    const map = new Map<string, number>();
+    const map = new Map<string, { parsedDate: Date; count: number }>();
 
     customersData
       .filter((customer) => inRange(customer.createdAt, dateRange))
       .forEach((customer) => {
-        const key = format(customer.createdAt, 'dd/MM');
-        map.set(key, (map.get(key) ?? 0) + 1);
+        const parsedDate = startOfDay(customer.createdAt);
+        const key = format(parsedDate, 'yyyy-MM-dd');
+        const current = map.get(key) ?? { parsedDate, count: 0 };
+        current.count += 1;
+        map.set(key, current);
       });
 
-    return Array.from(map.entries())
-      .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    return Array.from(map.values())
+      .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
+      .map((item) => ({
+        date: format(item.parsedDate, 'dd/MM'),
+        count: item.count,
+      }));
   }, [customersData, dateRange]);
 
   const topCustomers = useMemo(() => {
@@ -439,7 +480,7 @@ export function ReportsPage() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-[1480px] space-y-5">
       <section className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">
           Báo cáo & Thống kê
@@ -511,12 +552,12 @@ export function ReportsPage() {
         </div>
       </section>
 
-      <Tabs defaultValue="revenue" className="w-full">
-        <TabsList variant="line" className="h-auto border-b border-[var(--color-border)] p-0">
-          <TabsTrigger value="revenue" className="px-4 py-2 text-[15px] font-medium">Doanh thu</TabsTrigger>
-          <TabsTrigger value="products" className="px-4 py-2 text-[15px] font-medium">Sản phẩm</TabsTrigger>
-          <TabsTrigger value="customers" className="px-4 py-2 text-[15px] font-medium">Khách hàng</TabsTrigger>
-          <TabsTrigger value="stock" className="px-4 py-2 text-[15px] font-medium">Tồn kho</TabsTrigger>
+      <Tabs defaultValue="revenue" className="flex-col gap-4">
+        <TabsList variant="line" className="h-auto w-full justify-start border-b border-[var(--color-border)] p-0">
+          <TabsTrigger value="revenue" className="flex-none px-4 py-2 text-[15px] font-medium">Doanh thu</TabsTrigger>
+          <TabsTrigger value="products" className="flex-none px-4 py-2 text-[15px] font-medium">Sản phẩm</TabsTrigger>
+          <TabsTrigger value="customers" className="flex-none px-4 py-2 text-[15px] font-medium">Khách hàng</TabsTrigger>
+          <TabsTrigger value="stock" className="flex-none px-4 py-2 text-[15px] font-medium">Tồn kho</TabsTrigger>
         </TabsList>
 
         <TabsContent value="revenue" className="mt-4 space-y-4">
@@ -568,29 +609,35 @@ export function ReportsPage() {
             </div>
 
             <div className="h-[320px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={revenueSeries}>
-                  <CartesianGrid vertical={false} stroke="#F0EEE9" />
-                  <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} />
-                  <YAxis
-                    tick={{ fontSize: 12, fill: '#A09D99' }}
-                    axisLine={false}
-                    tickLine={false}
-                    tickFormatter={(value: number) => `${Math.round(value / 1000000)}M`}
-                  />
-                  <Tooltip
-                    contentStyle={{ border: '1px solid #E8E6E3', borderRadius: '8px', background: '#fff' }}
-                    formatter={(value, name, item) => {
-                      if (name === 'revenue') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Doanh thu'];
-                      if (name === 'orders') return [item.payload?.orders ?? 0, 'Số đơn'];
-                      return [value, name];
-                    }}
-                  />
-                  <Legend verticalAlign="bottom" />
-                  <Bar name="Doanh thu" dataKey="revenue" fill="#2D6BE4" opacity={0.9} radius={[4, 4, 0, 0]} />
-                  <Line name="Lũy kế" dataKey="cumulative" stroke="#16A34A" strokeWidth={2} dot={false} />
-                </ComposedChart>
-              </ResponsiveContainer>
+              {isLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Đang tải dữ liệu biểu đồ...</div>
+              ) : revenueSeries.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có dữ liệu doanh thu trong khoảng thời gian đã chọn.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={revenueSeries}>
+                    <CartesianGrid vertical={false} stroke="#F0EEE9" />
+                    <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      tick={{ fontSize: 12, fill: '#A09D99' }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(value: number) => `${Math.round(value / 1000000)}M`}
+                    />
+                    <Tooltip
+                      contentStyle={{ border: '1px solid #E8E6E3', borderRadius: '8px', background: '#fff' }}
+                      formatter={(value, name, item) => {
+                        if (name === 'revenue') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Doanh thu'];
+                        if (name === 'orders') return [item.payload?.orders ?? 0, 'Số đơn'];
+                        return [value, name];
+                      }}
+                    />
+                    <Legend verticalAlign="bottom" />
+                    <Bar name="Doanh thu" dataKey="revenue" fill="#2D6BE4" opacity={0.9} radius={[4, 4, 0, 0]} />
+                    <Line name="Lũy kế" dataKey="cumulative" stroke="#16A34A" strokeWidth={2} dot={false} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
             <div className="mt-4">
@@ -604,26 +651,32 @@ export function ReportsPage() {
             <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
               <h3 className="mb-3 text-base font-semibold">Top sản phẩm bán chạy</h3>
               <div className="h-[320px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={topProducts.slice(0, 8)} layout="vertical" margin={{ left: 20, right: 20 }}>
-                    <defs>
-                      <linearGradient id="topProductGradient" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#2D6BE4" />
-                        <stop offset="100%" stopColor="#6B9DF8" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid horizontal={false} stroke="#F0EEE9" />
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12, fill: '#6B6863' }} />
-                    <Tooltip
-                      formatter={(value, _, payload) => [
-                        `${Number(value ?? 0)} sp · ${formatVND(Number(payload?.payload?.revenue ?? 0))}`,
-                        'Bán ra',
-                      ]}
-                    />
-                    <Bar dataKey="sold" fill="url(#topProductGradient)" radius={[4, 4, 4, 4]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {isLoading ? (
+                  <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Đang tải dữ liệu sản phẩm...</div>
+                ) : topProducts.length === 0 ? (
+                  <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có dữ liệu bán hàng trong khoảng thời gian đã chọn.</div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={topProducts.slice(0, 8)} layout="vertical" margin={{ left: 20, right: 20 }}>
+                      <defs>
+                        <linearGradient id="topProductGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#2D6BE4" />
+                          <stop offset="100%" stopColor="#6B9DF8" />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid horizontal={false} stroke="#F0EEE9" />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12, fill: '#6B6863' }} />
+                      <Tooltip
+                        formatter={(value, _, payload) => [
+                          `${Number(value ?? 0)} sp · ${formatVND(Number(payload?.payload?.revenue ?? 0))}`,
+                          'Bán ra',
+                        ]}
+                      />
+                      <Bar dataKey="sold" fill="url(#topProductGradient)" radius={[4, 4, 4, 4]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
 
@@ -668,24 +721,41 @@ export function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="customers" className="mt-4 space-y-4">
+          {!canViewCustomers ? (
+            <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-8 text-center">
+              <p className="text-sm font-medium text-[var(--color-text-primary)]">Bạn chưa có quyền xem dữ liệu khách hàng.</p>
+              <p className="mt-1 text-xs text-[var(--color-text-muted)]">Liên hệ quản lý để được cấp quyền truy cập mục này.</p>
+            </section>
+          ) : null}
+
+          {canViewCustomers ? (
           <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
             <h3 className="mb-3 text-base font-semibold">Khách hàng mới theo ngày</h3>
             <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={newCustomersSeries}>
-                  <CartesianGrid vertical={false} stroke="#F0EEE9" />
-                  <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="count" stroke="#16A34A" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
+              {isLoading ? (
+                <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Đang tải dữ liệu khách hàng...</div>
+              ) : newCustomersSeries.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có khách hàng mới trong khoảng thời gian đã chọn.</div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={newCustomersSeries}>
+                    <CartesianGrid vertical={false} stroke="#F0EEE9" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="count" stroke="#16A34A" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </section>
+          ) : null}
 
+          {canViewCustomers ? (
           <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-4">
             <DataTable data={topCustomers} columns={customerColumns} pageSize={10} />
           </section>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="stock" className="mt-4 space-y-4">

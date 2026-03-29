@@ -84,7 +84,7 @@ export const ProductListPage = () => {
       counts.set(product.category, (counts.get(product.category) ?? 0) + 1)
     }
     return counts
-  }, [])
+  }, [products])
 
   const uniqueCategories = useMemo(() => Array.from(categoryCounts.keys()), [categoryCounts])
 
@@ -96,7 +96,18 @@ export const ProductListPage = () => {
       }
     }
     return Array.from(set)
-  }, [])
+  }, [products])
+
+  const colorCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const product of products) {
+      const uniqueByProduct = new Set(product.colors)
+      for (const color of uniqueByProduct) {
+        counts.set(color, (counts.get(color) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [products])
 
   const uniqueSizes = useMemo(() => {
     const set = new Set<string>()
@@ -106,7 +117,18 @@ export const ProductListPage = () => {
       }
     }
     return sizeOrder.filter((size) => set.has(size))
-  }, [])
+  }, [products])
+
+  const sizeCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const product of products) {
+      const uniqueByProduct = new Set(product.sizes)
+      for (const size of uniqueByProduct) {
+        counts.set(size, (counts.get(size) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [products])
 
   const filtered = useMemo(() => {
     const base = products.filter((product) => {
@@ -143,7 +165,7 @@ export const ProductListPage = () => {
     }
 
     return base
-  }, [genderFilter, initialCategories, maxPrice, saleOnly, searchQuery, selectedCategories, selectedColors, selectedRating, selectedSizes, sortBy, wishlistOnly, wishlistedIds])
+  }, [genderFilter, initialCategories, maxPrice, products, saleOnly, searchQuery, selectedCategories, selectedColors, selectedRating, selectedSizes, sortBy, wishlistOnly, wishlistedIds])
 
   const toggleValue = (values: string[], value: string) =>
     values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
@@ -222,7 +244,7 @@ export const ProductListPage = () => {
               <span className="text-[11px] font-semibold uppercase tracking-[0.07em] text-[var(--text-secondary)]">MÀU SẮC</span>
               <ChevronDown size={14} className="text-[var(--text-secondary)]" />
             </CollapsibleTrigger>
-            <CollapsibleContent className="mt-3 grid grid-cols-3 gap-2">
+            <CollapsibleContent className="mt-3 space-y-2">
               {uniqueColors.map((color) => {
                 const selected = selectedColors.includes(color)
                 return (
@@ -231,12 +253,22 @@ export const ProductListPage = () => {
                     type="button"
                     title={color}
                     onClick={() => setSelectedColors((prev) => toggleValue(prev, color))}
-                    className="h-6 w-6 rounded-full"
-                    style={{
-                      backgroundColor: colorMap[color] ?? '#9CA3AF',
-                      boxShadow: selected ? '0 0 0 2px #ffffff, 0 0 0 3px #1A1A18' : 'none',
-                    }}
-                  />
+                    className={`flex w-full items-center justify-between rounded-md px-1 py-1 text-left ${
+                      selected ? 'bg-[var(--line-soft)]' : ''
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2 text-[13px] text-[var(--text-primary)]">
+                      <span
+                        className="h-4 w-4 rounded-full"
+                        style={{
+                          backgroundColor: colorMap[color] ?? '#9CA3AF',
+                          boxShadow: selected ? '0 0 0 2px #ffffff, 0 0 0 3px #1A1A18' : '0 0 0 1px #D1D5DB inset',
+                        }}
+                      />
+                      <span>{color}</span>
+                    </span>
+                    <span className="text-[12px] text-[var(--text-secondary)]">({colorCounts.get(color) ?? 0})</span>
+                  </button>
                 )
               })}
             </CollapsibleContent>
@@ -265,7 +297,7 @@ export const ProductListPage = () => {
                         : 'border-[var(--line)] bg-[var(--surface-bg)] text-[var(--text-secondary)] hover:border-[var(--line-strong)] hover:text-[var(--text-primary)]'
                     }`}
                   >
-                    {size}
+                    {size} <span className="ml-1 opacity-75">({sizeCounts.get(size) ?? 0})</span>
                   </button>
                 )
               })}

@@ -49,12 +49,25 @@ export const useProductStore = create<ProductState>((set) => ({
       code: product.code,
       name: product.name,
       category: product.category,
+      gender: product.gender,
       description: '',
       price: product.price,
       costPrice: product.costPrice,
       stock: product.stock,
       minStock: product.minStock,
       imageUrl: product.imageUrl,
+      imageUrls: product.imageUrls,
+      sizes: product.sizes ?? product.variants?.map((variant) => variant.size) ?? [],
+      colors: product.colors ?? product.variants?.map((variant) => variant.color) ?? [],
+      sizeStocks: (product.variants ?? []).reduce<Record<string, number>>((acc, variant) => {
+        acc[variant.size] = variant.stock;
+        return acc;
+      }, {}),
+      variants: (product.variants ?? []).map((variant) => ({
+        size: variant.size,
+        color: variant.color,
+        stock: variant.stock,
+      })),
     });
     set((state) => ({ products: [created, ...state.products] }));
   },
@@ -63,12 +76,25 @@ export const useProductStore = create<ProductState>((set) => ({
       code: product.code,
       name: product.name,
       category: product.category,
+      gender: product.gender,
       description: '',
       price: product.price,
       costPrice: product.costPrice,
       stock: product.stock,
       minStock: product.minStock,
       imageUrl: product.imageUrl,
+      imageUrls: product.imageUrls,
+      sizes: product.sizes ?? product.variants?.map((variant) => variant.size) ?? [],
+      colors: product.colors ?? product.variants?.map((variant) => variant.color) ?? [],
+      sizeStocks: (product.variants ?? []).reduce<Record<string, number>>((acc, variant) => {
+        acc[variant.size] = variant.stock;
+        return acc;
+      }, {}),
+      variants: (product.variants ?? []).map((variant) => ({
+        size: variant.size,
+        color: variant.color,
+        stock: variant.stock,
+      })),
     });
     set((state) => ({
       products: state.products.map((item) => (item.id === product.id ? updated : item)),

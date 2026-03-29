@@ -2,7 +2,13 @@ export type ProductCategory = string
 
 export type ProductBadge = 'new' | 'sale' | 'bestseller'
 
-export type ProductSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | '28' | '29' | '30' | '31' | '32'
+export type ProductSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | '2XL' | '28' | '29' | '30' | '31' | '32'
+
+export interface ProductVariant {
+  size: string
+  color: string
+  stock: number
+}
 
 export interface Product {
   id: string
@@ -12,8 +18,10 @@ export interface Product {
   price: number
   oldPrice?: number
   image: string
+  images?: string[]
   colors: string[]
   sizes: ProductSize[]
+  variants?: ProductVariant[]
   rating: number
   reviewCount: number
   badge?: ProductBadge
@@ -57,6 +65,9 @@ export interface CustomerUser {
   fullName: string
   email: string
   phone?: string
+  address?: string
+  district?: string
+  city?: string
   token?: string
   refreshToken?: string
 }

@@ -10,10 +10,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.be.dto.request.ChangePasswordRequest;
 import com.example.be.dto.request.LoginRequest;
 import com.example.be.dto.request.RefreshTokenRequest;
 import com.example.be.dto.request.RegisterCustomerRequest;
 import com.example.be.dto.request.RegisterUserRequest;
+import com.example.be.dto.request.UpdateCustomerProfileRequest;
 import com.example.be.dto.response.AuthResponse;
 import com.example.be.entity.Customer;
 import com.example.be.entity.CustomerTier;
@@ -28,58 +30,58 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
-    
+
     private final UserRepository userRepository;
     private final CustomerRepository customerRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider tokenProvider;
-    
+
     @Transactional
     public AuthResponse registerUser(RegisterUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email is already registered");
         }
-        
+
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setRole(request.getRole());
         user.setIsActive(true);
-        
+
         userRepository.save(user);
-        
+
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
-        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication), tokenProvider.generateRefreshToken(authentication));
+
+        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
+                tokenProvider.generateRefreshToken(authentication));
     }
-    
+
     public AuthResponse loginUser(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
+
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("User not found"));
-        
-        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication), tokenProvider.generateRefreshToken(authentication));
+
+        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
+                tokenProvider.generateRefreshToken(authentication));
     }
-    
+
     @Transactional
     public AuthResponse registerCustomer(RegisterCustomerRequest request) {
         if (customerRepository.existsByEmail(request.getEmail())) {
             throw new BadRequestException("Email is already registered");
         }
-        
+
         if (customerRepository.existsByPhone(request.getPhone())) {
             throw new BadRequestException("Phone number is already registered");
         }
-        
+
         Customer customer = new Customer();
         customer.setEmail(request.getEmail());
         customer.setPasswordHash(passwordEncoder.encode(request.getPassword()));
@@ -88,27 +90,27 @@ public class AuthService {
         customer.setTier(CustomerTier.REGULAR);
         customer.setTotalOrders(0);
         customer.setTotalSpent(BigDecimal.ZERO);
-        
+
         customerRepository.save(customer);
-        
+
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
-        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication), tokenProvider.generateRefreshToken(authentication));
+
+        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication),
+                tokenProvider.generateRefreshToken(authentication));
     }
-    
+
     public AuthResponse loginCustomer(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        
+
         Customer customer = customerRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new BadRequestException("Customer not found"));
-        
-        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication), tokenProvider.generateRefreshToken(authentication));
+
+        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication),
+                tokenProvider.generateRefreshToken(authentication));
     }
 
     public AuthResponse refreshToken(RefreshTokenRequest request) {
@@ -120,13 +122,15 @@ public class AuthService {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
             Authentication authentication = new UsernamePasswordAuthenticationToken(email, null);
-            return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication), tokenProvider.generateRefreshTokenByEmail(email));
+            return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
+                    tokenProvider.generateRefreshTokenByEmail(email));
         }
 
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("User not found for refresh token"));
         Authentication authentication = new UsernamePasswordAuthenticationToken(email, null);
-        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication), tokenProvider.generateRefreshTokenByEmail(email));
+        return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication),
+                tokenProvider.generateRefreshTokenByEmail(email));
     }
 
     public AuthResponse getCurrentUser(String email) {
@@ -138,6 +142,47 @@ public class AuthService {
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException("Current user not found"));
         return buildCustomerAuthResponse(customer, null, null);
+    }
+
+    @Transactional
+    public AuthResponse updateCustomerProfile(String customerEmail, UpdateCustomerProfileRequest request) {
+        Customer customer = customerRepository.findByEmail(customerEmail)
+                .orElseThrow(() -> new BadRequestException("Customer not found"));
+
+        String normalizedPhone = request.getPhone() != null ? request.getPhone().trim() : "";
+        if (!normalizedPhone.equals(customer.getPhone()) && customerRepository.existsByPhone(normalizedPhone)) {
+            throw new BadRequestException("Phone number is already registered");
+        }
+
+        customer.setFullName(request.getFullName().trim());
+        customer.setPhone(normalizedPhone);
+        customer.setAddress(request.getAddress() != null ? request.getAddress().trim() : null);
+        customer.setDistrict(request.getDistrict() != null ? request.getDistrict().trim() : null);
+        customer.setCity(request.getCity() != null ? request.getCity().trim() : null);
+
+        customerRepository.save(customer);
+        return buildCustomerAuthResponse(customer, null, null);
+    }
+
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user != null) {
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+                throw new BadRequestException("Current password is incorrect");
+            }
+            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+            return;
+        }
+
+        Customer customer = customerRepository.findByEmail(email)
+                .orElseThrow(() -> new BadRequestException("Current user not found"));
+        if (!passwordEncoder.matches(request.getCurrentPassword(), customer.getPasswordHash())) {
+            throw new BadRequestException("Current password is incorrect");
+        }
+        customer.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        customerRepository.save(customer);
     }
 
     private AuthResponse buildUserAuthResponse(User user, String token, String refreshToken) {
@@ -163,6 +208,9 @@ public class AuthService {
                 .role("CUSTOMER")
                 .phone(customer.getPhone())
                 .tier(customer.getTier() != null ? customer.getTier().name() : null)
+                .address(customer.getAddress())
+                .district(customer.getDistrict())
+                .city(customer.getCity())
                 .build();
     }
 }

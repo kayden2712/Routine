@@ -19,6 +19,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
   const isWishlisted = useWishlistStore((state) => state.isWishlisted)
 
   const wished = isWishlisted(product.id)
+  const variantSummary = (product.variants ?? [])
+    .slice(0, 2)
+    .map((variant) => `${variant.size}/${variant.color}:${variant.stock}`)
+    .join(' | ')
 
   const animateFlyToCart = () => {
     const sourceImage = document.getElementById(`product-card-image-${product.id}`) as HTMLImageElement | null
@@ -118,6 +122,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             <span className="text-xs text-[var(--text-secondary)] line-through">{formatVnd(product.oldPrice)}</span>
           )}
         </div>
+
+        <p className="text-xs text-[var(--text-secondary)]">
+          {variantSummary || `${product.sizes.join(', ')} | ${product.colors.join(', ')} | Tồn: ${product.stock ?? 0}`}
+        </p>
 
         <Button
           className="mt-auto w-full"

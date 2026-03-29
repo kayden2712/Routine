@@ -37,6 +37,7 @@ import {
   fetchOrdersApi,
   updateCustomerApi,
 } from '@/lib/backendApi';
+import { exportRowsToExcel } from '@/lib/excel';
 import {
   Sheet,
   SheetContent,
@@ -51,6 +52,18 @@ import type { Customer, Order } from '@/types';
 type TierFilter = 'all' | 'regular' | 'vip';
 type SortMode = 'newest' | 'spent' | 'orders';
 type HistoryFilter = 'all' | 'paid' | 'cancelled';
+
+const tierFilterLabelMap: Record<TierFilter, string> = {
+  all: 'Tất cả hạng',
+  regular: 'Khách thường',
+  vip: 'Khách VIP',
+};
+
+const sortModeLabelMap: Record<SortMode, string> = {
+  newest: 'Mới nhất',
+  spent: 'Chi tiêu cao nhất',
+  orders: 'Nhiều đơn nhất',
+};
 
 interface CustomerFormState {
   id?: string;
@@ -228,6 +241,25 @@ export function CustomersPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    exportRowsToExcel({
+      fileName: 'khach-hang',
+      sheetName: 'KhachHang',
+      headers: ['Ho ten', 'So dien thoai', 'Email', 'Tong don', 'Tong chi tieu', 'Hang', 'Ngay tao'],
+      rows: filteredCustomers.map((item) => [
+        item.name,
+        item.phone,
+        item.email ?? '',
+        item.totalOrders,
+        item.totalSpent,
+        item.tier === 'vip' ? 'VIP' : 'Thuong',
+        format(item.createdAt, 'dd/MM/yyyy'),
+      ]),
+    });
+
+    toast.success('Da xuat file Excel khach hang');
+  };
+
   const columns: ColumnDef<Customer>[] = [
     {
       id: 'customer',
@@ -336,7 +368,7 @@ export function CustomersPage() {
         <h1 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">Khách hàng</h1>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-9 gap-2" onClick={() => toast.success('Đang xuất Excel...')}>
+          <Button variant="outline" className="h-9 gap-2" onClick={handleExportExcel}>
             <Download size={16} />
             Xuất Excel
           </Button>
@@ -389,7 +421,7 @@ export function CustomersPage() {
 
         <Select value={tierFilter} onValueChange={(value) => setTierFilter((value ?? 'all') as TierFilter)}>
           <SelectTrigger className="h-9 min-w-40">
-            <SelectValue placeholder="Tất cả hạng" />
+            <SelectValue>{tierFilterLabelMap[tierFilter]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tất cả hạng</SelectItem>
@@ -400,7 +432,7 @@ export function CustomersPage() {
 
         <Select value={sortMode} onValueChange={(value) => setSortMode((value ?? 'newest') as SortMode)}>
           <SelectTrigger className="h-9 min-w-44">
-            <SelectValue placeholder="Mới nhất" />
+            <SelectValue>{sortModeLabelMap[sortMode]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="newest">Mới nhất</SelectItem>
@@ -421,7 +453,7 @@ export function CustomersPage() {
       />
 
       <Sheet open={!!selectedCustomer} onOpenChange={(open) => !open && setSelectedCustomer(null)}>
-        <SheetContent side="right" className="w-[480px] max-w-[480px] p-0" showCloseButton={false}>
+        <SheetContent side="right" className="w-[480px] max-w-[480px] bg-[var(--color-surface)] p-0" showCloseButton={false}>
           {selectedCustomer ? (
             <>
               <SheetHeader className="border-b border-[var(--color-border)] p-5">

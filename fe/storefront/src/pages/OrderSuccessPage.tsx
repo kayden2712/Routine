@@ -1,10 +1,20 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { formatVnd } from '@/lib/utils'
 
 export const OrderSuccessPage = () => {
-  const orderCode = '#ORD2024001'
-  const total = 769500
+  const location = useLocation()
+  const summary = (location.state ?? {}) as {
+    orderCode?: string
+    subtotal?: number
+    shippingFee?: number
+    total?: number
+  }
+
+  const orderCode = summary.orderCode ?? '#ORD2024001'
+  const subtotal = summary.subtotal ?? 739500
+  const shippingFee = summary.shippingFee ?? 30000
+  const total = summary.total ?? subtotal + shippingFee
 
   return (
     <section className="mx-auto flex max-w-3xl flex-col items-center px-8 py-20 text-center">
@@ -50,19 +60,19 @@ export const OrderSuccessPage = () => {
         />
       </svg>
 
-      <h1 className="mt-6 font-display text-[28px] font-bold text-white">Đặt hàng thành công!</h1>
-      <p className="mt-2 text-[14px] text-white/60">Mã đơn hàng: {orderCode}</p>
+      <h1 className="mt-6 font-display text-[28px] font-bold text-[var(--text-primary)]">Đặt hàng thành công!</h1>
+      <p className="mt-2 text-[14px] text-[var(--text-secondary)]">Mã đơn hàng: {orderCode}</p>
 
       <div className="mt-7 w-full max-w-[540px] rounded-[12px] bg-[#242422] p-5 text-left">
         <p className="text-xs font-semibold tracking-[0.08em] text-white/45">TÓM TẮT ĐƠN HÀNG</p>
         <div className="mt-4 space-y-2.5 text-sm text-white/70">
           <div className="flex items-center justify-between">
             <span>Tạm tính</span>
-            <span>{formatVnd(739500)}</span>
+            <span>{formatVnd(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span>Phí giao hàng</span>
-            <span>{formatVnd(30000)}</span>
+            <span>{formatVnd(shippingFee)}</span>
           </div>
           <div className="flex items-center justify-between border-t border-white/10 pt-3 text-white">
             <span>Tổng thanh toán</span>

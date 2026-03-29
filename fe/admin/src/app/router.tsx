@@ -10,7 +10,6 @@ import { InvoicesPage } from '../pages/InvoicesPage';
 import { LoginPage } from '../pages/LoginPage';
 import { POSPage } from '../pages/POSPage';
 import { ProductsPage } from '../pages/ProductsPage';
-import { RegisterPage } from '../pages/RegisterPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { StaffPage } from '../pages/StaffPage';
@@ -64,11 +63,6 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
-    errorElement: <RouteErrorBoundary />,
-  },
-  {
-    path: '/register',
-    element: <RegisterPage />,
     errorElement: <RouteErrorBoundary />,
   },
   {
@@ -146,11 +140,7 @@ export const router = createBrowserRouter([
       },
       {
         path: '/settings',
-        element: (
-          <ProtectedRoute roles={['manager']}>
-            <SettingsPage />
-          </ProtectedRoute>
-        ),
+        element: <SettingsPage />,
         errorElement: <RouteErrorBoundary />,
       },
       {

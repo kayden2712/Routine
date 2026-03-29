@@ -15,12 +15,21 @@ interface BackendProduct {
   code: string;
   name: string;
   categoryName: string;
+  gender?: string;
   price: number;
   costPrice: number;
   stock: number;
   minStock: number;
   status: string;
   imageUrl?: string;
+  imageUrls?: string[];
+  sizes?: string[];
+  colors?: string[];
+  variants?: Array<{
+    size?: string;
+    color?: string;
+    stock?: number;
+  }>;
   createdAt?: string;
 }
 
@@ -113,6 +122,10 @@ function mapProductStatus(status?: string): Product['status'] {
   return 'active';
 }
 
+function mapProductGender(gender?: string): Product['gender'] {
+  return gender === 'FEMALE' ? 'female' : 'male';
+}
+
 function mapOrderStatus(status?: string): Order['status'] {
   if (status === 'PAID') return 'paid';
   if (status === 'CANCELLED') return 'cancelled';
@@ -124,18 +137,40 @@ function mapPaymentMethod(value?: string): Order['paymentMethod'] {
 }
 
 export function mapBackendProduct(item: BackendProduct): Product {
+  const variants = (item.variants ?? []).map((variant, index) => ({
+    id: `v-${item.id}-${index + 1}`,
+    size: String(variant.size ?? '').toUpperCase(),
+    color: String(variant.color ?? 'black').toLowerCase(),
+    stock: Number(variant.stock ?? 0),
+  }));
+
+  const fallbackSizes = item.sizes ?? [];
+  const fallbackColors = item.colors ?? [];
+
+  const variantSizes = Array.from(new Set(variants.map((variant) => variant.size)));
+  const variantColors = Array.from(new Set(variants.map((variant) => variant.color)));
+
+  const imageUrls = (item.imageUrls ?? [])
+    .map((url) => String(url ?? '').trim())
+    .filter((url) => url.length > 0);
+  const displayImageUrl = imageUrls[0] ?? item.imageUrl;
+
   return {
     id: String(item.id),
     code: item.code,
     name: item.name,
     category: item.categoryName,
+    gender: mapProductGender(item.gender),
     price: Number(item.price ?? 0),
     costPrice: Number(item.costPrice ?? 0),
     stock: Number(item.stock ?? 0),
     minStock: Number(item.minStock ?? 0),
     status: mapProductStatus(item.status),
-    imageUrl: item.imageUrl,
-    variants: [],
+    imageUrl: displayImageUrl,
+    imageUrls,
+    sizes: variants.length > 0 ? variantSizes : fallbackSizes,
+    colors: variants.length > 0 ? variantColors : fallbackColors,
+    variants,
     createdAt: parseDate(item.createdAt),
   };
 }
@@ -221,24 +256,40 @@ export async function createProductApi(payload: {
   code: string;
   name: string;
   category: string;
+  gender: 'male' | 'female';
   description?: string;
   price: number;
   costPrice: number;
   stock: number;
   minStock: number;
   imageUrl?: string;
+  imageUrls?: string[];
+  sizes?: string[];
+  colors?: string[];
+  sizeStocks?: Record<string, number>;
+  variants?: Array<{
+    size: string;
+    color: string;
+    stock: number;
+  }>;
 }): Promise<Product> {
   const categoryId = 1;
   const response = await apiClient.post<BackendProduct>('/products', {
     code: payload.code,
     name: payload.name,
     categoryId,
+    gender: payload.gender === 'female' ? 'FEMALE' : 'MALE',
     description: payload.description,
     price: payload.price,
     costPrice: payload.costPrice,
     stock: payload.stock,
     minStock: payload.minStock,
     imageUrl: payload.imageUrl,
+    imageUrls: payload.imageUrls ?? [],
+    sizes: payload.sizes ?? [],
+    colors: payload.colors ?? [],
+    sizeStocks: payload.sizeStocks ?? {},
+    variants: payload.variants ?? [],
   });
   return mapBackendProduct(response.data);
 }
@@ -247,24 +298,40 @@ export async function updateProductApi(id: string, payload: {
   code: string;
   name: string;
   category: string;
+  gender: 'male' | 'female';
   description?: string;
   price: number;
   costPrice: number;
   stock: number;
   minStock: number;
   imageUrl?: string;
+  imageUrls?: string[];
+  sizes?: string[];
+  colors?: string[];
+  sizeStocks?: Record<string, number>;
+  variants?: Array<{
+    size: string;
+    color: string;
+    stock: number;
+  }>;
 }): Promise<Product> {
   const categoryId = 1;
   const response = await apiClient.put<BackendProduct>(`/products/${id}`, {
     code: payload.code,
     name: payload.name,
     categoryId,
+    gender: payload.gender === 'female' ? 'FEMALE' : 'MALE',
     description: payload.description,
     price: payload.price,
     costPrice: payload.costPrice,
     stock: payload.stock,
     minStock: payload.minStock,
     imageUrl: payload.imageUrl,
+    imageUrls: payload.imageUrls ?? [],
+    sizes: payload.sizes ?? [],
+    colors: payload.colors ?? [],
+    sizeStocks: payload.sizeStocks ?? {},
+    variants: payload.variants ?? [],
   });
   return mapBackendProduct(response.data);
 }
@@ -325,6 +392,40 @@ export async function fetchOrdersApi(): Promise<Order[]> {
   return (response.data ?? []).map(mapBackendOrder);
 }
 
+export async function createOrderApi(payload: {
+  customerId?: string;
+  items: Array<{
+    productId: string;
+    quantity: number;
+    price: number;
+    size?: string;
+    color?: string;
+  }>;
+  subtotal: number;
+  discount: number;
+  total: number;
+  paymentMethod: 'cash' | 'transfer';
+  notes?: string;
+}): Promise<Order> {
+  const response = await apiClient.post<BackendOrder>('/orders', {
+    customerId: payload.customerId ? Number.parseInt(payload.customerId, 10) : undefined,
+    items: payload.items.map((item) => ({
+      productId: Number.parseInt(item.productId, 10),
+      quantity: item.quantity,
+      price: item.price,
+      size: item.size,
+      color: item.color,
+    })),
+    subtotal: payload.subtotal,
+    discount: payload.discount,
+    total: payload.total,
+    paymentMethod: payload.paymentMethod === 'transfer' ? 'TRANSFER' : 'CASH',
+    notes: payload.notes,
+  });
+
+  return mapBackendOrder(response.data);
+}
+
 export async function fetchDashboardSummaryApi(range: 'today' | '7days' | 'month'): Promise<AdminDashboardSummary> {
   const response = await apiClient.get<AdminDashboardSummary>(`/admin/dashboard/summary?range=${range}`);
   return {
@@ -372,6 +473,7 @@ export async function createStaffApi(payload: {
   name: string;
   email: string;
   phone: string;
+  password: string;
   role: UserRole;
   status: 'active' | 'inactive';
   branch: string;
@@ -380,6 +482,7 @@ export async function createStaffApi(payload: {
     fullName: payload.name,
     email: payload.email,
     phone: payload.phone,
+    password: payload.password,
     role: roleReverseMap[payload.role],
     isActive: payload.status === 'active',
     branch: payload.branch,
@@ -409,4 +512,11 @@ export async function updateStaffApi(
 
 export async function updateStaffStatusApi(id: string, isActive: boolean): Promise<void> {
   await apiClient.patch(`/admin/staff/${id}/status`, { isActive });
+}
+
+export async function changePasswordApi(payload: {
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  await apiClient.patch('/auth/change-password', payload);
 }

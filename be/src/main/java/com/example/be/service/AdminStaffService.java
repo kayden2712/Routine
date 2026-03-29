@@ -21,8 +21,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AdminStaffService {
 
-    private static final String DEFAULT_STAFF_PASSWORD = "Staff@123";
-
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -44,10 +42,13 @@ public class AdminStaffService {
         if (StringUtils.hasText(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
             throw new BadRequestException("Phone number is already registered");
         }
+        if (!StringUtils.hasText(request.getPassword())) {
+            throw new BadRequestException("Password is required when creating staff");
+        }
 
         User user = new User();
         user.setEmail(request.getEmail());
-        user.setPasswordHash(passwordEncoder.encode(resolvePassword(request.getPassword())));
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         applyRequest(user, request);
         if (user.getIsActive() == null) {
             user.setIsActive(true);
@@ -98,13 +99,6 @@ public class AdminStaffService {
         if (request.getIsActive() != null) {
             user.setIsActive(request.getIsActive());
         }
-    }
-
-    private String resolvePassword(String inputPassword) {
-        if (StringUtils.hasText(inputPassword)) {
-            return inputPassword;
-        }
-        return DEFAULT_STAFF_PASSWORD;
     }
 
     private AdminStaffResponse mapToResponse(User user) {

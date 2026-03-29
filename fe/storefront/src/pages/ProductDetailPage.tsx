@@ -52,18 +52,85 @@ export const ProductDetailPage = () => {
         'Đường may chắc chắn, hoàn thiện tốt',
         'Phù hợp mặc hàng ngày',
       ],
-      gallery: [product.image],
+      gallery: product.images && product.images.length > 0 ? product.images : [product.image],
       reviews,
     }
   }, [product])
 
   const isNumericSize = (product?.sizes[0] ?? '').match(/^\d+$/)
   const baseSizes: ProductSize[] = isNumericSize ? ['28', '29', '30', '31', '32'] : ['XS', 'S', 'M', 'L', 'XL']
+  const displaySizes: ProductSize[] = (product?.sizes.length ? product.sizes : baseSizes) as ProductSize[]
+
+  const variantRows = useMemo(() => {
+    if (!product) {
+      return []
+    }
+
+    if (product.variants && product.variants.length > 0) {
+      return product.variants
+    }
+
+    return product.sizes.map((size, index) => ({
+      size,
+      color: product.colors[index % Math.max(1, product.colors.length)] ?? 'Mặc định',
+      stock: Number(product.stock ?? 0),
+    }))
+  }, [product])
 
   const [size, setSize] = useState<ProductSize | undefined>(product?.sizes[0])
   const [selectedColor, setSelectedColor] = useState(product?.colors[0] ?? '')
   const [quantity, setQuantity] = useState(1)
   const [activeThumb, setActiveThumb] = useState(0)
+
+  const selectedVariantStock = useMemo(() => {
+    const matched = variantRows.find((variant) => variant.size === size && variant.color === selectedColor)
+    if (matched) {
+      return Math.max(0, Number(matched.stock ?? 0))
+    }
+
+    const bySize = variantRows.find((variant) => variant.size === size)
+    if (bySize) {
+      return Math.max(0, Number(bySize.stock ?? 0))
+    }
+
+    return Math.max(0, Number(product?.stock ?? 0))
+  }, [product?.stock, selectedColor, size, variantRows])
+
+  useEffect(() => {
+    if (!product) {
+      return
+    }
+
+    const nextSize = (product.sizes[0] ?? baseSizes[0]) as ProductSize
+    setSize((prev) => (prev && product.sizes.includes(prev) ? prev : nextSize))
+    setSelectedColor((prev) => (prev && product.colors.includes(prev) ? prev : product.colors[0] ?? 'Mặc định'))
+    setActiveThumb(0)
+    setQuantity(1)
+  }, [product])
+
+  useEffect(() => {
+    if (!size) {
+      return
+    }
+
+    const colorsForSize = variantRows.filter((variant) => variant.size === size).map((variant) => variant.color)
+    if (colorsForSize.length === 0) {
+      return
+    }
+
+    if (!colorsForSize.includes(selectedColor)) {
+      setSelectedColor(colorsForSize[0])
+    }
+  }, [selectedColor, size, variantRows])
+
+  useEffect(() => {
+    setQuantity((prev) => {
+      if (selectedVariantStock <= 0) {
+        return 1
+      }
+      return Math.min(prev, selectedVariantStock)
+    })
+  }, [selectedVariantStock])
 
   if (!product || !details) {
     return (
@@ -121,7 +188,14 @@ export const ProductDetailPage = () => {
   }
 
   const handleAddToCart = (event?: MouseEvent<HTMLButtonElement>) => {
-    if (!size) return
+    const selectedSize = size ?? product.sizes[0]
+    if (!selectedSize) {
+      return false
+    }
+
+    if (selectedVariantStock <= 0 || quantity > selectedVariantStock) {
+      return false
+    }
 
     if (event) {
       event.currentTarget.animate(
@@ -138,10 +212,12 @@ export const ProductDetailPage = () => {
 
     addToCart({
       product,
-      size,
-      color: selectedColor,
+      size: selectedSize,
+      color: selectedColor || product.colors[0] || 'Mặc định',
       quantity,
     })
+
+    return true
   }
 
   return (
@@ -200,6 +276,7 @@ export const ProductDetailPage = () => {
             <span>{product.rating.toFixed(1)}/5</span>
             <span>({product.reviewCount} đánh giá)</span>
             <span>· Còn {details.stock} sản phẩm</span>
+            <span>· Biến thể đã chọn: {selectedVariantStock} sản phẩm</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] pb-5">
@@ -215,6 +292,9 @@ export const ProductDetailPage = () => {
             <div className="flex flex-wrap gap-3">
               {product.colors.map((color) => {
                 const selected = selectedColor === color
+                const colorStock = variantRows
+                  .filter((variant) => variant.color === color)
+                  .reduce((sum, variant) => sum + Math.max(0, Number(variant.stock ?? 0)), 0)
                 return (
                   <button
                     key={color}
@@ -226,7 +306,7 @@ export const ProductDetailPage = () => {
                         : 'border-[var(--line)] text-[var(--text-secondary)] hover:border-[var(--line-strong)]'
                     }`}
                   >
-                    {color}
+                    {color} ({colorStock})
                   </button>
                 )
               })}
@@ -241,22 +321,25 @@ export const ProductDetailPage = () => {
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {baseSizes.map((sizeValue) => {
+              {displaySizes.map((sizeValue) => {
                 const available = product.sizes.includes(sizeValue)
+                const sizeStock = variantRows
+                  .filter((variant) => variant.size === sizeValue)
+                  .reduce((sum, variant) => sum + Math.max(0, Number(variant.stock ?? 0)), 0)
                 const selected = size === sizeValue
                 return (
                   <button
                     key={sizeValue}
                     type="button"
-                    disabled={!available}
+                    disabled={!available || sizeStock <= 0}
                     onClick={() => setSize(sizeValue)}
                     className={`relative h-9 rounded-md border px-3.5 text-sm transition ${
                       selected
                         ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--surface-bg)]'
                         : 'border-[var(--line)] bg-transparent text-[var(--text-primary)] hover:border-[var(--line-strong)]'
-                    } ${!available ? 'cursor-not-allowed opacity-30' : ''}`}
+                    } ${!available || sizeStock <= 0 ? 'cursor-not-allowed opacity-30' : ''}`}
                   >
-                    {sizeValue}
+                    {sizeValue} ({sizeStock})
                   </button>
                 )
               })}
@@ -276,25 +359,39 @@ export const ProductDetailPage = () => {
               <span className="flex h-10 w-10 items-center justify-center text-sm text-[var(--text-primary)]">{quantity}</span>
               <button
                 type="button"
-                onClick={() => setQuantity((prev) => prev + 1)}
+                onClick={() =>
+                  setQuantity((prev) => {
+                    if (selectedVariantStock <= 0) {
+                      return prev
+                    }
+                    return Math.min(selectedVariantStock, prev + 1)
+                  })
+                }
                 className="flex h-10 w-10 items-center justify-center border-l border-[var(--line)] text-[var(--text-primary)] transition hover:bg-[var(--line-soft)]"
               >
                 <Plus size={14} />
               </button>
             </div>
+            {selectedVariantStock <= 0 ? (
+              <p className="text-xs text-[#B91C1C]">Biến thể đã chọn đang hết hàng.</p>
+            ) : (
+              <p className="text-xs text-[var(--text-secondary)]">Tối đa {selectedVariantStock} sản phẩm cho biến thể đã chọn.</p>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Button onClick={(event) => handleAddToCart(event)} className="h-12 flex-1 rounded-lg">
+            <Button onClick={(event) => handleAddToCart(event)} className="h-12 flex-1 rounded-lg" disabled={selectedVariantStock <= 0}>
               Thêm vào giỏ
             </Button>
             <Button
               onClick={(event) => {
-                handleAddToCart(event)
-                navigate('/checkout')
+                if (handleAddToCart(event)) {
+                  navigate('/checkout')
+                }
               }}
               className="h-12 flex-1 rounded-lg"
               variant="outline"
+              disabled={selectedVariantStock <= 0}
             >
               Mua ngay
             </Button>
@@ -351,6 +448,16 @@ export const ProductDetailPage = () => {
               <p>Phom dáng: {details.fit}</p>
               <p>Mùa phù hợp: {details.season}</p>
               <p>Bảo quản: {details.care}</p>
+            </div>
+            <div className="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
+              <p className="mb-2 text-sm font-medium text-[var(--text-primary)]">Tồn kho theo biến thể</p>
+              <div className="space-y-1 text-sm">
+                {variantRows.map((variant, index) => (
+                  <p key={`${variant.size}-${variant.color}-${index}`}>
+                    {variant.size} / {variant.color}: {Math.max(0, Number(variant.stock ?? 0))}
+                  </p>
+                ))}
+              </div>
             </div>
           </TabsContent>
 

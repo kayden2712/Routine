@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
-import { AlertTriangle, Boxes, Filter, PackagePlus, PackageMinus, RotateCcw, Search } from 'lucide-react';
+import { AlertTriangle, Boxes, Download, Filter, PackagePlus, PackageMinus, RotateCcw, Search } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { KPICard } from '@/components/shared/KPICard';
-import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { cn, formatVND } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { exportRowsToExcel } from '@/lib/excel';
 import { useAuthStore } from '@/store/authStore';
 import { useProductStore } from '@/store/productStore';
 import type { Product } from '@/types';
@@ -229,6 +229,25 @@ export function InventoryPage() {
     toast.success(`Da nhap them cho ${rows.length} san pham (+5/sp)`);
   };
 
+  const handleExportExcel = () => {
+    exportRowsToExcel({
+      fileName: 'kho-hang',
+      sheetName: 'KhoHang',
+      headers: ['Ma SP', 'Ten san pham', 'Danh muc', 'Ton hien tai', 'Muc toi thieu', 'Gia tri ton', 'Tinh trang'],
+      rows: inventoryRows.map((item) => [
+        item.code,
+        item.name,
+        item.category,
+        item.stock,
+        item.minStock,
+        item.value,
+        item.stock <= 0 ? 'Het hang' : item.stock <= item.minStock ? 'Sap het' : 'Con hang',
+      ]),
+    });
+
+    toast.success('Da xuat file Excel kho hang');
+  };
+
   const columns = useMemo<ColumnDef<InventoryRow>[]>(
     () => [
       {
@@ -277,7 +296,29 @@ export function InventoryPage() {
         header: 'Tinh trang',
         cell: ({ row }) => {
           const item = row.original;
-          return <StatusBadge status={String(item.stock)} variant="stock" />;
+          const isOut = item.stock <= 0;
+          const isLow = item.stock > 0 && item.stock <= item.minStock;
+
+          const label = isOut ? 'Het hang' : isLow ? 'Sap het' : 'Con hang';
+          const bg = isOut
+            ? 'var(--color-error-bg)'
+            : isLow
+              ? 'var(--color-warning-bg)'
+              : 'var(--color-success-bg)';
+          const color = isOut
+            ? 'var(--color-error)'
+            : isLow
+              ? 'var(--color-warning)'
+              : 'var(--color-success)';
+
+          return (
+            <span
+              className="inline-flex items-center rounded-full px-[10px] py-[2px] text-xs font-medium"
+              style={{ backgroundColor: bg, color }}
+            >
+              {label}
+            </span>
+          );
         },
       },
       {
@@ -321,6 +362,14 @@ export function InventoryPage() {
 
   return (
     <div className="space-y-5">
+      <section className="flex items-center justify-between gap-3">
+        <h1 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">Kho hàng</h1>
+        <Button variant="outline" className="h-9 gap-2" onClick={handleExportExcel}>
+          <Download size={16} />
+          Xuất Excel
+        </Button>
+      </section>
+
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KPICard
           label="Tong ma SKU"
@@ -468,7 +517,29 @@ export function InventoryPage() {
                 <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm">
                   <div className="mb-2 flex items-center justify-between">
                     <span className="text-[var(--color-text-secondary)]">Ton kho</span>
-                    <StatusBadge status={String(adjustState.product.stock)} variant="stock" />
+                    <span
+                      className="inline-flex items-center rounded-full px-[10px] py-[2px] text-xs font-medium"
+                      style={{
+                        backgroundColor:
+                          adjustState.product.stock <= 0
+                            ? 'var(--color-error-bg)'
+                            : adjustState.product.stock <= adjustState.product.minStock
+                              ? 'var(--color-warning-bg)'
+                              : 'var(--color-success-bg)',
+                        color:
+                          adjustState.product.stock <= 0
+                            ? 'var(--color-error)'
+                            : adjustState.product.stock <= adjustState.product.minStock
+                              ? 'var(--color-warning)'
+                              : 'var(--color-success)',
+                      }}
+                    >
+                      {adjustState.product.stock <= 0
+                        ? 'Het hang'
+                        : adjustState.product.stock <= adjustState.product.minStock
+                          ? 'Sap het'
+                          : 'Con hang'}
+                    </span>
                   </div>
                   <p className="text-[var(--color-text-primary)]">
                     Muc canh bao: <span className="font-medium">{adjustState.product.minStock}</span>

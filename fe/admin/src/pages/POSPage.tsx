@@ -25,9 +25,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { createCustomerApi, fetchCustomersApi } from '@/lib/backendApi';
+import { createCustomerApi, createOrderApi, fetchCustomersApi } from '@/lib/backendApi';
 import { cn, formatVND } from '@/lib/utils';
 import { toast } from '@/lib/toast';
+import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useProductStore } from '@/store/productStore';
 import type { Customer, Product } from '@/types';
@@ -43,6 +44,25 @@ interface CategoryTab {
 interface CustomerFormState {
   name: string;
   phone: string;
+}
+
+interface InvoiceExportSnapshot {
+  orderNumber: string;
+  createdAt: Date;
+  paymentMethod: PaymentMethod;
+  status: 'pending' | 'paid' | 'cancelled';
+  customerName: string;
+  customerPhone: string;
+  cashierName: string;
+  items: Array<{
+    productName: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+  }>;
+  subtotal: number;
+  discount: number;
+  total: number;
 }
 
 const CATEGORY_TABS: CategoryTab[] = [
@@ -122,7 +142,73 @@ function customerInitials(name: string): string {
     .join('');
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function buildInvoiceWordContent(invoice: InvoiceExportSnapshot): string {
+  const rows = invoice.items
+    .map((item, index) => `
+      <tr>
+        <td style="padding:8px;border:1px solid #d9d9d9;text-align:center;">${index + 1}</td>
+        <td style="padding:8px;border:1px solid #d9d9d9;">${escapeHtml(item.productName)}</td>
+        <td style="padding:8px;border:1px solid #d9d9d9;text-align:center;">${item.quantity}</td>
+        <td style="padding:8px;border:1px solid #d9d9d9;text-align:right;">${formatVND(item.price)}</td>
+        <td style="padding:8px;border:1px solid #d9d9d9;text-align:right;">${formatVND(item.subtotal)}</td>
+      </tr>
+    `)
+    .join('');
+
+  const paymentMethodLabel = invoice.paymentMethod === 'transfer' ? 'Chuyển khoản' : 'Tiền mặt';
+  const createdTime = invoice.createdAt.toLocaleString('vi-VN');
+
+  return `
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <title>Hoa don ${escapeHtml(invoice.orderNumber)}</title>
+      </head>
+      <body style="font-family:Arial,sans-serif;color:#222;padding:24px;">
+        <h2 style="margin:0 0 8px 0;">ROUTINE - HOA DON BAN HANG</h2>
+        <p style="margin:0 0 4px 0;"><strong>So hoa don:</strong> ${escapeHtml(invoice.orderNumber)}</p>
+        <p style="margin:0 0 4px 0;"><strong>Thoi gian:</strong> ${escapeHtml(createdTime)}</p>
+        <p style="margin:0 0 4px 0;"><strong>Trang thai:</strong> ${escapeHtml(invoice.status.toUpperCase())}</p>
+        <p style="margin:0 0 4px 0;"><strong>Thu ngan:</strong> ${escapeHtml(invoice.cashierName)}</p>
+        <p style="margin:0 0 4px 0;"><strong>Khach hang:</strong> ${escapeHtml(invoice.customerName)} (${escapeHtml(invoice.customerPhone)})</p>
+        <p style="margin:0 0 16px 0;"><strong>Thanh toan:</strong> ${escapeHtml(paymentMethodLabel)}</p>
+
+        <table style="border-collapse:collapse;width:100%;font-size:13px;">
+          <thead>
+            <tr>
+              <th style="padding:8px;border:1px solid #d9d9d9;background:#f4f4f4;">STT</th>
+              <th style="padding:8px;border:1px solid #d9d9d9;background:#f4f4f4;text-align:left;">San pham</th>
+              <th style="padding:8px;border:1px solid #d9d9d9;background:#f4f4f4;">SL</th>
+              <th style="padding:8px;border:1px solid #d9d9d9;background:#f4f4f4;text-align:right;">Don gia</th>
+              <th style="padding:8px;border:1px solid #d9d9d9;background:#f4f4f4;text-align:right;">Thanh tien</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+
+        <div style="margin-top:16px;margin-left:auto;width:320px;font-size:13px;">
+          <p style="margin:0 0 6px 0;display:flex;justify-content:space-between;"><span>Tam tinh:</span><strong>${formatVND(invoice.subtotal)}</strong></p>
+          <p style="margin:0 0 6px 0;display:flex;justify-content:space-between;"><span>Giam gia:</span><strong>-${formatVND(invoice.discount)}</strong></p>
+          <p style="margin:0;display:flex;justify-content:space-between;font-size:15px;"><span><strong>Tong cong:</strong></span><strong>${formatVND(invoice.total)}</strong></p>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 export function POSPage() {
+  const currentUser = useAuthStore((state) => state.user);
   const products = useProductStore((state) => state.products);
   const fetchProducts = useProductStore((state) => state.fetchProducts);
   const {
@@ -173,6 +259,7 @@ export function POSPage() {
   const [isConfirming, setIsConfirming] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [createdOrderCode, setCreatedOrderCode] = useState('');
+  const [createdInvoice, setCreatedInvoice] = useState<InvoiceExportSnapshot | null>(null);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const customerSearchRef = useRef<HTMLDivElement | null>(null);
@@ -353,7 +440,28 @@ export function POSPage() {
     setCashReceivedInput('');
     setPaymentSuccess(false);
     setCreatedOrderCode('');
+    setCreatedInvoice(null);
     setPaymentOpen(true);
+  };
+
+  const handleExportWordInvoice = () => {
+    if (!createdInvoice) {
+      toast.error('Không tìm thấy dữ liệu hóa đơn để in');
+      return;
+    }
+
+    const content = buildInvoiceWordContent(createdInvoice);
+    const blob = new Blob([`\ufeff${content}`], {
+      type: 'application/msword;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = `hoa-don-${createdInvoice.orderNumber}.doc`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
   };
 
   const handleConfirmPayment = async () => {
@@ -369,12 +477,59 @@ export function POSPage() {
       return;
     }
 
+    if (paymentMethod === 'cash' && cashReceived < total) {
+      toast.error('Số tiền khách đưa chưa đủ', 'Vui lòng nhập số tiền lớn hơn hoặc bằng tổng thanh toán.');
+      return;
+    }
+
     setIsConfirming(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 1500));
-    setIsConfirming(false);
-    setPaymentSuccess(true);
-    setCreatedOrderCode(`HD0${Math.floor(100 + Math.random() * 900)}`);
-    toast.success('Thanh toán thành công', 'Đơn hàng đã được ghi nhận.');
+    try {
+      const createdOrder = await createOrderApi({
+        customerId: invoiceCustomer?.id,
+        items: items.map((item) => ({
+          productId: item.product.id,
+          quantity: item.quantity,
+          price: item.product.price,
+          size: 'M',
+          color: 'Black',
+        })),
+        subtotal,
+        discount: discountAmount,
+        total,
+        paymentMethod,
+      });
+
+      setPaymentSuccess(true);
+      setCreatedOrderCode(createdOrder.orderNumber);
+      setCreatedInvoice({
+        orderNumber: createdOrder.orderNumber,
+        createdAt: createdOrder.createdAt,
+        paymentMethod,
+        status: createdOrder.status,
+        customerName: invoiceCustomer?.name ?? 'Khach le',
+        customerPhone: invoiceCustomer?.phone ?? (customerSearch.trim() || 'N/A'),
+        cashierName: currentUser?.name ?? 'N/A',
+        items: items.map((item) => ({
+          productName: item.product.name,
+          quantity: item.quantity,
+          price: item.product.price,
+          subtotal: item.product.price * item.quantity,
+        })),
+        subtotal,
+        discount: discountAmount,
+        total,
+      });
+      toast.success(
+        'Thanh toán thành công',
+        createdOrder.status === 'paid'
+          ? 'Hóa đơn đã lưu vào hệ thống với trạng thái PAID.'
+          : 'Hóa đơn đã lưu vào hệ thống.',
+      );
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Không thể tạo hóa đơn. Vui lòng thử lại.');
+    } finally {
+      setIsConfirming(false);
+    }
   };
 
   const closeSuccessModal = () => {
@@ -382,6 +537,7 @@ export function POSPage() {
     setDiscountInput('');
     setPaymentOpen(false);
     setPaymentSuccess(false);
+    setCreatedInvoice(null);
   };
 
   return (
@@ -793,8 +949,8 @@ export function POSPage() {
               <p className="text-sm text-[var(--color-text-secondary)]">Hóa đơn #{createdOrderCode} đã được tạo</p>
 
               <div className="mt-6 grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={() => toast.success('Đã gửi lệnh in', `In ${createdOrderCode}`)}>
-                  In hóa đơn
+                <Button variant="outline" onClick={handleExportWordInvoice}>
+                  In hóa đơn Word
                 </Button>
                 <Button onClick={closeSuccessModal}>Đóng</Button>
               </div>

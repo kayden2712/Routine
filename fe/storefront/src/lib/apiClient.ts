@@ -12,6 +12,30 @@ export const apiClient = axios.create({
   timeout: 10000, // 10 seconds
 });
 
+function extractErrorMessage(data: unknown): string | null {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+
+  const payload = data as {
+    message?: string;
+    data?: unknown;
+  };
+
+  if (payload.message && payload.message !== 'Validation failed') {
+    return payload.message;
+  }
+
+  if (payload.data && typeof payload.data === 'object') {
+    const firstEntry = Object.values(payload.data as Record<string, unknown>)[0];
+    if (typeof firstEntry === 'string' && firstEntry.trim()) {
+      return firstEntry;
+    }
+  }
+
+  return payload.message ?? null;
+}
+
 // Request interceptor - Add JWT token to headers
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -64,7 +88,7 @@ apiClient.interceptors.response.use(
       
       // 404 Not Found
       if (status === 404) {
-        return Promise.reject(new Error(data?.message || 'Resource not found.'));
+        return Promise.reject(new Error(extractErrorMessage(data) || 'Resource not found.'));
       }
       
       // 500 Server Error
@@ -73,7 +97,7 @@ apiClient.interceptors.response.use(
       }
       
       // Other errors
-      return Promise.reject(new Error(data?.message || 'An error occurred.'));
+      return Promise.reject(new Error(extractErrorMessage(data) || 'An error occurred.'));
     }
     
     // Network error

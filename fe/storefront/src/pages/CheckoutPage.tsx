@@ -1,14 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { createCustomerOrderApi, fetchMyProfileApi, updateCustomerProfileApi } from '@/lib/backendApi'
 import { cn, formatVnd } from '@/lib/utils'
 import { useCartStore } from '@/store/cartStore'
+import { useCustomerAuthStore } from '@/store/customerAuthStore'
 
 export const CheckoutPage = () => {
   const navigate = useNavigate()
   const items = useCartStore((state) => state.items)
   const clearCart = useCartStore((state) => state.clearCart)
   const getSubtotal = useCartStore((state) => state.getSubtotal)
+  const user = useCustomerAuthStore((state) => state.user)
+  const setUser = useCustomerAuthStore((state) => state.setUser)
 
   const [form, setForm] = useState({
     fullName: '',
@@ -22,17 +26,137 @@ export const CheckoutPage = () => {
   const [activeSection, setActiveSection] = useState<'contact' | 'delivery' | 'payment'>('contact')
   const [deliveryMethod, setDeliveryMethod] = useState<'standard' | 'fast'>('standard')
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bank'>('cod')
+  const [submitError, setSubmitError] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const hasPrefilledProfile = useRef(false)
 
   const shippingFee = deliveryMethod === 'fast' ? 45000 : 30000
   const subtotal = getSubtotal()
-  const fallbackSubtotal = 739500
-  const effectiveSubtotal = subtotal || fallbackSubtotal
-  const total = effectiveSubtotal + shippingFee
+  const total = subtotal + shippingFee
 
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0)
 
   const inputClassName =
     'h-11 w-full rounded-[8px] border border-white/12 bg-white/6 px-[14px] text-sm text-white placeholder:text-white/30 outline-none transition-all focus:border-white/40 focus:shadow-[0_0_0_3px_rgba(255,255,255,0.06)]'
+
+  useEffect(() => {
+    if (!user || hasPrefilledProfile.current) {
+      return
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      fullName: prev.fullName || user.fullName || '',
+      phone: prev.phone || user.phone || '',
+      email: prev.email || user.email || '',
+      address: prev.address || user.address || '',
+      district: prev.district || user.district || '',
+      city: prev.city || user.city || '',
+    }))
+    hasPrefilledProfile.current = true
+
+    if (!user.token) {
+      return
+    }
+
+    void (async () => {
+      try {
+        const profile = await fetchMyProfileApi()
+        setForm((prev) => ({
+          ...prev,
+          fullName: prev.fullName || profile.fullName || '',
+          phone: prev.phone || profile.phone || '',
+          email: prev.email || profile.email || '',
+          address: prev.address || profile.address || '',
+          district: prev.district || profile.district || '',
+          city: prev.city || profile.city || '',
+        }))
+      } catch {
+        // Keep checkout resilient even if profile endpoint fails.
+      }
+    })()
+  }, [user])
+
+  const handlePlaceOrder = async () => {
+    setSubmitError('')
+
+    if (items.length === 0) {
+      setSubmitError('Giỏ hàng đang trống. Vui lòng thêm sản phẩm trước khi đặt hàng.')
+      navigate('/gio-hang')
+      return
+    }
+
+    if (!form.fullName || !form.phone || !form.address || !form.city || !form.district) {
+      setSubmitError('Vui lòng điền đầy đủ thông tin giao hàng bắt buộc.')
+      return
+    }
+
+    if (!user?.token) {
+      setSubmitError('Vui lòng đăng nhập trước khi đặt hàng.')
+      navigate('/login')
+      return
+    }
+
+    setIsSubmitting(true)
+    try {
+      const updatedProfile = await updateCustomerProfileApi({
+        fullName: form.fullName.trim(),
+        phone: form.phone.trim(),
+        address: form.address.trim(),
+        district: form.district.trim(),
+        city: form.city.trim(),
+      })
+
+      // Keep local auth store in sync with persisted shipping profile.
+      setUser({
+        ...updatedProfile,
+        token: user.token,
+        refreshToken: user.refreshToken,
+      })
+
+      const notes = [
+        `Nguoi nhan: ${form.fullName}`,
+        `SĐT: ${form.phone}`,
+        `Email: ${form.email || 'Khong co'}`,
+        `Dia chi: ${form.address}, ${form.district}, ${form.city}`,
+        `Giao hang: ${deliveryMethod === 'fast' ? 'Nhanh' : 'Tieu chuan'}`,
+        form.note ? `Ghi chu: ${form.note}` : '',
+      ]
+        .filter(Boolean)
+        .join(' | ')
+
+      const createdOrder = await createCustomerOrderApi({
+        customerId: user.id,
+        items: items.map((item) => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          size: item.size,
+          color: item.color,
+        })),
+        subtotal,
+        discount: 0,
+        total,
+        paymentMethod,
+        notes,
+      })
+
+      clearCart()
+      navigate('/order-success', {
+        state: {
+          orderCode: `#${createdOrder.orderNumber}`,
+          subtotal,
+          shippingFee,
+          total,
+        },
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Dat hang that bai. Vui long thu lai.'
+      setSubmitError(message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -271,12 +395,12 @@ export const CheckoutPage = () => {
 
       <aside className="h-fit rounded-[12px] bg-[#242422] p-5">
         <h2 className="font-display text-[20px] text-white">Tóm tắt đơn hàng</h2>
-        <p className="mt-1.5 text-sm text-white/60">{itemCount || 1} sản phẩm</p>
+        <p className="mt-1.5 text-sm text-white/60">{itemCount} sản phẩm</p>
 
         <div className="mt-4 space-y-2.5 text-sm text-white/70">
           <div className="flex items-center justify-between">
             <span>Tạm tính</span>
-            <span>{formatVnd(effectiveSubtotal)}</span>
+            <span>{formatVnd(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between">
             <span>Phí giao hàng</span>
@@ -304,17 +428,17 @@ export const CheckoutPage = () => {
         </div>
 
         <Button
+          type="button"
           className="mt-5 h-[52px] w-full rounded-[8px] text-[15px] font-semibold"
+          disabled={isSubmitting || items.length === 0}
           onClick={() => {
-            if (!form.fullName || !form.phone || !form.address || !form.city || !form.district) {
-              return
-            }
-            clearCart()
-            navigate('/order-success')
+            void handlePlaceOrder()
           }}
         >
-          Đặt hàng ({formatVnd(total)})
+          {isSubmitting ? 'Dang xu ly...' : `Đặt hàng (${formatVnd(total)})`}
         </Button>
+
+        {submitError ? <p className="mt-3 text-xs text-[#FCA5A5]">{submitError}</p> : null}
       </aside>
     </div>
   )
