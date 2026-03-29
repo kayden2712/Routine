@@ -6,6 +6,8 @@ export interface User {
   email: string;
   role: UserRole;
   avatarInitials: string;
+  token?: string;
+  refreshToken?: string;
 }
 
 export interface Product {

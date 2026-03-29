@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { adminLogin } from '@/lib/backendApi';
 import type { User, UserRole } from '@/types';
 
 interface AuthState {
@@ -9,32 +10,20 @@ interface AuthState {
   logout: () => void;
 }
 
-const roleNameMap: Record<UserRole, string> = {
-  manager: 'Quan ly cua hang',
-  sales: 'Nhan vien ban hang',
-  warehouse: 'Nhan vien kho',
-  accountant: 'Ke toan',
-};
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      login: async (email, _password, role) => {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        const user: User = {
-          id: `u-${Date.now()}`,
-          name: roleNameMap[role],
-          email,
-          role,
-          avatarInitials: role.slice(0, 2).toUpperCase(),
-        };
-
+      login: async (email, password, role) => {
+        const user = await adminLogin(email, password);
+        if (user.role !== role) {
+          throw new Error('Vai trò không khớp với tài khoản đăng nhập');
+        }
         set({ user, isAuthenticated: true });
       },
       logout: () => {
+        localStorage.removeItem('routine-auth');
         set({ user: null, isAuthenticated: false });
       },
     }),

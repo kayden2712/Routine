@@ -29,6 +29,7 @@ import { vi } from 'date-fns/locale';
 import { EmptyState } from '@/components/shared/EmptyState';
 import { KPICard } from '@/components/shared/KPICard';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { fetchDashboardSummaryApi, fetchOrdersApi } from '@/lib/backendApi';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -40,7 +41,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { formatRelativeTime, formatVND } from '@/lib/utils';
-import { orders, revenueByDay, stockAlerts } from '@/lib/mockData';
+import type { Order } from '@/types';
 
 const RANGE_OPTIONS = [
   { key: 'today', label: 'Hôm nay' },
@@ -102,6 +103,14 @@ function parseRevenueDate(dateString: string): Date {
 export function DashboardPage() {
   const [isBootLoading, setIsBootLoading] = useState(true);
   const [selectedRange, setSelectedRange] = useState<RangeKey>('7days');
+  const [ordersData, setOrdersData] = useState<Order[]>([]);
+  const [summary, setSummary] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    lowStockCount: 0,
+    totalCustomers: 0,
+    stockAlerts: [] as Array<{ productId: number; productCode: string; productName: string; stock: number; minStock: number }>,
+  });
   const now = useMemo(() => new Date(), []);
   const rangeStart = getRangeStart(selectedRange, now);
 
@@ -110,9 +119,21 @@ export function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setIsBootLoading(false), 500);
-    return () => window.clearTimeout(timer);
-  }, []);
+    const loadData = async () => {
+      try {
+        const [orders, dashboardSummary] = await Promise.all([
+          fetchOrdersApi(),
+          fetchDashboardSummaryApi(selectedRange),
+        ]);
+        setOrdersData(orders);
+        setSummary(dashboardSummary);
+      } finally {
+        setIsBootLoading(false);
+      }
+    };
+
+    void loadData();
+  }, [selectedRange]);
 
   const formattedSubtitle = useMemo(() => {
     const raw = format(now, "EEEE, dd 'tháng' MM, yyyy", { locale: vi });
@@ -120,10 +141,36 @@ export function DashboardPage() {
   }, [now]);
 
   const filteredOrders = useMemo(() => {
-    return orders
+    return ordersData
       .filter((order) => isInRange(order.createdAt, rangeStart, now))
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-  }, [now, rangeStart]);
+  }, [now, ordersData, rangeStart]);
+
+  const revenueByDay = useMemo(() => {
+    const map = new Map<string, { date: string; revenue: number; orders: number }>();
+    ordersData.forEach((order) => {
+      const date = format(order.createdAt, 'dd/MM');
+      const current = map.get(date) ?? { date, revenue: 0, orders: 0 };
+      current.revenue += order.total;
+      current.orders += 1;
+      map.set(date, current);
+    });
+    return Array.from(map.values());
+  }, [ordersData]);
+
+  const stockAlerts = useMemo(
+    () => summary.stockAlerts.map((alert) => ({
+      product: { id: String(alert.productId), name: alert.productName },
+      currentStock: alert.stock,
+      minStock: alert.minStock,
+    })),
+    [summary.stockAlerts],
+  );
+
+  const soldProductsToday = useMemo(
+    () => filteredOrders.reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0),
+    [filteredOrders],
+  );
 
   const chartData = useMemo<RevenueChartRow[]>(() => {
     const dayBuckets = Array.from({ length: 7 }, (_, index) => subDays(startOfDay(now), 6 - index));
@@ -222,7 +269,7 @@ export function DashboardPage() {
       <section className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <KPICard
           label="Doanh thu hôm nay"
-          value={formatVND(12500000)}
+          value={formatVND(summary.totalRevenue)}
           delta={{ value: '+8.2% so với hôm qua', positive: true }}
           icon={TrendingUp}
           iconBg="#EEF3FD"
@@ -230,7 +277,7 @@ export function DashboardPage() {
         />
         <KPICard
           label="Đơn hàng hôm nay"
-          value="34"
+          value={String(summary.totalOrders)}
           delta={{ value: '+5 so với hôm qua', positive: true }}
           icon={ShoppingBag}
           iconBg="#F0FDF4"
@@ -238,7 +285,7 @@ export function DashboardPage() {
         />
         <KPICard
           label="Sản phẩm đã bán"
-          value="127"
+          value={String(soldProductsToday)}
           delta={{ value: '-3.1% so với hôm qua', positive: false }}
           icon={Package}
           iconBg="#FFFBEB"
@@ -250,7 +297,7 @@ export function DashboardPage() {
             <div>
               <p className="mb-1 text-[13px] text-[var(--color-text-secondary)]">Sản phẩm sắp hết</p>
               <p className="font-[var(--font-display)] text-[28px] font-bold leading-none text-[var(--color-text-primary)]">
-                8
+                {summary.lowStockCount}
               </p>
             </div>
             <div className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#FEF2F2]">

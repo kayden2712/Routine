@@ -70,10 +70,14 @@ export function LoginPage() {
 
     setHasError(false);
     setLoading(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 1500));
-    await login(safeEmail, safePassword, role);
-    navigate(roleHome[role], { replace: true });
-    setLoading(false);
+    try {
+      await login(safeEmail, safePassword, role);
+      navigate(roleHome[role], { replace: true });
+    } catch {
+      setHasError(true);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -30,7 +30,6 @@ import {
   format,
   isAfter,
   isBefore,
-  parse,
   startOfDay,
   subDays,
 } from 'date-fns';
@@ -52,9 +51,10 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { fetchCustomersApi, fetchOrdersApi, fetchProductsApi } from '@/lib/backendApi';
 import { formatVND } from '@/lib/utils';
-import { customers, orders, products, revenueByDay } from '@/lib/mockData';
 import { toast } from '@/lib/toast';
+import type { Customer, Order, Product } from '@/types';
 
 interface DateRange {
   from: Date;
@@ -82,12 +82,6 @@ interface TopProductRow {
   category: string;
 }
 
-function parseRevenueDate(label: string): Date {
-  const parsed = parse(label, 'dd/MM', new Date());
-  parsed.setHours(12, 0, 0, 0);
-  return parsed;
-}
-
 function inRange(date: Date, range: DateRange): boolean {
   return !isBefore(startOfDay(date), startOfDay(range.from)) && !isAfter(startOfDay(date), startOfDay(range.to));
 }
@@ -111,10 +105,49 @@ export function ReportsPage() {
   const [draftFrom, setDraftFrom] = useState(format(subDays(today, 29), 'yyyy-MM-dd'));
   const [draftTo, setDraftTo] = useState(format(today, 'yyyy-MM-dd'));
   const [revenueMode, setRevenueMode] = useState<RevenuePeriodMode>('week');
+  const [ordersData, setOrdersData] = useState<Order[]>([]);
+  const [productsData, setProductsData] = useState<Product[]>([]);
+  const [customersData, setCustomersData] = useState<Customer[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [orders, products, customers] = await Promise.all([
+        fetchOrdersApi(),
+        fetchProductsApi(),
+        fetchCustomersApi(),
+      ]);
+      setOrdersData(orders);
+      setProductsData(products);
+      setCustomersData(customers);
+    };
+
+    void loadData();
+  }, []);
+
+  const revenueByDay = useMemo(() => {
+    const map = new Map<string, { parsedDate: Date; revenue: number; orders: number }>();
+
+    ordersData.forEach((order) => {
+      const day = startOfDay(order.createdAt);
+      const key = format(day, 'yyyy-MM-dd');
+      const current = map.get(key) ?? { parsedDate: day, revenue: 0, orders: 0 };
+      current.revenue += order.total;
+      current.orders += 1;
+      map.set(key, current);
+    });
+
+    return Array.from(map.values())
+      .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime())
+      .map((item) => ({
+        parsedDate: item.parsedDate,
+        date: format(item.parsedDate, 'dd/MM'),
+        revenue: item.revenue,
+        orders: item.orders,
+      }));
+  }, [ordersData]);
 
   const filteredRevenueBase = useMemo(() => {
     return revenueByDay
-      .map((item) => ({ ...item, parsedDate: parseRevenueDate(item.date) }))
       .filter((item) => inRange(item.parsedDate, dateRange))
       .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
   }, [dateRange]);
@@ -151,15 +184,15 @@ export function ReportsPage() {
   const periodDelta = revenueSeries.length > 1 ? revenueSeries[revenueSeries.length - 1].changePct : 0;
 
   const filteredOrders = useMemo(() => {
-    return orders.filter((order) => inRange(order.createdAt, dateRange));
-  }, [dateRange]);
+    return ordersData.filter((order) => inRange(order.createdAt, dateRange));
+  }, [dateRange, ordersData]);
 
   const topProducts = useMemo<TopProductRow[]>(() => {
     const map = new Map<string, TopProductRow>();
 
     filteredOrders.forEach((order) => {
       order.items.forEach((item) => {
-        const product = products.find((p) => p.id === item.productId);
+        const product = productsData.find((p) => p.id === item.productId);
         const existing = map.get(item.productId);
         if (existing) {
           existing.sold += item.quantity;
@@ -186,7 +219,7 @@ export function ReportsPage() {
       ...row,
       performance: Math.round((row.sold / maxSold) * 100),
     }));
-  }, [filteredOrders]);
+  }, [filteredOrders, productsData]);
 
   const categoryPieData = useMemo(() => {
     const map = new Map<string, number>();
@@ -208,7 +241,7 @@ export function ReportsPage() {
   const newCustomersSeries = useMemo(() => {
     const map = new Map<string, number>();
 
-    customers
+    customersData
       .filter((customer) => inRange(customer.createdAt, dateRange))
       .forEach((customer) => {
         const key = format(customer.createdAt, 'dd/MM');
@@ -217,22 +250,22 @@ export function ReportsPage() {
 
     return Array.from(map.entries())
       .map(([date, count]) => ({ date, count }))
-      .sort((a, b) => parseRevenueDate(a.date).getTime() - parseRevenueDate(b.date).getTime());
-  }, [dateRange]);
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [customersData, dateRange]);
 
   const topCustomers = useMemo(() => {
-    return [...customers]
+    return [...customersData]
       .sort((a, b) => b.totalSpent - a.totalSpent)
       .slice(0, 10)
       .map((customer) => ({
         ...customer,
         avgOrder: customer.totalOrders === 0 ? 0 : Math.round(customer.totalSpent / customer.totalOrders),
       }));
-  }, []);
+  }, [customersData]);
 
-  const activeSku = products.filter((product) => product.status === 'active').length;
-  const lowSku = products.filter((product) => product.stock > 0 && product.stock <= product.minStock).length;
-  const outSku = products.filter((product) => product.stock === 0).length;
+  const activeSku = productsData.filter((product) => product.status === 'active').length;
+  const lowSku = productsData.filter((product) => product.stock > 0 && product.stock <= product.minStock).length;
+  const outSku = productsData.filter((product) => product.stock === 0).length;
 
   const stockPie = [
     { name: 'Còn hàng', value: activeSku, fill: '#2D6BE4' },
@@ -241,13 +274,13 @@ export function ReportsPage() {
   ];
 
   const lowStockRows = useMemo(() => {
-    return products
+    return productsData
       .filter((product) => product.stock <= product.minStock)
       .map((product) => ({
         ...product,
         needed: Math.max(0, product.minStock * 2 - product.stock),
       }));
-  }, []);
+  }, [productsData]);
 
   const lowStockTable = useReactTable({
     data: lowStockRows,

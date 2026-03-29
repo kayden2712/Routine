@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { customers } from '@/lib/mockData';
+import { createCustomerApi, fetchCustomersApi } from '@/lib/backendApi';
 import { cn, formatVND } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useCartStore } from '@/store/cartStore';
@@ -124,6 +124,7 @@ function customerInitials(name: string): string {
 
 export function POSPage() {
   const products = useProductStore((state) => state.products);
+  const fetchProducts = useProductStore((state) => state.fetchProducts);
   const {
     items,
     customer,
@@ -144,13 +145,22 @@ export function POSPage() {
 
   useEffect(() => {
     document.title = 'POS | Routine';
+    const loadInitialData = async () => {
+      const [customerList] = await Promise.all([
+        fetchCustomersApi(),
+        fetchProducts(),
+      ]);
+      setCustomerDirectory(customerList);
+    };
+
+    void loadInitialData();
   }, []);
 
   const [query, setQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('all');
   const [lastPressedProduct, setLastPressedProduct] = useState<string | null>(null);
   const [customerSearch, setCustomerSearch] = useState('');
-  const [customerDirectory, setCustomerDirectory] = useState<Customer[]>(customers);
+  const [customerDirectory, setCustomerDirectory] = useState<Customer[]>([]);
   const [isCustomerSearchOpen, setIsCustomerSearchOpen] = useState(false);
   const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [customerForm, setCustomerForm] = useState<CustomerFormState>({ name: '', phone: '' });
@@ -268,24 +278,16 @@ export function POSPage() {
     }
 
     setSavingCustomer(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 350));
-
-    const created: Customer = {
-      id: `c-pos-${Date.now()}`,
-      name,
-      phone,
-      totalOrders: 0,
-      totalSpent: 0,
-      tier: 'regular',
-      createdAt: new Date(),
-    };
-
-    setCustomerDirectory((prev) => [created, ...prev]);
-    setCustomer(created);
-    setCustomerSearch(created.phone);
-    setSavingCustomer(false);
-    setAddCustomerOpen(false);
-    toast.success('Đã thêm khách hàng mới', `${created.name} - ${created.phone}`);
+    try {
+      const created = await createCustomerApi({ name, phone, tier: 'regular' });
+      setCustomerDirectory((prev) => [created, ...prev]);
+      setCustomer(created);
+      setCustomerSearch(created.phone);
+      setAddCustomerOpen(false);
+      toast.success('Đã thêm khách hàng mới', `${created.name} - ${created.phone}`);
+    } finally {
+      setSavingCustomer(false);
+    }
   };
 
   const ensureCustomerForInvoice = (): Customer | null => {

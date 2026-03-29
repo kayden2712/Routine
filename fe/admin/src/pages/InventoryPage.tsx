@@ -79,6 +79,7 @@ function computeStatus(product: Product): Product['status'] {
 export function InventoryPage() {
   const products = useProductStore((state) => state.products);
   const updateProduct = useProductStore((state) => state.updateProduct);
+  const fetchProducts = useProductStore((state) => state.fetchProducts);
   const user = useAuthStore((state) => state.user);
   const isReadOnly = user?.role === 'sales';
 
@@ -91,6 +92,7 @@ export function InventoryPage() {
 
   useEffect(() => {
     document.title = 'Kho hang | Routine';
+    void fetchProducts();
   }, []);
 
   const categories = useMemo(() => {
@@ -169,7 +171,7 @@ export function InventoryPage() {
     setAdjustState({ product, mode });
   };
 
-  const applyAdjust = () => {
+  const applyAdjust = async () => {
     if (!adjustState) return;
 
     const parsed = Number(quantityInput);
@@ -199,7 +201,7 @@ export function InventoryPage() {
             : 'active',
     };
 
-    updateProduct(nextProduct);
+    await updateProduct(nextProduct);
     setAdjustState(null);
     toast.success('Cap nhat ton kho thanh cong');
   };
@@ -217,7 +219,7 @@ export function InventoryPage() {
 
     rows.forEach((row) => {
       const nextStock = row.stock + 5;
-      updateProduct({
+      void updateProduct({
         ...row.source,
         stock: nextStock,
         status: nextStock <= row.minStock ? 'inactive' : 'active',

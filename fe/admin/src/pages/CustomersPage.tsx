@@ -32,6 +32,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  createCustomerApi,
+  fetchCustomersApi,
+  fetchOrdersApi,
+  updateCustomerApi,
+} from '@/lib/backendApi';
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -39,7 +45,6 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { formatRelativeTime, formatVND } from '@/lib/utils';
-import { customers as mockCustomers, orders } from '@/lib/mockData';
 import { toast } from '@/lib/toast';
 import type { Customer, Order } from '@/types';
 
@@ -87,7 +92,8 @@ export function CustomersPage() {
     document.title = 'Khach hang | Routine';
   }, []);
 
-  const [customerList, setCustomerList] = useState<Customer[]>(mockCustomers);
+  const [customerList, setCustomerList] = useState<Customer[]>([]);
+  const [ordersData, setOrdersData] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [tierFilter, setTierFilter] = useState<TierFilter>('all');
   const [sortMode, setSortMode] = useState<SortMode>('newest');
@@ -98,6 +104,20 @@ export function CustomersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
   const [formState, setFormState] = useState<CustomerFormState>(createDefaultForm());
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [customers, orders] = await Promise.all([fetchCustomersApi(), fetchOrdersApi()]);
+        setCustomerList(customers);
+        setOrdersData(orders);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Không thể tải dữ liệu khách hàng');
+      }
+    };
+
+    void loadData();
+  }, []);
 
   const totalCustomers = customerList.length;
   const vipCount = customerList.filter((item) => item.tier === 'vip').length;
@@ -132,13 +152,13 @@ export function CustomersPage() {
   const selectedCustomerOrders = useMemo(() => {
     if (!selectedCustomer) return [];
 
-    const customerOrders = orders
+    const customerOrders = ordersData
       .filter((order) => order.customer?.id === selectedCustomer.id)
       .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     if (historyFilter === 'all') return customerOrders;
     return customerOrders.filter((order) => order.status === historyFilter);
-  }, [historyFilter, selectedCustomer]);
+  }, [historyFilter, selectedCustomer, ordersData]);
 
   const openCreateModal = () => {
     setFormState(createDefaultForm());
@@ -174,43 +194,38 @@ export function CustomersPage() {
     }
 
     setSavingForm(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 500));
 
-    if (formState.id) {
-      setCustomerList((prev) =>
-        prev.map((item) =>
-          item.id === formState.id
-            ? {
-                ...item,
-                name: formState.name.trim(),
-                phone: formState.phone.trim(),
-                email: formState.email.trim() || undefined,
-                address: formState.address.trim() || undefined,
-                tier: formState.tier,
-              }
-            : item,
-        ),
-      );
-      toast.success('Cập nhật khách hàng thành công');
-    } else {
-      const created: Customer = {
-        id: `c-${Date.now()}`,
-        name: formState.name.trim(),
-        phone: formState.phone.trim(),
-        email: formState.email.trim() || undefined,
-        address: formState.address.trim() || undefined,
-        totalOrders: 0,
-        totalSpent: 0,
-        tier: formState.tier,
-        createdAt: new Date(),
-      };
+    try {
+      if (formState.id) {
+        const updated = await updateCustomerApi(formState.id, {
+          name: formState.name.trim(),
+          phone: formState.phone.trim(),
+          email: formState.email.trim() || undefined,
+          address: formState.address.trim() || undefined,
+          tier: formState.tier,
+        });
 
-      setCustomerList((prev) => [created, ...prev]);
-      toast.success('Thêm khách hàng thành công');
+        setCustomerList((prev) => prev.map((item) => (item.id === formState.id ? updated : item)));
+        toast.success('Cập nhật khách hàng thành công');
+      } else {
+        const created = await createCustomerApi({
+          name: formState.name.trim(),
+          phone: formState.phone.trim(),
+          email: formState.email.trim() || undefined,
+          address: formState.address.trim() || undefined,
+          tier: formState.tier,
+        });
+
+        setCustomerList((prev) => [created, ...prev]);
+        toast.success('Thêm khách hàng thành công');
+      }
+
+      setFormOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Lưu khách hàng thất bại');
+    } finally {
+      setSavingForm(false);
     }
-
-    setSavingForm(false);
-    setFormOpen(false);
   };
 
   const columns: ColumnDef<Customer>[] = [

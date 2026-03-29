@@ -1,4 +1,5 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import axios, { AxiosError } from 'axios';
+import type { InternalAxiosRequestConfig } from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
@@ -18,9 +19,10 @@ apiClient.interceptors.request.use(
     
     if (authData) {
       try {
-        const { customer } = JSON.parse(authData);
-        if (customer?.token) {
-          config.headers.Authorization = `Bearer ${customer.token}`;
+        const parsed = JSON.parse(authData);
+        const token = parsed?.state?.user?.token ?? parsed?.user?.token;
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
         }
       } catch (error) {
         console.error('Error parsing auth data:', error);

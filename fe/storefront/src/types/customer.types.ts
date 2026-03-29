@@ -1,10 +1,4 @@
-export type ProductCategory =
-  | 'Áo sơ mi'
-  | 'Áo thun'
-  | 'Quần kaki'
-  | 'Quần jeans'
-  | 'Áo khoác'
-  | 'Váy'
+export type ProductCategory = string
 
 export type ProductBadge = 'new' | 'sale' | 'bestseller'
 
@@ -12,6 +6,7 @@ export type ProductSize = 'XS' | 'S' | 'M' | 'L' | 'XL' | '28' | '29' | '30' | '
 
 export interface Product {
   id: string
+  code?: string
   name: string
   category: ProductCategory
   price: number
@@ -23,6 +18,8 @@ export interface Product {
   reviewCount: number
   badge?: ProductBadge
   description: string
+  stock?: number
+  minStock?: number
 }
 
 export interface ProductReview {
@@ -59,4 +56,7 @@ export interface CustomerUser {
   id: string
   fullName: string
   email: string
+  phone?: string
+  token?: string
+  refreshToken?: string
 }

@@ -22,6 +22,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
+  createStaffApi,
+  fetchStaffApi,
+  updateStaffApi,
+  updateStaffStatusApi,
+} from '@/lib/backendApi';
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -84,75 +90,6 @@ const statusLabelMap: Record<StaffStatus, string> = {
   inactive: 'Tạm khóa',
 };
 
-const mockStaff: StaffMember[] = [
-  {
-    id: 's1',
-    name: 'Nguyen Minh Anh',
-    email: 'minh.anh@routine.vn',
-    phone: '0901122334',
-    role: 'manager',
-    status: 'active',
-    branch: 'Routine Q1',
-    createdAt: new Date('2025-04-04'),
-    lastActiveAt: new Date(),
-  },
-  {
-    id: 's2',
-    name: 'Tran Gia Bao',
-    email: 'gia.bao@routine.vn',
-    phone: '0912233445',
-    role: 'sales',
-    status: 'active',
-    branch: 'Routine Q1',
-    createdAt: new Date('2025-09-12'),
-    lastActiveAt: new Date(Date.now() - 1000 * 60 * 48),
-  },
-  {
-    id: 's3',
-    name: 'Le Thanh Hoa',
-    email: 'thanh.hoa@routine.vn',
-    phone: '0923344556',
-    role: 'sales',
-    status: 'active',
-    branch: 'Routine Thu Duc',
-    createdAt: new Date('2025-10-08'),
-    lastActiveAt: new Date(Date.now() - 1000 * 60 * 12),
-  },
-  {
-    id: 's4',
-    name: 'Pham Bao Ngoc',
-    email: 'bao.ngoc@routine.vn',
-    phone: '0934455667',
-    role: 'warehouse',
-    status: 'active',
-    branch: 'Routine Thu Duc',
-    createdAt: new Date('2025-07-17'),
-    lastActiveAt: new Date(Date.now() - 1000 * 60 * 90),
-  },
-  {
-    id: 's5',
-    name: 'Doan Quoc Viet',
-    email: 'quoc.viet@routine.vn',
-    phone: '0945566778',
-    role: 'accountant',
-    status: 'inactive',
-    branch: 'Back Office',
-    createdAt: new Date('2025-03-22'),
-    lastActiveAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-  },
-  {
-    id: 's6',
-    name: 'Vu Nhat Linh',
-    email: 'nhat.linh@routine.vn',
-    phone: '0956677889',
-    role: 'warehouse',
-    status: 'active',
-    branch: 'Routine Q1',
-    createdAt: new Date('2025-11-03'),
-    lastActiveAt: new Date(Date.now() - 1000 * 60 * 25),
-  },
-];
-
 function createDefaultForm(): StaffFormState {
   return {
     name: '',
@@ -185,7 +122,7 @@ export function StaffPage() {
     document.title = 'Nhân viên | Routine';
   }, []);
 
-  const [staffList, setStaffList] = useState<StaffMember[]>(mockStaff);
+  const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<StaffRoleFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StaffStatusFilter>('all');
@@ -193,6 +130,19 @@ export function StaffPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
   const [formState, setFormState] = useState<StaffFormState>(createDefaultForm());
+
+  useEffect(() => {
+    const loadStaff = async () => {
+      try {
+        const staff = await fetchStaffApi();
+        setStaffList(staff);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Không thể tải danh sách nhân viên');
+      }
+    };
+
+    void loadStaff();
+  }, []);
 
   const totalStaff = staffList.length;
   const activeStaff = staffList.filter((item) => item.status === 'active').length;
@@ -243,8 +193,9 @@ export function StaffPage() {
     setFormOpen(true);
   };
 
-  const toggleStaffStatus = (staff: StaffMember) => {
+  const toggleStaffStatus = async (staff: StaffMember) => {
     const nextStatus: StaffStatus = staff.status === 'active' ? 'inactive' : 'active';
+    await updateStaffStatusApi(staff.id, nextStatus === 'active');
     setStaffList((prev) =>
       prev.map((item) =>
         item.id === staff.id
@@ -285,44 +236,38 @@ export function StaffPage() {
     }
 
     setSavingForm(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
 
-    if (formState.id) {
-      setStaffList((prev) =>
-        prev.map((item) =>
-          item.id === formState.id
-            ? {
-                ...item,
-                name: formState.name.trim(),
-                email: formState.email.trim(),
-                phone: formState.phone.trim(),
-                role: formState.role,
-                status: formState.status,
-                branch: formState.branch.trim(),
-              }
-            : item,
-        ),
-      );
-      toast.success('Cập nhật nhân viên thành công');
-    } else {
-      const created: StaffMember = {
-        id: `s-${Date.now()}`,
-        name: formState.name.trim(),
-        email: formState.email.trim(),
-        phone: formState.phone.trim(),
-        role: formState.role,
-        status: formState.status,
-        branch: formState.branch.trim(),
-        createdAt: new Date(),
-        lastActiveAt: formState.status === 'active' ? new Date() : undefined,
-      };
+    try {
+      if (formState.id) {
+        await updateStaffApi(formState.id, {
+          name: formState.name.trim(),
+          email: formState.email.trim(),
+          phone: formState.phone.trim(),
+          role: formState.role,
+          status: formState.status,
+          branch: formState.branch.trim(),
+        });
+        toast.success('Cập nhật nhân viên thành công');
+      } else {
+        await createStaffApi({
+          name: formState.name.trim(),
+          email: formState.email.trim(),
+          phone: formState.phone.trim(),
+          role: formState.role,
+          status: formState.status,
+          branch: formState.branch.trim(),
+        });
+        toast.success('Thêm nhân viên thành công');
+      }
 
-      setStaffList((prev) => [created, ...prev]);
-      toast.success('Thêm nhân viên thành công');
+      const staff = await fetchStaffApi();
+      setStaffList(staff);
+      setFormOpen(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Lưu thông tin nhân viên thất bại');
+    } finally {
+      setSavingForm(false);
     }
-
-    setSavingForm(false);
-    setFormOpen(false);
   };
 
   const columns: ColumnDef<StaffMember>[] = [

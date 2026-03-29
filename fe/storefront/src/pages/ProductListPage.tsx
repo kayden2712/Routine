@@ -4,8 +4,9 @@ import { useSearchParams } from 'react-router-dom'
 import { ProductCard } from '@/components/shared/ProductCard'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { products } from '@/lib/mockData'
+import { fetchProductsApi } from '@/lib/backendApi'
 import { useWishlistStore } from '@/store/wishlistStore'
+import type { Product } from '@/types/customer.types'
 
 const colorMap: Record<string, string> = {
   Trắng: '#FFFFFF',
@@ -33,6 +34,7 @@ const colorMap: Record<string, string> = {
 const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', '28', '29', '30', '31', '32']
 
 export const ProductListPage = () => {
+  const [products, setProducts] = useState<Product[]>([])
   const [searchParams] = useSearchParams()
   const group = searchParams.get('group')
   const searchQuery = (searchParams.get('search') ?? '').trim().toLowerCase()
@@ -66,6 +68,15 @@ export const ProductListPage = () => {
   const [selectedRating, setSelectedRating] = useState<number | null>(null)
   const [sortBy, setSortBy] = useState('featured')
   const [layout, setLayout] = useState<'grid' | 'list'>('grid')
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const productList = await fetchProductsApi()
+      setProducts(productList)
+    }
+
+    void loadProducts()
+  }, [])
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>()

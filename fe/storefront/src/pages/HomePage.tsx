@@ -1,6 +1,8 @@
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { categories, products } from '@/lib/mockData'
+import { fetchProductsApi } from '@/lib/backendApi'
+import type { Product } from '@/types/customer.types'
 
 const sizeOrder = ['XS', 'S', 'M', 'L']
 
@@ -13,9 +15,33 @@ const labelMap: Record<string, string> = {
 }
 
 export const HomePage = () => {
+  const [products, setProducts] = useState<Product[]>([])
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const productList = await fetchProductsApi()
+      setProducts(productList)
+    }
+
+    void loadProducts()
+  }, [])
+
+  const categories = useMemo(
+    () => Array.from(new Set(products.map((product) => product.category))),
+    [products],
+  )
+
   const heroProduct = products[0]
   const curatedProducts = products.slice(0, 6)
   const featured = products.slice(0, 3)
+
+  if (!heroProduct) {
+    return (
+      <section className="rounded-[16px] border border-[var(--line)] bg-[var(--surface-bg)] p-8 text-center text-[var(--text-secondary)]">
+        Đang tải sản phẩm...
+      </section>
+    )
+  }
 
   return (
     <div className="space-y-8">

@@ -10,6 +10,7 @@ export const CustomerLoginPage = () => {
   const login = useCustomerAuthStore((state) => state.login)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
 
   return (
     <section className="flex min-h-[calc(100vh-170px)] items-center justify-center py-10">
@@ -47,12 +48,16 @@ export const CustomerLoginPage = () => {
 
         <form
           className="space-y-3"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
-            const success = login(email, password)
+            setError('')
+            const success = await login(email, password)
             if (success) {
               navigate('/tai-khoan')
+              return
             }
+
+            setError('Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.')
           }}
         >
           <div className="relative">
@@ -86,6 +91,8 @@ export const CustomerLoginPage = () => {
           <Button type="submit" className="h-11 w-full rounded-lg bg-white text-[#1A1A18] hover:bg-white/90">
             Đăng nhập
           </Button>
+
+          {error ? <p className="text-sm text-[#FCA5A5]">{error}</p> : null}
         </form>
 
         <p className="mt-5 text-center text-[13px] text-white/50">

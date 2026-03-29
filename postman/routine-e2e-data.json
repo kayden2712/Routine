@@ -1,0 +1,44 @@
+[
+  {
+    "customerFullName": "E2E Customer Alpha",
+    "customerPhone": "0900001001",
+    "customerPassword": "Aa@12345",
+    "searchQuery": "shirt",
+    "cartQuantity": 2,
+    "cartQuantityUpdate": 3,
+    "orderQuantity": 1,
+    "paymentMethod": "CASH",
+    "productName": "E2E Product Alpha",
+    "productPrice": 299000,
+    "productStock": 20,
+    "productMinStock": 5
+  },
+  {
+    "customerFullName": "E2E Customer Beta",
+    "customerPhone": "0900001002",
+    "customerPassword": "Aa@12345",
+    "searchQuery": "jacket",
+    "cartQuantity": 1,
+    "cartQuantityUpdate": 2,
+    "orderQuantity": 2,
+    "paymentMethod": "TRANSFER",
+    "productName": "E2E Product Beta",
+    "productPrice": 349000,
+    "productStock": 25,
+    "productMinStock": 6
+  },
+  {
+    "customerFullName": "E2E Customer Gamma",
+    "customerPhone": "0900001003",
+    "customerPassword": "Aa@12345",
+    "searchQuery": "jeans",
+    "cartQuantity": 3,
+    "cartQuantityUpdate": 4,
+    "orderQuantity": 1,
+    "paymentMethod": "COD",
+    "productName": "E2E Product Gamma",
+    "productPrice": 399000,
+    "productStock": 30,
+    "productMinStock": 7
+  }
+]

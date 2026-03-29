@@ -137,13 +137,14 @@ function generateCode(): string {
 }
 
 export function ProductsPage() {
-  const { products, addProduct, updateProduct, removeProducts } = useProductStore();
+  const { products, addProduct, updateProduct, removeProducts, fetchProducts } = useProductStore();
   const user = useAuthStore((state) => state.user);
   const isReadOnly = user?.role === 'sales';
   const [isBootLoading, setIsBootLoading] = useState(true);
 
   useEffect(() => {
     document.title = 'San pham | Routine';
+    void fetchProducts();
   }, []);
 
   useEffect(() => {
@@ -337,10 +338,10 @@ export function ProductsPage() {
     };
 
     if (formState.id) {
-      updateProduct(baseProduct);
+      await updateProduct(baseProduct);
       toast.success('Cập nhật sản phẩm thành công');
     } else {
-      addProduct(baseProduct);
+      await addProduct(baseProduct);
       toast.success('Thêm sản phẩm thành công');
     }
 
@@ -355,7 +356,7 @@ export function ProductsPage() {
     }
 
     if (!deleteTarget) return;
-    removeProducts([deleteTarget.id]);
+    void removeProducts([deleteTarget.id]);
     setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
     toast.success('Đã xóa sản phẩm');
     setDeleteTarget(null);
@@ -368,7 +369,7 @@ export function ProductsPage() {
     }
 
     if (selectedIds.length === 0) return;
-    removeProducts(selectedIds);
+    void removeProducts(selectedIds);
     toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
     setSelectedIds([]);
   };

@@ -12,6 +12,7 @@ export const CustomerRegisterPage = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
+  const [error, setError] = useState('')
 
   return (
     <section className="flex min-h-[calc(100vh-170px)] items-center justify-center py-10">
@@ -49,16 +50,21 @@ export const CustomerRegisterPage = () => {
 
         <form
           className="space-y-3"
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault()
+            setError('')
             if (!acceptTerms) {
+              setError('Vui lòng đồng ý điều khoản để tiếp tục.')
               return
             }
 
-            const success = register(fullName, email, password)
+            const success = await register(fullName, email, password)
             if (success) {
               navigate('/tai-khoan')
+              return
             }
+
+            setError('Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.')
           }}
         >
           <div className="relative">
@@ -116,6 +122,8 @@ export const CustomerRegisterPage = () => {
           <Button type="submit" className="h-11 w-full rounded-lg bg-white text-[#1A1A18] hover:bg-white/90">
             Đăng ký
           </Button>
+
+          {error ? <p className="text-sm text-[#FCA5A5]">{error}</p> : null}
         </form>
 
         <p className="mt-5 text-center text-[13px] text-white/50">

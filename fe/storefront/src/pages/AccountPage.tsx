@@ -1,12 +1,13 @@
 import { Heart, Lock, LogOut, Package, Search, UserRound } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { products } from '@/lib/mockData'
+import { fetchMyOrdersApi, fetchProductsApi } from '@/lib/backendApi'
 import { formatVnd } from '@/lib/utils'
 import { useCartStore } from '@/store/cartStore'
 import { useCustomerAuthStore } from '@/store/customerAuthStore'
 import { useWishlistStore } from '@/store/wishlistStore'
+import type { Product } from '@/types/customer.types'
 
 type AccountTab = 'orders' | 'profile' | 'security'
 type OrderStatus = 'shipping' | 'received' | 'cancelled'
@@ -48,60 +49,47 @@ export const AccountPage = () => {
   const [activeTab, setActiveTab] = useState<AccountTab>('orders')
   const [searchQuery, setSearchQuery] = useState('')
   const [trackedOrderId, setTrackedOrderId] = useState<string | null>(null)
+  const [orders, setOrders] = useState<AccountOrder[]>([])
+  const [products, setProducts] = useState<Product[]>([])
 
-  const mockOrders = useMemo<AccountOrder[]>(() => {
-    return [
-      {
-        id: '#ORD2024001',
-        date: '15/03/2026',
-        status: 'shipping',
-        total: 769500,
-        items: [products[0], products[6], products[10]].map((item) => ({
-          id: item.id,
-          name: item.name,
-          image: item.image,
-        })),
-        tracking: [
-          { label: 'Đơn hàng đã đặt', state: 'completed' },
-          { label: 'Shop đã xác nhận', state: 'completed' },
-          { label: 'Đang giao đến bạn', state: 'current' },
-          { label: 'Giao hàng thành công', state: 'upcoming' },
-        ],
-      },
-      {
-        id: '#ORD2023986',
-        date: '09/03/2026',
-        status: 'received',
-        total: 420000,
-        items: [products[1], products[3]].map((item) => ({
-          id: item.id,
-          name: item.name,
-          image: item.image,
-        })),
-        tracking: [
-          { label: 'Đơn hàng đã đặt', state: 'completed' },
-          { label: 'Shop đã xác nhận', state: 'completed' },
-          { label: 'Đã giao đến bạn', state: 'completed' },
-          { label: 'Đã nhận hàng', state: 'current' },
-        ],
-      },
-      {
-        id: '#ORD2023951',
-        date: '01/03/2026',
-        status: 'cancelled',
-        total: 650000,
-        items: [products[7], products[9]].map((item) => ({
-          id: item.id,
-          name: item.name,
-          image: item.image,
-        })),
-        tracking: [
-          { label: 'Đơn hàng đã đặt', state: 'completed' },
-          { label: 'Đang xử lý', state: 'current' },
-          { label: 'Đã hủy', state: 'upcoming' },
-        ],
-      },
-    ]
+  useEffect(() => {
+    const loadData = async () => {
+      const [orderList, productList] = await Promise.all([
+        fetchMyOrdersApi(),
+        fetchProductsApi(),
+      ])
+
+      setProducts(productList)
+      setOrders(orderList.map((order) => ({
+        id: `#${order.orderNumber}`,
+        date: new Intl.DateTimeFormat('vi-VN').format(order.createdAt),
+        status: order.status,
+        total: order.total,
+        items: order.items.map((item) => {
+          const product = productList.find((value) => value.id === item.productId)
+          return {
+            id: item.productId,
+            name: item.productName,
+            image: product?.image || 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=300&q=80',
+          }
+        }),
+        tracking:
+          order.status === 'cancelled'
+            ? [
+                { label: 'Đơn hàng đã đặt', state: 'completed' as const },
+                { label: 'Đang xử lý', state: 'current' as const },
+                { label: 'Đã hủy', state: 'upcoming' as const },
+              ]
+            : [
+                { label: 'Đơn hàng đã đặt', state: 'completed' as const },
+                { label: 'Shop đã xác nhận', state: 'completed' as const },
+                { label: 'Đang giao đến bạn', state: order.status === 'shipping' ? 'current' as const : 'completed' as const },
+                { label: 'Giao hàng thành công', state: order.status === 'received' ? 'current' as const : 'upcoming' as const },
+              ],
+      })))
+    }
+
+    void loadData()
   }, [])
 
   if (!isAuthenticated || !user) {
@@ -131,9 +119,9 @@ export const AccountPage = () => {
 
   const filteredOrders = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase()
-    if (!normalizedQuery) return mockOrders
+    if (!normalizedQuery) return orders
 
-    return mockOrders.filter((order) => {
+    return orders.filter((order) => {
       const itemNames = order.items.map((item) => item.name).join(' ').toLowerCase()
       return (
         order.id.toLowerCase().includes(normalizedQuery) ||
@@ -142,7 +130,7 @@ export const AccountPage = () => {
         itemNames.includes(normalizedQuery)
       )
     })
-  }, [mockOrders, searchQuery])
+  }, [orders, searchQuery])
 
   const trackedOrder = useMemo(
     () => filteredOrders.find((order) => order.id === trackedOrderId) ?? null,

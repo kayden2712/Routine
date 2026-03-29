@@ -1,28 +1,61 @@
 import { Heart, Minus, Plus, RotateCcw, ShieldCheck, Star, Truck } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Badge } from '@/components/shared/Badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { findProductByRef, productDetailData } from '@/lib/mockData'
+import { fetchProductsApi } from '@/lib/backendApi'
 import { formatVnd } from '@/lib/utils'
 import { useCartStore } from '@/store/cartStore'
 import { useWishlistStore } from '@/store/wishlistStore'
-import type { ProductSize } from '@/types/customer.types'
+import type { Product, ProductReview, ProductSize } from '@/types/customer.types'
 
 const ratingBars = [92, 78, 44, 16, 8]
 
 export const ProductDetailPage = () => {
   const { productId = '' } = useParams()
   const navigate = useNavigate()
-  const product = useMemo(() => findProductByRef(productId), [productId])
+  const [products, setProducts] = useState<Product[]>([])
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const productList = await fetchProductsApi()
+      setProducts(productList)
+    }
+
+    void loadProducts()
+  }, [])
+
+  const product = useMemo(() => products.find((item) => item.id === productId), [productId, products])
 
   const addToCart = useCartStore((state) => state.addToCart)
   const isWishlisted = useWishlistStore((state) => state.isWishlisted)
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist)
 
-  const details = product ? productDetailData[product.id] : undefined
+  const details = useMemo(() => {
+    if (!product) {
+      return undefined
+    }
+
+    const reviews: ProductReview[] = []
+
+    return {
+      sku: product.code || `SKU-${product.id}`,
+      stock: product.stock ?? 0,
+      material: 'Cotton pha',
+      fit: 'Regular fit',
+      season: 'Quanh năm',
+      care: 'Giặt máy nhẹ, không tẩy',
+      highlights: [
+        `Thiết kế ${product.category.toLowerCase()} tối giản`,
+        'Đường may chắc chắn, hoàn thiện tốt',
+        'Phù hợp mặc hàng ngày',
+      ],
+      gallery: [product.image],
+      reviews,
+    }
+  }, [product])
 
   const isNumericSize = (product?.sizes[0] ?? '').match(/^\d+$/)
   const baseSizes: ProductSize[] = isNumericSize ? ['28', '29', '30', '31', '32'] : ['XS', 'S', 'M', 'L', 'XL']
@@ -345,7 +378,7 @@ export const ProductDetailPage = () => {
               </div>
             </div>
 
-            {details.reviews.map((review) => (
+            {details.reviews.length ? details.reviews.map((review) => (
               <article key={review.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-muted)] text-sm font-medium text-[var(--text-primary)]">
@@ -365,7 +398,11 @@ export const ProductDetailPage = () => {
                   </div>
                 </div>
               </article>
-            ))}
+            )) : (
+              <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-4 text-sm text-[var(--text-secondary)]">
+                Chưa có đánh giá cho sản phẩm này.
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </section>
