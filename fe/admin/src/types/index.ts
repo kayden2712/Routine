@@ -71,6 +71,7 @@ export interface Order {
   total: number;
   paymentMethod: 'cash' | 'transfer';
   status: 'pending' | 'paid' | 'cancelled';
+  channel: 'online' | 'offline';
   createdAt: Date;
   createdBy: string;
 }
@@ -84,6 +85,8 @@ export interface StockAlert {
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedSize?: string;
+  selectedColor?: string;
 }
 
 export interface RevenuePoint {

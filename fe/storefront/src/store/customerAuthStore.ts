@@ -21,7 +21,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>()(
       authError: '',
       login: async (email, password) => {
         if (!email || !password) {
-          set({ authError: 'Vui long nhap email va mat khau.' })
+          set({ authError: 'Vui lòng nhập email và mật khẩu.' })
           return false
         }
 
@@ -37,7 +37,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>()(
       },
       register: async (fullName, email, password, phone) => {
         if (!fullName || !email || !password || !phone) {
-          set({ authError: 'Vui long nhap day du thong tin.' })
+          set({ authError: 'Vui lòng nhập đầy đủ thông tin.' })
           return false
         }
 

@@ -28,5 +28,12 @@ public class DatabaseSchemaMigration implements ApplicationRunner {
         } catch (DataAccessException ex) {
             logger.warn("Database schema migration skipped or failed: {}", ex.getMessage());
         }
+
+        try {
+            jdbcTemplate.execute("ALTER TABLE orders ADD COLUMN channel VARCHAR(20) NOT NULL DEFAULT 'OFFLINE'");
+            logger.info("Database schema migration applied for order channel column");
+        } catch (DataAccessException ex) {
+            logger.warn("Order channel column migration skipped or failed: {}", ex.getMessage());
+        }
     }
 }

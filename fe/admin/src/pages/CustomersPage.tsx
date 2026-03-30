@@ -257,7 +257,7 @@ export function CustomersPage() {
       ]),
     });
 
-    toast.success('Da xuat file Excel khach hang');
+    toast.success('Đã xuất file Excel khách hàng');
   };
 
   const columns: ColumnDef<Customer>[] = [

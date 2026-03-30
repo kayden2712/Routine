@@ -333,7 +333,7 @@ export function ProductsPage() {
 
   const openCreateModal = () => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem san pham');
+      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
       return;
     }
 
@@ -349,7 +349,7 @@ export function ProductsPage() {
 
   const openEditModal = (product: Product) => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem san pham');
+      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
       return;
     }
 
@@ -421,7 +421,7 @@ export function ProductsPage() {
 
   const saveForm = async () => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem san pham');
+      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
       return;
     }
 
@@ -561,7 +561,7 @@ export function ProductsPage() {
 
   const deleteSingle = () => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem san pham');
+      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
       return;
     }
 
@@ -574,7 +574,7 @@ export function ProductsPage() {
 
   const deleteBulk = () => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem san pham');
+      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
       return;
     }
 
@@ -600,12 +600,12 @@ export function ProductsPage() {
       ]),
     });
 
-    toast.success('Da xuat file Excel san pham');
+    toast.success('Đã xuất file Excel sản phẩm');
   };
 
   const changeBulkCategory = () => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem san pham');
+      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
       return;
     }
 
@@ -866,19 +866,6 @@ export function ProductsPage() {
             <Download size={16} />
             Xuất Excel
           </Button>
-          <Button
-            variant="outline"
-            className="h-9 gap-2"
-            disabled={isReadOnly}
-            onClick={() => {
-              if (isReadOnly) {
-                toast.error('Vai tro Sales chi co quyen xem san pham');
-              }
-            }}
-          >
-            <Upload size={16} />
-            Nhập Excel
-          </Button>
           <Button className="h-9 gap-2" onClick={openCreateModal} disabled={isReadOnly}>
             <Plus size={16} />
             Thêm sản phẩm
@@ -888,7 +875,7 @@ export function ProductsPage() {
 
       {isReadOnly ? (
         <p className="rounded-[8px] border border-[var(--color-warning)]/30 bg-[var(--color-warning-bg)] px-3 py-2 text-sm text-[var(--color-warning)]">
-          Vai tro Sales dang o che do chi xem tren trang san pham.
+          Vai trò Sales đang ở chế độ chỉ xem trên trang sản phẩm.
         </p>
       ) : null}
 
@@ -1321,17 +1308,20 @@ export function ProductsPage() {
                         </Select>
 
                         <Input
-                          type="number"
-                          min={0}
+                          type="text"
+                          inputMode="numeric"
                           value={variant.stock}
-                          onChange={(event) =>
-                            setFormState((prev) => ({
-                              ...prev,
-                              variants: prev.variants.map((item, i) =>
-                                i === index ? { ...item, stock: event.target.value } : item,
-                              ),
-                            }))
-                          }
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (value === '' || /^\d+$/.test(value)) {
+                              setFormState((prev) => ({
+                                ...prev,
+                                variants: prev.variants.map((item, i) =>
+                                  i === index ? { ...item, stock: value } : item,
+                                ),
+                              }))
+                            }
+                          }}
                           placeholder="Số lượng"
                           className="h-8 w-[90px] min-w-[90px]"
                         />

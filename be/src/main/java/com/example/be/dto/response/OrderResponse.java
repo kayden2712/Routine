@@ -1,10 +1,13 @@
 package com.example.be.dto.response;
 
-import lombok.*;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -20,6 +23,7 @@ public class OrderResponse {
     private BigDecimal total;
     private String paymentMethod;
     private String status;
+    private String channel;
     private String createdByName;
     private String notes;
     private LocalDateTime createdAt;

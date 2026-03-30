@@ -15,6 +15,7 @@ import com.example.be.dto.response.OrderResponse;
 import com.example.be.entity.Customer;
 import com.example.be.entity.CustomerTier;
 import com.example.be.entity.Order;
+import com.example.be.entity.OrderChannel;
 import com.example.be.entity.OrderItem;
 import com.example.be.entity.OrderStatus;
 import com.example.be.entity.Product;
@@ -84,7 +85,7 @@ public class OrderService {
                     .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
         }
 
-        return createOrderInternal(request, customer, createdBy, OrderStatus.PAID);
+        return createOrderInternal(request, customer, createdBy, OrderStatus.PAID, OrderChannel.OFFLINE);
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -93,7 +94,7 @@ public class OrderService {
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
         User createdBy = resolveCreatedByForCustomer();
 
-        return createOrderInternal(request, customer, createdBy, OrderStatus.PENDING);
+        return createOrderInternal(request, customer, createdBy, OrderStatus.PENDING, OrderChannel.ONLINE);
     }
 
     private User resolveCreatedByForCustomer() {
@@ -114,7 +115,8 @@ public class OrderService {
             CreateOrderRequest request,
             Customer customer,
             User createdBy,
-            OrderStatus initialStatus) {
+            OrderStatus initialStatus,
+            OrderChannel channel) {
 
         // Generate order number
         String orderNumber = generateOrderNumber();
@@ -127,6 +129,7 @@ public class OrderService {
         BigDecimal discount = request.getDiscount() != null ? request.getDiscount() : BigDecimal.ZERO;
         order.setPaymentMethod(request.getPaymentMethod());
         order.setStatus(initialStatus);
+        order.setChannel(channel);
         order.setCreatedBy(createdBy);
         order.setNotes(request.getNotes());
 
@@ -266,6 +269,7 @@ public class OrderService {
                 .total(order.getTotal())
                 .paymentMethod(order.getPaymentMethod().name())
                 .status(order.getStatus().name())
+                .channel(order.getChannel().name())
                 .createdByName(order.getCreatedBy().getFullName())
                 .notes(order.getNotes())
                 .createdAt(order.getCreatedAt())

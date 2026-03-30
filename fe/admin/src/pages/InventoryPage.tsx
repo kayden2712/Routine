@@ -163,7 +163,7 @@ export function InventoryPage() {
 
   const openAdjustDialog = (product: Product, mode: AdjustMode) => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem ton kho');
+      toast.error('Vai trò Sales chỉ có quyền xem tồn kho');
       return;
     }
 
@@ -176,7 +176,7 @@ export function InventoryPage() {
 
     const parsed = Number(quantityInput);
     if (!Number.isFinite(parsed) || parsed < 0) {
-      toast.error('Vui long nhap so luong hop le');
+      toast.error('Vui lòng nhập số lượng hợp lệ');
       return;
     }
 
@@ -208,12 +208,12 @@ export function InventoryPage() {
 
   const restockSelected = (rows: InventoryRow[]) => {
     if (isReadOnly) {
-      toast.error('Vai tro Sales chi co quyen xem ton kho');
+      toast.error('Vai trò Sales chỉ có quyền xem tồn kho');
       return;
     }
 
     if (rows.length === 0) {
-      toast.error('Chua co san pham duoc chon');
+      toast.error('Chưa có sản phẩm được chọn');
       return;
     }
 
@@ -245,7 +245,7 @@ export function InventoryPage() {
       ]),
     });
 
-    toast.success('Da xuat file Excel kho hang');
+    toast.success('Đã xuất file Excel kho hàng');
   };
 
   const columns = useMemo<ColumnDef<InventoryRow>[]>(
@@ -409,8 +409,8 @@ export function InventoryPage() {
         pageSize={8}
         emptyState={{
           icon: Boxes,
-          title: 'Khong co san pham phu hop',
-          description: 'Thu thay doi bo loc hoac tu khoa tim kiem de xem du lieu kho.',
+          title: 'Không có sản phẩm phù hợp',
+          description: 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu kho.',
         }}
         bulkActions={(rows) => {
           return (
@@ -548,14 +548,19 @@ export function InventoryPage() {
 
                 <div>
                   <label htmlFor="inventory-quantity" className="mb-1 block text-sm text-[var(--color-text-secondary)]">
-                    {adjustState.mode === 'set' ? 'Ton kho moi' : 'So luong'}
+                    {adjustState.mode === 'set' ? 'Tồn kho mới' : 'Số lượng'}
                   </label>
                   <Input
                     id="inventory-quantity"
-                    type="number"
-                    min={0}
+                    type="text"
+                    inputMode="numeric"
                     value={quantityInput}
-                    onChange={(event) => setQuantityInput(event.target.value)}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setQuantityInput(value);
+                      }
+                    }}
                     className="h-10"
                   />
                 </div>

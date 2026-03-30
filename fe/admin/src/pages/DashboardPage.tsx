@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   ArrowRight,
@@ -101,6 +102,7 @@ function parseRevenueDate(dateString: string): Date {
 }
 
 export function DashboardPage() {
+  const navigate = useNavigate();
   const [isBootLoading, setIsBootLoading] = useState(true);
   const [selectedRange, setSelectedRange] = useState<RangeKey>('7days');
   const [ordersData, setOrdersData] = useState<Order[]>([]);
@@ -419,6 +421,7 @@ export function DashboardPage() {
             <h3 className="text-[16px] font-semibold text-[var(--color-text-primary)]">Đơn hàng gần đây</h3>
             <button
               type="button"
+              onClick={() => navigate('/invoices')}
               className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-accent)]"
             >
               Xem tất cả <ArrowRight size={14} />
@@ -521,7 +524,11 @@ export function DashboardPage() {
           </div>
 
           <div className="mt-4 pt-3">
-            <button type="button" className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-accent)]">
+            <button
+              type="button"
+              onClick={() => navigate('/inventory')}
+              className="inline-flex items-center gap-1 text-sm font-medium text-[var(--color-accent)]"
+            >
               Xem báo cáo tồn kho <ArrowRight size={14} />
             </button>
           </div>

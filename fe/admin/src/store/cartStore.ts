@@ -24,9 +24,9 @@ interface CartState {
   customer: Customer | null;
   discountCode: string;
   discountAmount: number;
-  addItem: (product: Product) => void;
-  removeItem: (productId: string) => void;
-  updateQuantity: (productId: string, qty: number) => void;
+  addItem: (product: Product, selectedSize?: string, selectedColor?: string) => void;
+  removeItem: (productId: string, selectedSize?: string, selectedColor?: string) => void;
+  updateQuantity: (productId: string, qty: number, selectedSize?: string, selectedColor?: string) => void;
   setCustomer: (customer: Customer | null) => void;
   applyDiscount: (code: string) => void;
   clearCart: () => void;
@@ -39,16 +39,23 @@ export const useCartStore = create<CartState>((set, get) => ({
   customer: null,
   discountCode: '',
   discountAmount: 0,
-  addItem: (product) => {
+  addItem: (product, selectedSize, selectedColor) => {
     set((state) => {
-      const existing = state.items.find((item) => item.product.id === product.id);
+      // Create a key that includes product id and selected variants
+      const itemKey = `${product.id}:${selectedSize || ''}:${selectedColor || ''}`;
+      const existing = state.items.find((item) => {
+        const key = `${item.product.id}:${item.selectedSize || ''}:${item.selectedColor || ''}`;
+        return key === itemKey;
+      });
+
       const nextItems = existing
-        ? state.items.map((item) =>
-            item.product.id === product.id
+        ? state.items.map((item) => {
+            const key = `${item.product.id}:${item.selectedSize || ''}:${item.selectedColor || ''}`;
+            return key === itemKey
               ? { ...item, quantity: item.quantity + 1 }
-              : item,
-          )
-        : [...state.items, { product, quantity: 1 }];
+              : item;
+          })
+        : [...state.items, { product, quantity: 1, selectedSize, selectedColor }];
 
       const nextSubtotal = calculateSubtotal(nextItems);
       return {
@@ -57,9 +64,13 @@ export const useCartStore = create<CartState>((set, get) => ({
       };
     });
   },
-  removeItem: (productId) => {
+  removeItem: (productId, selectedSize, selectedColor) => {
     set((state) => {
-      const nextItems = state.items.filter((item) => item.product.id !== productId);
+      const itemKey = `${productId}:${selectedSize || ''}:${selectedColor || ''}`;
+      const nextItems = state.items.filter((item) => {
+        const key = `${item.product.id}:${item.selectedSize || ''}:${item.selectedColor || ''}`;
+        return key !== itemKey;
+      });
       const nextSubtotal = calculateSubtotal(nextItems);
 
       return {
@@ -68,14 +79,19 @@ export const useCartStore = create<CartState>((set, get) => ({
       };
     });
   },
-  updateQuantity: (productId, qty) => {
+  updateQuantity: (productId, qty, selectedSize, selectedColor) => {
     set((state) => {
+      const itemKey = `${productId}:${selectedSize || ''}:${selectedColor || ''}`;
       const nextItems =
         qty <= 0
-          ? state.items.filter((item) => item.product.id !== productId)
-          : state.items.map((item) =>
-              item.product.id === productId ? { ...item, quantity: qty } : item,
-            );
+          ? state.items.filter((item) => {
+              const key = `${item.product.id}:${item.selectedSize || ''}:${item.selectedColor || ''}`;
+              return key !== itemKey;
+            })
+          : state.items.map((item) => {
+              const key = `${item.product.id}:${item.selectedSize || ''}:${item.selectedColor || ''}`;
+              return key === itemKey ? { ...item, quantity: qty } : item;
+            });
 
       const nextSubtotal = calculateSubtotal(nextItems);
 

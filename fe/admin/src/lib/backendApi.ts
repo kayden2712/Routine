@@ -70,6 +70,7 @@ interface BackendOrder {
   total: number;
   paymentMethod: string;
   status: string;
+  channel: string;
   createdByName: string;
   createdAt?: string;
 }
@@ -253,6 +254,7 @@ export function mapBackendOrder(item: BackendOrder): Order {
     total: Number(item.total ?? 0),
     paymentMethod: mapPaymentMethod(item.paymentMethod),
     status: mapOrderStatus(item.status),
+    channel: (item.channel ?? 'OFFLINE').toLowerCase() === 'online' ? 'online' : 'offline',
     createdAt: parseDate(item.createdAt),
     createdBy: item.createdByName,
   };

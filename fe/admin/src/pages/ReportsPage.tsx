@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ColumnDef } from '@tanstack/react-table';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import {
+  ArrowLeft,
   ArrowDownRight,
   ArrowUpRight,
   CalendarRange,
@@ -9,7 +10,13 @@ import {
   FileText,
   Printer,
   Sheet,
+  Globe,
+  Store,
+  AlertCircle,
+  Clock,
+  ReceiptText,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import {
   Bar,
   CartesianGrid,
@@ -92,6 +99,8 @@ function categoryColor(index: number): string {
 }
 
 export function ReportsPage() {
+  const navigate = useNavigate();
+
   useEffect(() => {
     document.title = 'Bao cao | Routine';
   }, []);
@@ -304,6 +313,61 @@ export function ReportsPage() {
       }));
   }, [customersData]);
 
+  // Order Statistics
+  const todayOrders = useMemo(() => {
+    const todayStart = startOfDay(today);
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+
+    return ordersData.filter((order) => {
+      const orderDay = startOfDay(order.createdAt);
+      return !isBefore(orderDay, todayStart) && isBefore(orderDay, todayEnd);
+    });
+  }, [ordersData, today]);
+
+  const onlineOrders = useMemo(() => {
+    return filteredOrders.filter((order) => order.channel === 'online');
+  }, [filteredOrders]);
+
+  const offlineOrders = useMemo(() => {
+    return filteredOrders.filter((order) => order.channel === 'offline');
+  }, [filteredOrders]);
+
+  const cancelledOrders = useMemo(() => {
+    return filteredOrders.filter((order) => order.status === 'cancelled');
+  }, [filteredOrders]);
+
+  const todayStats = useMemo(() => {
+    const total = todayOrders.length;
+    const revenue = todayOrders.reduce((sum, order) => sum + order.total, 0);
+    const online = todayOrders.filter((o) => o.channel === 'online').length;
+    const offline = todayOrders.filter((o) => o.channel === 'offline').length;
+    const cancelled = todayOrders.filter((o) => o.status === 'cancelled').length;
+
+    return { total, revenue, online, offline, cancelled };
+  }, [todayOrders]);
+
+  const orderChannelPie = useMemo(() => {
+    const onlineCount = onlineOrders.length;
+    const offlineCount = offlineOrders.length;
+    return [
+      { name: 'Online', value: onlineCount, fill: '#2D6BE4', percentage: onlineCount + offlineCount === 0 ? 0 : Math.round((onlineCount / (onlineCount + offlineCount)) * 100) },
+      { name: 'Offline', value: offlineCount, fill: '#16A34A', percentage: onlineCount + offlineCount === 0 ? 0 : Math.round((offlineCount / (onlineCount + offlineCount)) * 100) },
+    ];
+  }, [onlineOrders, offlineOrders]);
+
+  const orderStatusDistribution = useMemo(() => {
+    const pending = filteredOrders.filter((o) => o.status === 'pending').length;
+    const paid = filteredOrders.filter((o) => o.status === 'paid').length;
+    const cancelled = filteredOrders.filter((o) => o.status === 'cancelled').length;
+
+    return [
+      { name: 'Chờ xử lý', value: pending, fill: '#D97706' },
+      { name: 'Đã thanh toán', value: paid, fill: '#16A34A' },
+      { name: 'Đã hủy', value: cancelled, fill: '#DC2626' },
+    ];
+  }, [filteredOrders]);
+
   const activeSku = productsData.filter((product) => product.status === 'active').length;
   const lowSku = productsData.filter((product) => product.stock > 0 && product.stock <= product.minStock).length;
   const outSku = productsData.filter((product) => product.stock === 0).length;
@@ -482,9 +546,29 @@ export function ReportsPage() {
   return (
     <div className="mx-auto w-full max-w-[1480px] space-y-5">
       <section className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">
-          Báo cáo & Thống kê
-        </h1>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 gap-2"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft size={16} />
+            Quay lại
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-9 gap-2"
+            onClick={() => navigate('/invoices')}
+          >
+            <ReceiptText size={16} />
+            Hóa đơn
+          </Button>
+          <h1 className="ml-1 font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">
+            Báo cáo & Thống kê
+          </h1>
+        </div>
 
         <div className="flex items-center gap-2">
           <DropdownMenu>
@@ -556,6 +640,7 @@ export function ReportsPage() {
         <TabsList variant="line" className="h-auto w-full justify-start border-b border-[var(--color-border)] p-0">
           <TabsTrigger value="revenue" className="flex-none px-4 py-2 text-[15px] font-medium">Doanh thu</TabsTrigger>
           <TabsTrigger value="products" className="flex-none px-4 py-2 text-[15px] font-medium">Sản phẩm</TabsTrigger>
+          <TabsTrigger value="orders" className="flex-none px-4 py-2 text-[15px] font-medium">Đơn hàng</TabsTrigger>
           <TabsTrigger value="customers" className="flex-none px-4 py-2 text-[15px] font-medium">Khách hàng</TabsTrigger>
           <TabsTrigger value="stock" className="flex-none px-4 py-2 text-[15px] font-medium">Tồn kho</TabsTrigger>
         </TabsList>
@@ -717,6 +802,138 @@ export function ReportsPage() {
 
           <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-4">
             <DataTable data={topProducts} columns={productColumns} pageSize={8} />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="orders" className="mt-4 space-y-4">
+          <section className="grid gap-3 md:grid-cols-4">
+            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock size={16} className="text-[var(--color-accent)]" />
+                <p className="text-sm text-[var(--color-text-secondary)]">Hôm nay</p>
+              </div>
+              <p className="font-[var(--font-display)] text-[24px] font-bold text-[var(--color-text-primary)]">{todayStats.total}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{formatVND(todayStats.revenue)} doanh thu</p>
+            </div>
+
+            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Globe size={16} className="text-[#2D6BE4]" />
+                <p className="text-sm text-[var(--color-text-secondary)]">Đơn Online</p>
+              </div>
+              <p className="font-[var(--font-display)] text-[24px] font-bold text-[#2D6BE4]">{onlineOrders.length}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{`${onlineOrders.length + offlineOrders.length === 0 ? 0 : Math.round((onlineOrders.length / (onlineOrders.length + offlineOrders.length)) * 100)}%`} trong kỳ</p>
+            </div>
+
+            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <Store size={16} className="text-[#16A34A]" />
+                <p className="text-sm text-[var(--color-text-secondary)]">Đơn Offline</p>
+              </div>
+              <p className="font-[var(--font-display)] text-[24px] font-bold text-[#16A34A]">{offlineOrders.length}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{`${onlineOrders.length + offlineOrders.length === 0 ? 0 : Math.round((offlineOrders.length / (onlineOrders.length + offlineOrders.length)) * 100)}%`} trong kỳ</p>
+            </div>
+
+            <div className="rounded-[12px] border border-[#FECACA] bg-[#FEF2F2] p-5">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle size={16} className="text-[#DC2626]" />
+                <p className="text-sm text-[#DC2626]">Đã hủy</p>
+              </div>
+              <p className="font-[var(--font-display)] text-[24px] font-bold text-[#DC2626]">{cancelledOrders.length}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{filteredOrders.length === 0 ? 0 : Math.round((cancelledOrders.length / filteredOrders.length) * 100)}% hủy/tổng</p>
+            </div>
+          </section>
+
+          <section className="grid gap-4 xl:grid-cols-2">
+            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
+              <h3 className="mb-3 text-base font-semibold">Đơn hàng theo kênh</h3>
+              <div className="mx-auto h-[220px] w-[220px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <PieChart>
+                    <Pie
+                      data={orderChannelPie}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                    >
+                      {orderChannelPie.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${Number(value ?? 0)} đơn`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 space-y-1">
+                {orderChannelPie.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
+                      <span>{item.name}</span>
+                    </div>
+                    <span className="text-[var(--color-text-secondary)]">{item.percentage}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
+              <h3 className="mb-3 text-base font-semibold">Trạng thái đơn hàng</h3>
+              <div className="mx-auto h-[220px] w-[220px]">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                  <PieChart>
+                    <Pie
+                      data={orderStatusDistribution}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                    >
+                      {orderStatusDistribution.map((entry) => (
+                        <Cell key={entry.name} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => `${Number(value ?? 0)} đơn`} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-2 space-y-1">
+                {orderStatusDistribution.map((item) => (
+                  <div key={item.name} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.fill }} />
+                      <span>{item.name}</span>
+                    </div>
+                    <span className="text-[var(--color-text-secondary)]">{item.value} đơn</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-4">
+            <h3 className="mb-3 text-base font-semibold">Đơn hàng trong kỳ</h3>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between p-2 bg-[#F7F6F4] rounded">
+                <span className="text-[var(--color-text-secondary)]">Tổng số đơn</span>
+                <span className="font-semibold">{filteredOrders.length}</span>
+              </div>
+              <div className="flex justify-between p-2">
+                <span className="text-[var(--color-text-secondary)]">Doanh thu</span>
+                <span className="font-semibold">{formatVND(filteredOrders.reduce((sum, o) => sum + o.total, 0))}</span>
+              </div>
+              <div className="flex justify-between p-2 bg-[#F7F6F4] rounded">
+                <span className="text-[var(--color-text-secondary)]">TB/đơn</span>
+                <span className="font-semibold">{formatVND(filteredOrders.length === 0 ? 0 : Math.round(filteredOrders.reduce((sum, o) => sum + o.total, 0) / filteredOrders.length))}</span>
+              </div>
+              <div className="flex justify-between p-2">
+                <span className="text-[var(--color-text-secondary)]">Đơn đã hủy</span>
+                <span className="font-semibold text-[#DC2626]">{cancelledOrders.length} ({filteredOrders.length === 0 ? 0 : Math.round((cancelledOrders.length / filteredOrders.length) * 100)}%)</span>
+              </div>
+            </div>
           </section>
         </TabsContent>
 

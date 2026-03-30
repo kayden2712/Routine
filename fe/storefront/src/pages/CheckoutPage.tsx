@@ -115,12 +115,12 @@ export const CheckoutPage = () => {
       })
 
       const notes = [
-        `Nguoi nhan: ${form.fullName}`,
+        `Người nhận: ${form.fullName}`,
         `SĐT: ${form.phone}`,
-        `Email: ${form.email || 'Khong co'}`,
-        `Dia chi: ${form.address}, ${form.district}, ${form.city}`,
-        `Giao hang: ${deliveryMethod === 'fast' ? 'Nhanh' : 'Tieu chuan'}`,
-        form.note ? `Ghi chu: ${form.note}` : '',
+        `Email: ${form.email || 'Không có'}`,
+        `Địa chỉ: ${form.address}, ${form.district}, ${form.city}`,
+        `Giao hàng: ${deliveryMethod === 'fast' ? 'Nhanh' : 'Tiêu chuẩn'}`,
+        form.note ? `Ghi chú: ${form.note}` : '',
       ]
         .filter(Boolean)
         .join(' | ')
@@ -151,7 +151,7 @@ export const CheckoutPage = () => {
         },
       })
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Dat hang that bai. Vui long thu lai.'
+      const message = error instanceof Error ? error.message : 'Đặt hàng thất bại. Vui lòng thử lại.'
       setSubmitError(message)
     } finally {
       setIsSubmitting(false)

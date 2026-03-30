@@ -260,6 +260,10 @@ export function POSPage() {
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [createdOrderCode, setCreatedOrderCode] = useState('');
   const [createdInvoice, setCreatedInvoice] = useState<InvoiceExportSnapshot | null>(null);
+  const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
+  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedColor, setSelectedColor] = useState('');
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const customerSearchRef = useRef<HTMLDivElement | null>(null);
@@ -405,8 +409,29 @@ export function POSPage() {
     }
 
     setLastPressedProduct(product.id);
-    addItem(product);
-    window.setTimeout(() => setLastPressedProduct(null), 180);
+
+    // If product has variants (colors/sizes), show dialog for selection
+    if (product.colors?.length || product.sizes?.length) {
+      setPendingProduct(product);
+      setSelectedSize(product.sizes?.[0] || '');
+      setSelectedColor(product.colors?.[0] || '');
+      setIsVariantDialogOpen(true);
+    } else {
+      // Add directly if no variants
+      addItem(product);
+      window.setTimeout(() => setLastPressedProduct(null), 180);
+    }
+  };
+
+  const handleConfirmVariantSelection = () => {
+    if (pendingProduct) {
+      addItem(pendingProduct, selectedSize || undefined, selectedColor || undefined);
+      setIsVariantDialogOpen(false);
+      setPendingProduct(null);
+      setSelectedSize('');
+      setSelectedColor('');
+      window.setTimeout(() => setLastPressedProduct(null), 180);
+    }
   };
 
   const handleApplyDiscount = () => {
@@ -490,8 +515,8 @@ export function POSPage() {
           productId: item.product.id,
           quantity: item.quantity,
           price: item.product.price,
-          size: 'M',
-          color: 'Black',
+          size: item.selectedSize || (item.product.sizes?.[0] || 'M'),
+          color: item.selectedColor || (item.product.colors?.[0] || 'Black'),
         })),
         subtotal,
         discount: discountAmount,
@@ -781,7 +806,11 @@ export function POSPage() {
                               <p className="truncate text-[13px] font-medium text-[var(--color-text-primary)]">
                                 {item.product.name}
                               </p>
-                              <p className="text-[11px] text-[var(--color-text-muted)]">Màu Đen · M</p>
+                              <p className="text-[11px] text-[var(--color-text-muted)]">
+                                {item.selectedColor && `Màu ${item.selectedColor}`}
+                                {item.selectedColor && item.selectedSize && ' · '}
+                                {item.selectedSize && `Size ${item.selectedSize}`}
+                              </p>
                               <p className="mt-1 text-[13px] font-bold text-[var(--color-text-primary)]">
                                 {formatVND(item.product.price)}
                               </p>
@@ -790,7 +819,7 @@ export function POSPage() {
                             <button
                               type="button"
                               className="text-[var(--color-text-muted)] hover:text-[var(--color-error)]"
-                              onClick={() => removeItem(item.product.id)}
+                              onClick={() => removeItem(item.product.id, item.selectedSize, item.selectedColor)}
                             >
                               <X size={14} />
                             </button>
@@ -799,7 +828,7 @@ export function POSPage() {
                           <div className="mt-2 flex items-center gap-1.5">
                             <button
                               type="button"
-                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                              onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.selectedSize, item.selectedColor)}
                               className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--color-border)] bg-white hover:bg-[#F7F6F4]"
                             >
                               <Minus size={14} />
@@ -811,14 +840,14 @@ export function POSPage() {
                               onChange={(event) => {
                                 const qty = Number(event.target.value);
                                 if (Number.isFinite(qty) && qty > 0) {
-                                  updateQuantity(item.product.id, qty);
+                                  updateQuantity(item.product.id, qty, item.selectedSize, item.selectedColor);
                                 }
                               }}
                               className="h-7 w-9 appearance-none rounded-[6px] border border-[var(--color-border)] text-center text-[13px] font-semibold text-[var(--color-text-primary)] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             />
                             <button
                               type="button"
-                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                              onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.selectedSize, item.selectedColor)}
                               className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--color-border)] bg-white hover:bg-[#F7F6F4]"
                             >
                               +
@@ -926,6 +955,143 @@ export function POSPage() {
             </Button>
             <Button onClick={handleCreateCustomer} disabled={savingCustomer}>
               {savingCustomer ? 'Đang lưu...' : 'Thêm khách hàng'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isVariantDialogOpen} onOpenChange={setIsVariantDialogOpen}>
+        <DialogContent className="max-w-[400px] rounded-[12px] p-6">
+          <DialogHeader>
+            <DialogTitle className="text-[19px] font-semibold text-[var(--color-text-primary)]">
+              Chọn {pendingProduct?.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {pendingProduct?.colors && pendingProduct.colors.length > 0 && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
+                  Màu sắc
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {pendingProduct.colors.map((color) => {
+                    const colorVariants = pendingProduct.variants?.filter((v) => v.color === color) || [];
+                    const colorStock = colorVariants.reduce((sum, v) => sum + v.stock, 0);
+                    const isOutOfStock = colorStock === 0;
+
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={() => setSelectedColor(color)}
+                        className={cn(
+                          'rounded-[8px] border-2 px-3 py-2 text-sm font-medium transition-all',
+                          isOutOfStock
+                            ? 'border-[var(--color-border)] bg-[#F5F5F5] text-[#999] cursor-not-allowed opacity-50'
+                            : selectedColor === color
+                              ? 'border-[#2D6BE4] bg-[#EEF3FD] text-[#2D6BE4]'
+                              : 'border-[var(--color-border)] bg-white text-[var(--color-text-primary)] hover:border-[#2D6BE4]',
+                        )}
+                      >
+                        <span>{color}</span>
+                        {!isOutOfStock && <span className="ml-1 text-xs text-[#666]">({colorStock})</span>}
+                        {isOutOfStock && <span className="ml-1 text-xs">Hết hàng</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {pendingProduct?.sizes && pendingProduct.sizes.length > 0 && (
+              <div>
+                <label className="mb-2 block text-sm font-medium text-[var(--color-text-primary)]">
+                  Kích cỡ
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {pendingProduct.sizes.map((size) => {
+                    const sizeVariants = pendingProduct.variants?.filter((v) => v.size === size) || [];
+                    const sizeStock = sizeVariants.reduce((sum, v) => sum + v.stock, 0);
+                    const isOutOfStock = sizeStock === 0;
+
+                    return (
+                      <button
+                        key={size}
+                        type="button"
+                        disabled={isOutOfStock}
+                        onClick={() => setSelectedSize(size)}
+                        className={cn(
+                          'rounded-[8px] border-2 px-3 py-2 text-sm font-medium transition-all',
+                          isOutOfStock
+                            ? 'border-[var(--color-border)] bg-[#F5F5F5] text-[#999] cursor-not-allowed opacity-50'
+                            : selectedSize === size
+                              ? 'border-[#2D6BE4] bg-[#EEF3FD] text-[#2D6BE4]'
+                              : 'border-[var(--color-border)] bg-white text-[var(--color-text-primary)] hover:border-[#2D6BE4]',
+                        )}
+                      >
+                        <span>{size}</span>
+                        {!isOutOfStock && <span className="ml-1 text-xs text-[#666]">({sizeStock})</span>}
+                        {isOutOfStock && <span className="ml-1 text-xs">Hết hàng</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {selectedColor && selectedSize && (
+              <div className="rounded-[10px] border border-[var(--color-border)] bg-[#F7F6F4] p-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-[var(--color-text-secondary)]">
+                    Màu {selectedColor} · Size {selectedSize}
+                  </span>
+                  {(() => {
+                    const variant = pendingProduct.variants?.find(
+                      (v) => v.color === selectedColor && v.size === selectedSize,
+                    );
+                    const stock = variant?.stock ?? 0;
+                    return (
+                      <span
+                        className={cn(
+                          'font-semibold',
+                          stock > 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]',
+                        )}
+                      >
+                        {stock > 0 ? `Còn ${stock}` : 'Hết hàng'}
+                      </span>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsVariantDialogOpen(false);
+                setPendingProduct(null);
+                setSelectedSize('');
+                setSelectedColor('');
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              onClick={handleConfirmVariantSelection}
+              disabled={(() => {
+                if (!selectedColor || !selectedSize) return true;
+                const variant = pendingProduct?.variants?.find(
+                  (v) => v.color === selectedColor && v.size === selectedSize,
+                );
+                return !variant || variant.stock === 0;
+              })()}
+            >
+              Thêm vào giỏ
             </Button>
           </DialogFooter>
         </DialogContent>

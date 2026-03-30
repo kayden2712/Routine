@@ -6,15 +6,15 @@ export function RouteErrorBoundary() {
   const error = useRouteError();
   const navigate = useNavigate();
 
-  let title = 'Da xay ra loi';
-  let message = 'He thong gap su co khong mong muon. Vui long thu lai.';
+  let title = 'Đã xảy ra lỗi';
+  let message = 'Hệ thống gặp sự cố không mong muốn. Vui lòng thử lại.';
 
   if (isRouteErrorResponse(error)) {
     title = `${error.status} - ${error.statusText || 'Route error'}`;
     message =
       typeof error.data === 'string'
         ? error.data
-        : 'Khong the tai du lieu cho trang nay. Vui long thu lai sau.';
+        : 'Không thể tải dữ liệu cho trang này. Vui lòng thử lại sau.';
   } else if (error instanceof Error && error.message) {
     message = error.message;
   }
