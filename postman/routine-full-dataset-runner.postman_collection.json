@@ -15,8 +15,13 @@
 
     { "key": "runId", "value": "" },
     { "key": "adminToken", "value": "" },
+    { "key": "loginAttemptIndex", "value": "0" },
+    { "key": "adminCandidates", "value": "[{\"email\":\"admin@routine.com\",\"password\":\"admin123\"},{\"email\":\"admin@example.com\",\"password\":\"admin123\"},{\"email\":\"manager@routine.com\",\"password\":\"admin123\"}]" },
 
     { "key": "categoryMap", "value": "{}" },
+    { "key": "categoryEnsureSeeds", "value": "[]" },
+    { "key": "categoryEnsureIndex", "value": "0" },
+    { "key": "currentCategoryBody", "value": "{}" },
 
     { "key": "productSeeds", "value": "[]" },
     { "key": "customerSeeds", "value": "[]" },
@@ -56,6 +61,9 @@
               "pm.collectionVariables.set('customerIndex', '0');",
               "pm.collectionVariables.set('orderIndex', '0');",
               "pm.collectionVariables.set('saleSyncIndex', '0');",
+              "pm.collectionVariables.set('loginAttemptIndex', '0');",
+              "pm.collectionVariables.set('categoryEnsureIndex', '0');",
+              "pm.collectionVariables.set('adminToken', '');",
               "pm.collectionVariables.set('seededProducts', '[]');",
               "pm.collectionVariables.set('seededCustomers', '[]');",
               "postman.setNextRequest('01 Admin Login');"
@@ -80,17 +88,142 @@
       },
       "event": [
         {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "let candidates = [];",
+              "try {",
+              "  candidates = JSON.parse(pm.collectionVariables.get('adminCandidates') || '[]');",
+              "} catch (e) {",
+              "  candidates = [];",
+              "}",
+              "if (!Array.isArray(candidates) || candidates.length === 0) {",
+              "  candidates = [{ email: 'admin@routine.com', password: 'admin123' }];",
+              "}",
+              "const idx = Number(pm.collectionVariables.get('loginAttemptIndex') || '0');",
+              "const chosen = candidates[Math.min(idx, candidates.length - 1)] || candidates[0];",
+              "pm.variables.set('adminEmail', chosen.email);",
+              "pm.variables.set('adminPassword', chosen.password);",
+              "pm.collectionVariables.set('adminEmail', chosen.email);",
+              "pm.collectionVariables.set('adminPassword', chosen.password);"
+            ]
+          }
+        },
+        {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Admin login 200', function () { pm.response.to.have.status(200); });",
-              "const json = pm.response.json();",
-              "pm.collectionVariables.set('adminToken', (json.data && json.data.token) || '');",
-              "pm.test('Admin token exists', function () {",
-              "  pm.expect(pm.collectionVariables.get('adminToken')).to.be.a('string').and.not.empty;",
-              "});",
-              "postman.setNextRequest('02 Build Dataset From Categories');"
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "const token = (json.data && json.data.token) || '';",
+              "if (token) {",
+              "  pm.collectionVariables.set('adminToken', token);",
+              "  pm.test('Admin login success', function () { pm.expect(token).to.not.eql(''); });",
+              "  postman.setNextRequest('02 Ensure Categories - Prepare');",
+              "} else {",
+              "  let candidates = [];",
+              "  try { candidates = JSON.parse(pm.collectionVariables.get('adminCandidates') || '[]'); } catch (e) { candidates = []; }",
+              "  const idx = Number(pm.collectionVariables.get('loginAttemptIndex') || '0');",
+              "  const nextIdx = idx + 1;",
+              "  const message = (json && (json.message || json.error)) || 'Login failed';",
+              "  if (nextIdx < Math.max(1, candidates.length)) {",
+              "    pm.collectionVariables.set('loginAttemptIndex', String(nextIdx));",
+              "    postman.setNextRequest('01 Admin Login');",
+              "  } else {",
+              "    pm.test('Admin login failed after trying default accounts', function () {",
+              "      pm.expect.fail('Khong dang nhap duoc admin. Hay cap nhat adminEmail/adminPassword trong collection variables. Chi tiet: ' + message);",
+              "    });",
+              "    postman.setNextRequest(null);",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "02 Ensure Categories - Prepare",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/categories"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Get categories for ensure 200', function () { pm.response.to.have.status(200); });",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "const categories = Array.isArray(json.data) ? json.data : [];",
+              "const normalize = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();",
+              "const required = [",
+              "  { name: 'Ao so mi', description: 'Nhom ao so mi, ao phong, polo', icon: 'shirt', displayOrder: 1 },",
+              "  { name: 'Ao khoac', description: 'Nhom ao khoac ngoai', icon: 'jacket', displayOrder: 2 },",
+              "  { name: 'Quan jeans', description: 'Nhom quan jeans', icon: 'jeans', displayOrder: 3 },",
+              "  { name: 'Quan kaki', description: 'Nhom quan kaki', icon: 'khaki', displayOrder: 4 },",
+              "  { name: 'Vay', description: 'Nhom vay dam nu', icon: 'dress', displayOrder: 5 },",
+              "  { name: 'Phu kien', description: 'Nhom phu kien', icon: 'accessory', displayOrder: 6 }",
+              "];",
+              "const existingNames = categories.map((c) => normalize(c.name));",
+              "const missing = required.filter((r) => !existingNames.includes(normalize(r.name)));",
+              "pm.collectionVariables.set('categoryEnsureSeeds', JSON.stringify(missing));",
+              "pm.collectionVariables.set('categoryEnsureIndex', '0');",
+              "if (missing.length > 0) {",
+              "  postman.setNextRequest('02 Ensure Categories - Create Loop');",
+              "} else {",
+              "  postman.setNextRequest('02 Build Dataset From Categories');",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "02 Ensure Categories - Create Loop",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{currentCategoryBody}}"
+        },
+        "url": "{{baseUrl}}/categories"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const seeds = JSON.parse(pm.collectionVariables.get('categoryEnsureSeeds') || '[]');",
+              "const idx = Number(pm.collectionVariables.get('categoryEnsureIndex') || '0');",
+              "if (idx >= seeds.length) {",
+              "  postman.setNextRequest('02 Build Dataset From Categories');",
+              "  return;",
+              "}",
+              "pm.collectionVariables.set('currentCategoryBody', JSON.stringify(seeds[idx]));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Create category 201', function () { pm.response.to.have.status(201); });",
+              "const idx = Number(pm.collectionVariables.get('categoryEnsureIndex') || '0');",
+              "pm.collectionVariables.set('categoryEnsureIndex', String(idx + 1));",
+              "postman.setNextRequest('02 Ensure Categories - Create Loop');"
             ]
           }
         }
@@ -111,9 +244,16 @@
             "type": "text/javascript",
             "exec": [
               "pm.test('Categories loaded', function () { pm.response.to.have.status(200); });",
-              "const body = pm.response.json();",
+              "let body = {};",
+              "try { body = pm.response.json(); } catch (e) { body = {}; }",
               "const categories = (body && body.data) || [];",
-              "pm.test('Has categories', function () { pm.expect(categories.length).to.be.greaterThan(0); });",
+              "pm.test('Has categories', function () {",
+              "  pm.expect(categories.length, 'Khong tim thay categories sau khi ensure').to.be.greaterThan(0);",
+              "});",
+              "if (!Array.isArray(categories) || categories.length === 0) {",
+              "  postman.setNextRequest(null);",
+              "  return;",
+              "}",
               "",
               "const normalize = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();",
               "const findCategoryId = (keywords) => {",

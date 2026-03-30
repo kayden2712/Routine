@@ -614,7 +614,7 @@ export function ReportsPage() {
               ) : revenueSeries.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có dữ liệu doanh thu trong khoảng thời gian đã chọn.</div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <ComposedChart data={revenueSeries}>
                     <CartesianGrid vertical={false} stroke="#F0EEE9" />
                     <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} />
@@ -656,7 +656,7 @@ export function ReportsPage() {
                 ) : topProducts.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có dữ liệu bán hàng trong khoảng thời gian đã chọn.</div>
                 ) : (
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={topProducts.slice(0, 8)} layout="vertical" margin={{ left: 20, right: 20 }}>
                       <defs>
                         <linearGradient id="topProductGradient" x1="0" y1="0" x2="1" y2="0">
@@ -683,7 +683,7 @@ export function ReportsPage() {
             <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
               <h3 className="mb-3 text-base font-semibold">Theo danh mục</h3>
               <div className="mx-auto h-[220px] w-[220px]">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <PieChart>
                     <Pie
                       data={categoryPieData}
@@ -737,7 +737,7 @@ export function ReportsPage() {
               ) : newCustomersSeries.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có khách hàng mới trong khoảng thời gian đã chọn.</div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                   <LineChart data={newCustomersSeries}>
                     <CartesianGrid vertical={false} stroke="#F0EEE9" />
                     <XAxis dataKey="date" tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} />
@@ -776,7 +776,7 @@ export function ReportsPage() {
 
           <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
             <div className="mx-auto h-[220px] w-[220px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                 <PieChart>
                   <Pie data={stockPie} dataKey="value" nameKey="name" innerRadius={60} outerRadius={90}>
                     {stockPie.map((item) => (
