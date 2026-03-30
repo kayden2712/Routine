@@ -415,6 +415,10 @@
               "  return;",
               "}",
               "const body = { ...seeds[idx] };",
+              "const runId = pm.collectionVariables.get('runId') || String(Date.now());",
+              "const no = String(idx + 1).padStart(2, '0');",
+              "const nonce = Math.floor(Math.random() * 900 + 100);",
+              "body.code = `SEED-${runId.slice(-6)}-${no}-${nonce}`;",
               "delete body.__meta;",
               "pm.collectionVariables.set('currentProductBody', JSON.stringify(body));"
             ]
