@@ -16,7 +16,9 @@ export interface Product {
   name: string;
   category: string;
   gender: 'male' | 'female';
+  description?: string;
   price: number;
+  oldPrice?: number;
   costPrice: number;
   stock: number;
   minStock: number;

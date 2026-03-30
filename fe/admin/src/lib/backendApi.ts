@@ -16,7 +16,9 @@ interface BackendProduct {
   name: string;
   categoryName: string;
   gender?: string;
+  description?: string;
   price: number;
+  oldPrice?: number;
   costPrice: number;
   stock: number;
   minStock: number;
@@ -70,6 +72,12 @@ interface BackendOrder {
   status: string;
   createdByName: string;
   createdAt?: string;
+}
+
+interface BackendCategory {
+  id: number;
+  name: string;
+  slug?: string;
 }
 
 export interface AdminDashboardSummary {
@@ -136,6 +144,30 @@ function mapPaymentMethod(value?: string): Order['paymentMethod'] {
   return value === 'TRANSFER' || value === 'BANK' ? 'transfer' : 'cash';
 }
 
+function normalizeCategoryKey(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .trim()
+    .toLowerCase();
+}
+
+async function resolveCategoryId(categoryName: string): Promise<number> {
+  const response = await apiClient.get<BackendCategory[]>('/categories');
+  const categories = response.data ?? [];
+
+  if (categories.length === 0) {
+    throw new Error('Không tìm thấy danh mục trên hệ thống.');
+  }
+
+  const requested = normalizeCategoryKey(categoryName);
+  const matched = categories.find((category) => normalizeCategoryKey(category.name) === requested)
+    ?? categories.find((category) => category.slug && normalizeCategoryKey(category.slug) === requested)
+    ?? categories[0];
+
+  return matched.id;
+}
+
 export function mapBackendProduct(item: BackendProduct): Product {
   const variants = (item.variants ?? []).map((variant, index) => ({
     id: `v-${item.id}-${index + 1}`,
@@ -161,7 +193,9 @@ export function mapBackendProduct(item: BackendProduct): Product {
     name: item.name,
     category: item.categoryName,
     gender: mapProductGender(item.gender),
+    description: item.description ?? '',
     price: Number(item.price ?? 0),
+    oldPrice: item.oldPrice ? Number(item.oldPrice) : undefined,
     costPrice: Number(item.costPrice ?? 0),
     stock: Number(item.stock ?? 0),
     minStock: Number(item.minStock ?? 0),
@@ -259,6 +293,7 @@ export async function createProductApi(payload: {
   gender: 'male' | 'female';
   description?: string;
   price: number;
+  oldPrice?: number;
   costPrice: number;
   stock: number;
   minStock: number;
@@ -273,7 +308,7 @@ export async function createProductApi(payload: {
     stock: number;
   }>;
 }): Promise<Product> {
-  const categoryId = 1;
+  const categoryId = await resolveCategoryId(payload.category);
   const response = await apiClient.post<BackendProduct>('/products', {
     code: payload.code,
     name: payload.name,
@@ -281,6 +316,7 @@ export async function createProductApi(payload: {
     gender: payload.gender === 'female' ? 'FEMALE' : 'MALE',
     description: payload.description,
     price: payload.price,
+    oldPrice: payload.oldPrice,
     costPrice: payload.costPrice,
     stock: payload.stock,
     minStock: payload.minStock,
@@ -301,6 +337,7 @@ export async function updateProductApi(id: string, payload: {
   gender: 'male' | 'female';
   description?: string;
   price: number;
+  oldPrice?: number;
   costPrice: number;
   stock: number;
   minStock: number;
@@ -315,7 +352,7 @@ export async function updateProductApi(id: string, payload: {
     stock: number;
   }>;
 }): Promise<Product> {
-  const categoryId = 1;
+  const categoryId = await resolveCategoryId(payload.category);
   const response = await apiClient.put<BackendProduct>(`/products/${id}`, {
     code: payload.code,
     name: payload.name,
@@ -323,6 +360,7 @@ export async function updateProductApi(id: string, payload: {
     gender: payload.gender === 'female' ? 'FEMALE' : 'MALE',
     description: payload.description,
     price: payload.price,
+    oldPrice: payload.oldPrice,
     costPrice: payload.costPrice,
     stock: payload.stock,
     minStock: payload.minStock,

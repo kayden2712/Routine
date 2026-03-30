@@ -5,8 +5,16 @@ import { fetchProductsApi } from '@/lib/backendApi'
 import type { Product } from '@/types/customer.types'
 
 const sizeOrder = ['XS', 'S', 'M', 'L']
+const ALL_CATEGORY = 'all'
 
 const formatPrice = (value: number) => `${new Intl.NumberFormat('vi-VN').format(value)} ₫`
+
+const normalizeCategoryText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
 
 const labelMap: Record<string, string> = {
   new: 'NEW',
@@ -16,6 +24,7 @@ const labelMap: Record<string, string> = {
 
 export const HomePage = () => {
   const [products, setProducts] = useState<Product[]>([])
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORY)
 
   useEffect(() => {
     const loadProducts = async () => {
@@ -31,9 +40,34 @@ export const HomePage = () => {
     [products],
   )
 
+  useEffect(() => {
+    if (activeCategory === ALL_CATEGORY) {
+      return
+    }
+
+    const categoryStillExists = categories.some(
+      (category) => normalizeCategoryText(category) === normalizeCategoryText(activeCategory),
+    )
+
+    if (!categoryStillExists) {
+      setActiveCategory(ALL_CATEGORY)
+    }
+  }, [activeCategory, categories])
+
+  const filteredProducts = useMemo(() => {
+    if (activeCategory === ALL_CATEGORY) {
+      return products
+    }
+
+    const normalizedActive = normalizeCategoryText(activeCategory)
+    return products.filter(
+      (product) => normalizeCategoryText(product.category) === normalizedActive,
+    )
+  }, [activeCategory, products])
+
   const heroProduct = products[0]
-  const curatedProducts = products.slice(0, 6)
-  const featured = products.slice(0, 3)
+  const curatedProducts = filteredProducts.slice(0, 6)
+  const featured = filteredProducts.slice(0, 3)
 
   if (!heroProduct) {
     return (
@@ -93,7 +127,12 @@ export const HomePage = () => {
             <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] pb-4">
               <button
                 type="button"
-                className="inline-flex h-10 items-center rounded-full bg-[var(--text-primary)] px-5 text-[14px] font-medium text-[var(--surface-bg)]"
+                onClick={() => setActiveCategory(ALL_CATEGORY)}
+                className={`inline-flex h-10 items-center rounded-full px-5 text-[14px] font-medium transition-colors ${
+                  activeCategory === ALL_CATEGORY
+                    ? 'bg-[var(--text-primary)] text-[var(--surface-bg)]'
+                    : 'border border-[var(--line)] bg-[var(--surface-bg)] text-[var(--text-primary)] hover:bg-[var(--line-soft)]'
+                }`}
               >
                 Tất cả
               </button>
@@ -101,7 +140,12 @@ export const HomePage = () => {
                 <button
                   key={category}
                   type="button"
-                  className="inline-flex h-10 items-center rounded-full border border-[var(--line)] bg-[var(--surface-bg)] px-4 text-[14px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--line-soft)]"
+                  onClick={() => setActiveCategory(category)}
+                  className={`inline-flex h-10 items-center rounded-full px-4 text-[14px] font-medium transition-colors ${
+                    normalizeCategoryText(activeCategory) === normalizeCategoryText(category)
+                      ? 'bg-[var(--text-primary)] text-[var(--surface-bg)]'
+                      : 'border border-[var(--line)] bg-[var(--surface-bg)] text-[var(--text-primary)] hover:bg-[var(--line-soft)]'
+                  }`}
                 >
                   {category}
                 </button>
@@ -148,7 +192,12 @@ export const HomePage = () => {
           <div className="flex min-w-max items-center gap-2.5">
             <button
               type="button"
-              className="inline-flex h-10 items-center rounded-full bg-[var(--text-primary)] px-5 text-[14px] font-medium text-[var(--surface-bg)]"
+              onClick={() => setActiveCategory(ALL_CATEGORY)}
+              className={`inline-flex h-10 items-center rounded-full px-5 text-[14px] font-medium transition-colors ${
+                activeCategory === ALL_CATEGORY
+                  ? 'bg-[var(--text-primary)] text-[var(--surface-bg)]'
+                  : 'border border-[var(--line)] bg-[var(--page-bg)] text-[var(--text-primary)] hover:bg-[var(--line-soft)]'
+              }`}
             >
               Tất cả
             </button>
@@ -156,7 +205,12 @@ export const HomePage = () => {
               <button
                 key={category}
                 type="button"
-                className="inline-flex h-10 items-center rounded-full border border-[var(--line)] bg-[var(--page-bg)] px-5 text-[14px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--line-soft)]"
+                onClick={() => setActiveCategory(category)}
+                className={`inline-flex h-10 items-center rounded-full px-5 text-[14px] font-medium transition-colors ${
+                  normalizeCategoryText(activeCategory) === normalizeCategoryText(category)
+                    ? 'bg-[var(--text-primary)] text-[var(--surface-bg)]'
+                    : 'border border-[var(--line)] bg-[var(--page-bg)] text-[var(--text-primary)] hover:bg-[var(--line-soft)]'
+                }`}
               >
                 {category}
               </button>

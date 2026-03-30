@@ -15,6 +15,7 @@ export interface Product {
   code?: string
   name: string
   category: ProductCategory
+  gender?: 'male' | 'female'
   price: number
   oldPrice?: number
   image: string

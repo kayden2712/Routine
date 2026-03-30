@@ -18,8 +18,11 @@ interface BackendProduct {
   code?: string;
   name: string;
   categoryName?: string;
+  gender?: string;
   description?: string;
   price: number;
+  oldPrice?: number;
+  badge?: string;
   stock?: number;
   minStock?: number;
   imageUrl?: string;
@@ -118,6 +121,12 @@ function mapOrderStatus(status?: string): StorefrontOrder['status'] {
   return 'shipping';
 }
 
+function mapProductGender(value?: string): Product['gender'] {
+  if (value === 'FEMALE') return 'female';
+  if (value === 'MALE') return 'male';
+  return undefined;
+}
+
 function inferSizes(category: string, id: number): Product['sizes'] {
   const normalized = category.toLowerCase();
 
@@ -166,8 +175,9 @@ export function mapBackendProduct(item: BackendProduct): Product {
     code: item.code,
     name: item.name,
     category,
+    gender: mapProductGender(item.gender),
     price: Number(item.price ?? 0),
-    oldPrice: undefined,
+    oldPrice: item.oldPrice ? Number(item.oldPrice) : undefined,
     image: primaryImage,
     images,
     colors: colorsFromVariants.length > 0 ? colorsFromVariants : fallbackColors,
@@ -175,7 +185,9 @@ export function mapBackendProduct(item: BackendProduct): Product {
     variants,
     rating: 4.5,
     reviewCount: 0,
-    badge: undefined,
+    badge: item.badge === 'sale' || item.badge === 'new' || item.badge === 'bestseller'
+      ? item.badge
+      : undefined,
     description: item.description || `Sản phẩm ${item.name} đang có tại Routine.`,
     stock: Number(item.stock ?? 0),
     minStock: Number(item.minStock ?? 0),

@@ -30,7 +30,7 @@ export const ProductDetailPage = () => {
   const product = useMemo(() => products.find((item) => item.id === productId), [productId, products])
 
   const addToCart = useCartStore((state) => state.addToCart)
-  const isWishlisted = useWishlistStore((state) => state.isWishlisted)
+  const wishlistProductIds = useWishlistStore((state) => state.productIds)
   const toggleWishlist = useWishlistStore((state) => state.toggleWishlist)
 
   const details = useMemo(() => {
@@ -70,11 +70,16 @@ export const ProductDetailPage = () => {
       return product.variants
     }
 
-    return product.sizes.map((size, index) => ({
-      size,
-      color: product.colors[index % Math.max(1, product.colors.length)] ?? 'Mặc định',
-      stock: Number(product.stock ?? 0),
-    }))
+    const fallbackSizes = product.sizes.length > 0 ? product.sizes : baseSizes
+    const fallbackColors = product.colors.length > 0 ? product.colors : ['Mặc định']
+
+    return fallbackSizes.flatMap((size) =>
+      fallbackColors.map((color) => ({
+        size,
+        color,
+        stock: Number(product.stock ?? 0),
+      })),
+    )
   }, [product])
 
   const [size, setSize] = useState<ProductSize | undefined>(product?.sizes[0])
@@ -88,12 +93,7 @@ export const ProductDetailPage = () => {
       return Math.max(0, Number(matched.stock ?? 0))
     }
 
-    const bySize = variantRows.find((variant) => variant.size === size)
-    if (bySize) {
-      return Math.max(0, Number(bySize.stock ?? 0))
-    }
-
-    return Math.max(0, Number(product?.stock ?? 0))
+    return 0
   }, [product?.stock, selectedColor, size, variantRows])
 
   useEffect(() => {
@@ -107,21 +107,6 @@ export const ProductDetailPage = () => {
     setActiveThumb(0)
     setQuantity(1)
   }, [product])
-
-  useEffect(() => {
-    if (!size) {
-      return
-    }
-
-    const colorsForSize = variantRows.filter((variant) => variant.size === size).map((variant) => variant.color)
-    if (colorsForSize.length === 0) {
-      return
-    }
-
-    if (!colorsForSize.includes(selectedColor)) {
-      setSelectedColor(colorsForSize[0])
-    }
-  }, [selectedColor, size, variantRows])
 
   useEffect(() => {
     setQuantity((prev) => {
@@ -147,6 +132,8 @@ export const ProductDetailPage = () => {
     product.oldPrice && product.oldPrice > product.price
       ? Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100)
       : undefined
+
+  const wished = wishlistProductIds.includes(product.id)
 
   const gallery = details.gallery.length ? details.gallery : [product.image]
 
@@ -279,10 +266,14 @@ export const ProductDetailPage = () => {
             <span>· Biến thể đã chọn: {selectedVariantStock} sản phẩm</span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] pb-5">
-            <span className="text-2xl font-bold text-[var(--text-primary)]">{formatVnd(product.price)}</span>
-            {product.oldPrice ? <span className="text-base text-[var(--text-secondary)] line-through">{formatVnd(product.oldPrice)}</span> : null}
-            {discountPercent ? <span className="rounded bg-[var(--sale)] px-2 py-0.5 text-[11px] font-bold text-white">-{discountPercent}%</span> : null}
+          <div className="border-b border-[var(--line)] pb-5">
+            {product.oldPrice && product.oldPrice > product.price ? (
+              <p className="text-sm text-[var(--text-secondary)] line-through">{formatVnd(product.oldPrice)}</p>
+            ) : null}
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="text-2xl font-bold text-[var(--text-primary)]">{formatVnd(product.price)}</span>
+              {discountPercent ? <span className="rounded bg-[var(--sale)] px-2 py-0.5 text-[11px] font-bold text-white">-{discountPercent}%</span> : null}
+            </div>
           </div>
 
           <p className="border-b border-[var(--line)] pb-5 text-sm leading-relaxed text-[var(--text-secondary)]">{product.description}</p>
@@ -292,6 +283,7 @@ export const ProductDetailPage = () => {
             <div className="flex flex-wrap gap-3">
               {product.colors.map((color) => {
                 const selected = selectedColor === color
+                const colorAvailable = variantRows.some((variant) => variant.color === color && Math.max(0, Number(variant.stock ?? 0)) > 0)
                 const colorStock = variantRows
                   .filter((variant) => variant.color === color)
                   .reduce((sum, variant) => sum + Math.max(0, Number(variant.stock ?? 0)), 0)
@@ -299,12 +291,13 @@ export const ProductDetailPage = () => {
                   <button
                     key={color}
                     type="button"
+                    disabled={!colorAvailable}
                     onClick={() => setSelectedColor(color)}
                     className={`rounded-full border px-3 py-1 text-xs transition ${
                       selected
                         ? 'border-[var(--text-primary)] bg-[var(--surface-elevated)] text-[var(--text-primary)]'
                         : 'border-[var(--line)] text-[var(--text-secondary)] hover:border-[var(--line-strong)]'
-                    }`}
+                    } ${!colorAvailable ? 'cursor-not-allowed opacity-40' : ''}`}
                   >
                     {color} ({colorStock})
                   </button>
@@ -395,8 +388,13 @@ export const ProductDetailPage = () => {
             >
               Mua ngay
             </Button>
-            <Button type="button" variant="ghost" onClick={() => toggleWishlist(product.id)} className="h-12 w-12 rounded-lg p-0">
-              <Heart size={17} className={isWishlisted(product.id) ? 'fill-current' : ''} />
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => toggleWishlist(product.id)}
+              className={`h-12 w-12 rounded-lg p-0 ${wished ? 'text-[#DB2777]' : 'text-[var(--text-primary)]/85 hover:text-[var(--text-primary)]'}`}
+            >
+              <Heart size={17} className={wished ? 'fill-[#F472B6] text-[#DB2777]' : ''} />
             </Button>
           </div>
 

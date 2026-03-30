@@ -68,8 +68,10 @@ public class ProductService {
 
     @Transactional
     public ProductResponse createProduct(ProductRequest request) {
-        if (productRepository.existsByCode(request.getCode())) {
-            throw new BadRequestException("Product code already exists: " + request.getCode());
+        String normalizedCode = normalizeProductCode(request.getCode());
+
+        if (productRepository.existsByNormalizedCode(normalizedCode)) {
+            throw new BadRequestException("Product code already exists: " + normalizedCode);
         }
 
         Category category = categoryRepository.findById(request.getCategoryId())
@@ -77,7 +79,7 @@ public class ProductService {
                         () -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
         Product product = new Product();
-        product.setCode(request.getCode());
+        product.setCode(normalizedCode);
         product.setName(request.getName());
         product.setCategory(category);
         product.setDescription(request.getDescription());
@@ -107,23 +109,28 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
-        if (!product.getCode().equals(request.getCode()) && productRepository.existsByCode(request.getCode())) {
-            throw new BadRequestException("Product code already exists: " + request.getCode());
+        String normalizedCode = normalizeProductCode(request.getCode());
+
+        if (!product.getCode().equalsIgnoreCase(normalizedCode)
+                && productRepository.existsByNormalizedCodeAndIdNot(normalizedCode, id)) {
+            throw new BadRequestException("Product code already exists: " + normalizedCode);
         }
 
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(
                         () -> new ResourceNotFoundException("Category not found with id: " + request.getCategoryId()));
 
-        product.setCode(request.getCode());
+        product.setCode(normalizedCode);
         product.setName(request.getName());
         product.setCategory(category);
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setCostPrice(request.getCostPrice());
         product.setOldPrice(request.getOldPrice());
-        product.setStock(request.getStock());
-        product.setMinStock(request.getMinStock());
+        Integer updateStock = request.getStock();
+        Integer updateMinStock = request.getMinStock();
+        product.setStock(updateStock != null ? updateStock.intValue() : 0);
+        product.setMinStock(updateMinStock != null ? updateMinStock.intValue() : 10);
         product.setSku(request.getSku());
         product.setMaterial(request.getMaterial());
         product.setFit(request.getFit());
@@ -248,7 +255,14 @@ public class ProductService {
         List<String> colors = request.getColors();
         Map<String, Integer> sizeStocks = request.getSizeStocks();
 
+        boolean hasExistingVariants = product.getId() != null && !product.getVariants().isEmpty();
         product.getVariants().clear();
+        if (hasExistingVariants) {
+            // Force delete existing rows first to avoid hitting
+            // unique(product_id,size,color)
+            // when re-adding variants in the same transaction.
+            productRepository.flush();
+        }
 
         if (manualVariants != null && !manualVariants.isEmpty()) {
             Set<String> uniqueVariantKeys = new HashSet<>();
@@ -333,7 +347,22 @@ public class ProductService {
             product.getImages().add(image);
         }
 
-        product.setImageUrl(normalizedImageUrls.isEmpty() ? null : normalizedImageUrls.get(0));
+        product.setImageUrl(resolvePrimaryImageUrl(normalizedImageUrls));
+    }
+
+    private String resolvePrimaryImageUrl(List<String> normalizedImageUrls) {
+        if (normalizedImageUrls.isEmpty()) {
+            return null;
+        }
+
+        String primary = normalizedImageUrls.get(0);
+        if (primary.startsWith("data:")) {
+            // Keep base64 images in product_images table and avoid legacy-length column
+            // overflow.
+            return null;
+        }
+
+        return primary;
     }
 
     private List<String> normalizeImageUrls(ProductRequest request) {
@@ -363,5 +392,12 @@ public class ProductService {
         }
 
         return normalized;
+    }
+
+    private String normalizeProductCode(String code) {
+        if (code == null || code.isBlank()) {
+            throw new BadRequestException("Product code is required");
+        }
+        return code.trim().toUpperCase(Locale.ROOT);
     }
 }

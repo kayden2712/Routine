@@ -9,29 +9,91 @@ import { useWishlistStore } from '@/store/wishlistStore'
 import type { Product } from '@/types/customer.types'
 
 const colorMap: Record<string, string> = {
-  Trắng: '#FFFFFF',
-  Be: '#DDD2BF',
-  'Xám nhạt': '#B8B8B8',
-  'Nâu khói': '#6D5B4B',
-  Đen: '#111111',
-  Xám: '#7E7E7E',
-  'Kem sữa': '#F1E7D7',
-  'Rêu nhạt': '#77815C',
-  'Nâu nhạt': '#A58A6B',
-  'Xanh đêm': '#1E2A44',
-  'Xanh đậm': '#1E3A63',
-  'Xanh wash': '#5A7CA0',
-  'Xám bạc': '#A6A8AC',
-  'Đen wash': '#2B2B2B',
-  Navy: '#1E2D4E',
-  'Be khói': '#CBB8A1',
-  'Nâu cà phê': '#5A3A2E',
-  Olive: '#59664B',
-  Champagne: '#D4BFA3',
-  'Đỏ đô': '#6F1D2A',
+  white: '#FFFFFF',
+  black: '#111111',
+  red: '#C1121F',
+  gray: '#7E7E7E',
+  navy: '#1E2D4E',
+  beige: '#DDD2BF',
+  olive: '#59664B',
+  blue: '#1E3A63',
+  green: '#2F6F4F',
+  brown: '#5A3A2E',
 }
 
-const sizeOrder = ['XS', 'S', 'M', 'L', 'XL', '28', '29', '30', '31', '32']
+const sizeOrder = ['M', 'S', 'L', 'XL', 'XXL']
+
+const normalizeText = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+
+const normalizeColorKey = (value: string) => {
+  const normalized = normalizeText(value)
+
+  if (normalized === 'trang' || normalized === 'white') return 'white'
+  if (normalized === 'den' || normalized === 'black') return 'black'
+  if (normalized === 'do' || normalized === 'red') return 'red'
+  if (normalized === 'xam' || normalized === 'gray' || normalized === 'grey') return 'gray'
+  if (normalized === 'be' || normalized === 'beige') return 'beige'
+  if (normalized === 'xanh dam' || normalized === 'blue') return 'blue'
+  if (normalized === 'xanh la' || normalized === 'green') return 'green'
+  if (normalized === 'nau' || normalized === 'brown') return 'brown'
+
+  return normalized
+}
+
+const toColorLabel = (key: string) => {
+  if (key === 'white') return 'Trắng'
+  if (key === 'black') return 'Đen'
+  if (key === 'red') return 'Đỏ'
+  if (key === 'gray') return 'Xám'
+  if (key === 'beige') return 'Be'
+  if (key === 'blue') return 'Xanh dương'
+  if (key === 'green') return 'Xanh lá'
+  if (key === 'brown') return 'Nâu'
+  if (key === 'navy') return 'Navy'
+  if (key === 'olive') return 'Olive'
+  return key
+}
+
+const matchesGroup = (category: string, group: string | null, genderFilter?: string | null) => {
+  if (!group) {
+    return true
+  }
+
+  const normalizedCategory = normalizeText(category)
+  const isFemale = genderFilter === 'nu'
+  const isDressLike = normalizedCategory.includes('vay') || normalizedCategory.includes('dam')
+
+  if (group === 'ao') {
+    const isTopLike =
+      normalizedCategory.includes('ao') ||
+      normalizedCategory.includes('so mi') ||
+      normalizedCategory.includes('phong') ||
+      normalizedCategory.includes('polo') ||
+      normalizedCategory.includes('khoac')
+
+    return isTopLike || (isFemale && isDressLike)
+  }
+
+  if (group === 'quan') {
+    const isPantsLike =
+      normalizedCategory.includes('quan') ||
+      normalizedCategory.includes('jean') ||
+      normalizedCategory.includes('kaki')
+
+    return isPantsLike || (isFemale && isDressLike)
+  }
+
+  if (group === 'phu-kien') {
+    return normalizedCategory.includes('phu kien') || normalizedCategory.includes('phukien')
+  }
+
+  return true
+}
 
 export const ProductListPage = () => {
   const [products, setProducts] = useState<Product[]>([])
@@ -43,23 +105,24 @@ export const ProductListPage = () => {
   const wishlistOnly = searchParams.get('wishlist') === '1'
   const wishlistedIds = useWishlistStore((state) => state.productIds)
 
-  const isFemaleCategory = (category: string) => category === 'Váy'
+  const isFemaleProduct = (product: Product) => {
+    if (product.gender) {
+      return product.gender === 'female'
+    }
+
+    const normalizedCategory = normalizeText(product.category)
+    return normalizedCategory.includes('vay') || normalizedCategory.includes('dam')
+  }
 
   const initialCategories = useMemo(() => {
-    if (group === 'ao') {
-      return ['Áo sơ mi', 'Áo thun', 'Áo khoác']
+    if (!group) {
+      return [] as string[]
     }
 
-    if (group === 'quan') {
-      return ['Quần kaki', 'Quần jeans']
-    }
-
-    if (group === 'phu-kien') {
-      return ['Phụ kiện']
-    }
-
-    return [] as string[]
-  }, [group])
+    return Array.from(new Set(products.map((product) => product.category))).filter((category) =>
+      matchesGroup(category, group, genderFilter),
+    )
+  }, [genderFilter, group, products])
 
   const [selectedCategories, setSelectedCategories] = useState<string[]>(initialCategories)
   const [maxPrice, setMaxPrice] = useState(1000000)
@@ -78,78 +141,94 @@ export const ProductListPage = () => {
     void loadProducts()
   }, [])
 
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const product of products) {
-      counts.set(product.category, (counts.get(product.category) ?? 0) + 1)
-    }
-    return counts
-  }, [products])
-
-  const uniqueCategories = useMemo(() => Array.from(categoryCounts.keys()), [categoryCounts])
-
-  const uniqueColors = useMemo(() => {
-    const set = new Set<string>()
-    for (const product of products) {
-      for (const color of product.colors) {
-        set.add(color)
-      }
-    }
-    return Array.from(set)
-  }, [products])
-
-  const colorCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const product of products) {
-      const uniqueByProduct = new Set(product.colors)
-      for (const color of uniqueByProduct) {
-        counts.set(color, (counts.get(color) ?? 0) + 1)
-      }
-    }
-    return counts
-  }, [products])
-
-  const uniqueSizes = useMemo(() => {
-    const set = new Set<string>()
-    for (const product of products) {
-      for (const size of product.sizes) {
-        set.add(size)
-      }
-    }
-    return sizeOrder.filter((size) => set.has(size))
-  }, [products])
-
-  const sizeCounts = useMemo(() => {
-    const counts = new Map<string, number>()
-    for (const product of products) {
-      const uniqueByProduct = new Set(product.sizes)
-      for (const size of uniqueByProduct) {
-        counts.set(size, (counts.get(size) ?? 0) + 1)
-      }
-    }
-    return counts
-  }, [products])
-
-  const filtered = useMemo(() => {
-    const base = products.filter((product) => {
+  const scopedProducts = useMemo(() => {
+    return products.filter((product) => {
       const bySearch =
         !searchQuery ||
         product.name.toLowerCase().includes(searchQuery) ||
         product.category.toLowerCase().includes(searchQuery) ||
         product.description.toLowerCase().includes(searchQuery)
-      const bySale = !saleOnly || product.badge === 'sale'
+      const bySale = !saleOnly || product.badge === 'sale' || (!!product.oldPrice && product.oldPrice > product.price)
+      const byWishlist = !wishlistOnly || wishlistedIds.includes(product.id)
+      const byGroup = matchesGroup(product.category, group, genderFilter)
+
+      return bySearch && bySale && byWishlist && byGroup
+    })
+  }, [genderFilter, group, products, saleOnly, searchQuery, wishlistOnly, wishlistedIds])
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const product of scopedProducts) {
+      counts.set(product.category, (counts.get(product.category) ?? 0) + 1)
+    }
+    return counts
+  }, [scopedProducts])
+
+  const uniqueCategories = useMemo(
+    () => Array.from(categoryCounts.keys()).sort((a, b) => a.localeCompare(b, 'vi')),
+    [categoryCounts],
+  )
+
+  const colorCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const product of scopedProducts) {
+      const uniqueByProduct = new Set(product.colors.map((color) => normalizeColorKey(color)))
+      for (const color of uniqueByProduct) {
+        counts.set(color, (counts.get(color) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [scopedProducts])
+
+  const uniqueColors = useMemo(() => Array.from(colorCounts.keys()), [colorCounts])
+
+  const uniqueSizes = useMemo(() => {
+    const set = new Set<string>()
+    for (const product of scopedProducts) {
+      for (const size of product.sizes) {
+        set.add(size)
+      }
+    }
+    return sizeOrder.filter((size) => set.has(size))
+  }, [scopedProducts])
+
+  const sizeCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const product of scopedProducts) {
+      const uniqueByProduct = new Set(product.sizes.filter((size) => sizeOrder.includes(size)))
+      for (const size of uniqueByProduct) {
+        counts.set(size, (counts.get(size) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [scopedProducts])
+
+  const ratingCounts = useMemo(() => {
+    const counts = new Map<number, number>()
+    for (const stars of [5, 4, 3, 2, 1]) {
+      counts.set(stars, scopedProducts.filter((product) => Math.floor(product.rating) >= stars).length)
+    }
+    return counts
+  }, [scopedProducts])
+
+  const filtered = useMemo(() => {
+    const selectedCategoryKeys = selectedCategories.map((category) => normalizeText(category))
+    const selectedColorKeys = selectedColors.map((color) => normalizeColorKey(color))
+
+    const base = scopedProducts.filter((product) => {
       const byGender =
         !genderFilter ||
-        (genderFilter === 'nu' ? isFemaleCategory(product.category) : !isFemaleCategory(product.category))
-      const byWishlist = !wishlistOnly || wishlistedIds.includes(product.id)
-      const byGroup = initialCategories.length === 0 || initialCategories.includes(product.category)
+        (genderFilter === 'nu' ? isFemaleProduct(product) : !isFemaleProduct(product))
       const byCategory = selectedCategories.length === 0 || selectedCategories.includes(product.category)
+      const byCategoryNormalized = selectedCategoryKeys.length === 0 || selectedCategoryKeys.includes(normalizeText(product.category))
       const byPrice = product.price <= maxPrice
-      const byColor = selectedColors.length === 0 || product.colors.some((color) => selectedColors.includes(color))
+      const byColor =
+        selectedColorKeys.length === 0 ||
+        product.colors.some((color) => selectedColorKeys.includes(normalizeColorKey(color)))
       const bySize = selectedSizes.length === 0 || product.sizes.some((size) => selectedSizes.includes(size))
       const byRating = selectedRating === null || Math.floor(product.rating) >= selectedRating
 
-      return bySearch && bySale && byGender && byWishlist && byGroup && byCategory && byPrice && byColor && bySize && byRating
+      return byGender && (byCategory || byCategoryNormalized) && byPrice && byColor && bySize && byRating
     })
 
     if (sortBy === 'price-asc') {
@@ -165,7 +244,7 @@ export const ProductListPage = () => {
     }
 
     return base
-  }, [genderFilter, initialCategories, maxPrice, products, saleOnly, searchQuery, selectedCategories, selectedColors, selectedRating, selectedSizes, sortBy, wishlistOnly, wishlistedIds])
+  }, [genderFilter, maxPrice, scopedProducts, selectedCategories, selectedColors, selectedRating, selectedSizes, sortBy])
 
   const toggleValue = (values: string[], value: string) =>
     values.includes(value) ? values.filter((item) => item !== value) : [...values, value]
@@ -181,6 +260,16 @@ export const ProductListPage = () => {
   useEffect(() => {
     setSelectedCategories(initialCategories)
   }, [initialCategories])
+
+  useEffect(() => {
+    const availableCategoryKeys = new Set(uniqueCategories.map((category) => normalizeText(category)))
+    const availableColorKeys = new Set(uniqueColors)
+    const availableSizes = new Set(uniqueSizes)
+
+    setSelectedCategories((prev) => prev.filter((category) => availableCategoryKeys.has(normalizeText(category))))
+    setSelectedColors((prev) => prev.filter((color) => availableColorKeys.has(normalizeColorKey(color))))
+    setSelectedSizes((prev) => prev.filter((size) => availableSizes.has(size)))
+  }, [uniqueCategories, uniqueColors, uniqueSizes])
 
   return (
     <div className="grid grid-cols-1 gap-8 lg:grid-cols-[250px_minmax(0,1fr)]">
@@ -261,11 +350,11 @@ export const ProductListPage = () => {
                       <span
                         className="h-4 w-4 rounded-full"
                         style={{
-                          backgroundColor: colorMap[color] ?? '#9CA3AF',
+                          backgroundColor: colorMap[normalizeColorKey(color)] ?? '#9CA3AF',
                           boxShadow: selected ? '0 0 0 2px #ffffff, 0 0 0 3px #1A1A18' : '0 0 0 1px #D1D5DB inset',
                         }}
                       />
-                      <span>{color}</span>
+                      <span>{toColorLabel(color)}</span>
                     </span>
                     <span className="text-[12px] text-[var(--text-secondary)]">({colorCounts.get(color) ?? 0})</span>
                   </button>
@@ -333,7 +422,7 @@ export const ProductListPage = () => {
                     ))}
                     <span>{stars} sao</span>
                   </span>
-                  <span className="text-[12px] text-[var(--text-secondary)]">({stars + 3})</span>
+                  <span className="text-[12px] text-[var(--text-secondary)]">({ratingCounts.get(stars) ?? 0})</span>
                 </button>
               ))}
             </CollapsibleContent>

@@ -1,30 +1,76 @@
 {
   "info": {
-    "_postman_id": "4df08bbf-5a9c-4f7d-b8e5-7b4eaf2c7993",
-    "name": "Routine Full Dataset Runner",
-    "description": "All-in-one collection (embedded dataset), no separate data file required.",
+    "_postman_id": "53ca876c-4ab2-4e2d-a795-d80a7df0662e",
+    "name": "Routine Seed Runner - Postman Free (Single File)",
+    "description": "Seed full dataset in one collection: categories mapping, 30 products (10 sale with date window), 10 customers, 20 orders, and sale auto-revert sync.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:8080/api"
-    },
-    {
-      "key": "datasetRaw",
-      "value": "{\"info\":{\"name\":\"Routine Full Test Dataset\",\"version\":\"1.0.0\",\"generatedAt\":\"2026-03-29T21:18:57\",\"note\":\"Use with Postman/seed scripts. customers=10, products=30, orders=20.\"},\"adminLogin\":{\"email\":\"admin@routine.vn\",\"password\":\"Aa@12345\"},\"customers\":[{\"customerNo\":1,\"fullName\":\"Test Customer 1\",\"email\":\"test.customer.1@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000001\",\"address\":\"1 Nguyen Trai, Q1, HCM\",\"tier\":\"REGULAR\"},{\"customerNo\":2,\"fullName\":\"Test Customer 2\",\"email\":\"test.customer.2@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000002\",\"address\":\"2 Nguyen Trai, Q1, HCM\",\"tier\":\"REGULAR\"},{\"customerNo\":3,\"fullName\":\"Test Customer 3\",\"email\":\"test.customer.3@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000003\",\"address\":\"3 Nguyen Trai, Q1, HCM\",\"tier\":\"VIP\"},{\"customerNo\":4,\"fullName\":\"Test Customer 4\",\"email\":\"test.customer.4@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000004\",\"address\":\"4 Nguyen Trai, Q1, HCM\",\"tier\":\"REGULAR\"},{\"customerNo\":5,\"fullName\":\"Test Customer 5\",\"email\":\"test.customer.5@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000005\",\"address\":\"5 Nguyen Trai, Q1, HCM\",\"tier\":\"REGULAR\"},{\"customerNo\":6,\"fullName\":\"Test Customer 6\",\"email\":\"test.customer.6@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000006\",\"address\":\"6 Nguyen Trai, Q1, HCM\",\"tier\":\"VIP\"},{\"customerNo\":7,\"fullName\":\"Test Customer 7\",\"email\":\"test.customer.7@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000007\",\"address\":\"7 Nguyen Trai, Q1, HCM\",\"tier\":\"REGULAR\"},{\"customerNo\":8,\"fullName\":\"Test Customer 8\",\"email\":\"test.customer.8@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000008\",\"address\":\"8 Nguyen Trai, Q1, HCM\",\"tier\":\"REGULAR\"},{\"customerNo\":9,\"fullName\":\"Test Customer 9\",\"email\":\"test.customer.9@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000009\",\"address\":\"9 Nguyen Trai, Q1, HCM\",\"tier\":\"VIP\"},{\"customerNo\":10,\"fullName\":\"Test Customer 10\",\"email\":\"test.customer.10@routine.vn\",\"password\":\"Aa@12345\",\"phone\":\"0913000010\",\"address\":\"10 Nguyen Trai, Q1, HCM\",\"tier\":\"REGULAR\"}],\"products\":[{\"productNo\":1,\"code\":\"TP001\",\"name\":\"Test Product 1\",\"categoryId\":1,\"description\":\"Seed product for automated test 1\",\"price\":204000,\"costPrice\":123000,\"oldPrice\":224000,\"stock\":21,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-1/800/1000\",\"sku\":\"SKU-TP001\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":2,\"code\":\"TP002\",\"name\":\"Test Product 2\",\"categoryId\":2,\"description\":\"Seed product for automated test 2\",\"price\":209000,\"costPrice\":126000,\"oldPrice\":229000,\"stock\":22,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-2/800/1000\",\"sku\":\"SKU-TP002\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":3,\"code\":\"TP003\",\"name\":\"Test Product 3\",\"categoryId\":3,\"description\":\"Seed product for automated test 3\",\"price\":214000,\"costPrice\":129000,\"oldPrice\":234000,\"stock\":23,\"minStock\":8,\"imageUrl\":\"https://picsum.photos/seed/routine-3/800/1000\",\"sku\":\"SKU-TP003\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":4,\"code\":\"TP004\",\"name\":\"Test Product 4\",\"categoryId\":4,\"description\":\"Seed product for automated test 4\",\"price\":219000,\"costPrice\":132000,\"oldPrice\":239000,\"stock\":24,\"minStock\":5,\"imageUrl\":\"https://picsum.photos/seed/routine-4/800/1000\",\"sku\":\"SKU-TP004\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":5,\"code\":\"TP005\",\"name\":\"Test Product 5\",\"categoryId\":5,\"description\":\"Seed product for automated test 5\",\"price\":224000,\"costPrice\":135000,\"oldPrice\":244000,\"stock\":25,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-5/800/1000\",\"sku\":\"SKU-TP005\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":6,\"code\":\"TP006\",\"name\":\"Test Product 6\",\"categoryId\":1,\"description\":\"Seed product for automated test 6\",\"price\":229000,\"costPrice\":138000,\"oldPrice\":249000,\"stock\":26,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-6/800/1000\",\"sku\":\"SKU-TP006\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":7,\"code\":\"TP007\",\"name\":\"Test Product 7\",\"categoryId\":2,\"description\":\"Seed product for automated test 7\",\"price\":234000,\"costPrice\":141000,\"oldPrice\":254000,\"stock\":27,\"minStock\":8,\"imageUrl\":\"https://picsum.photos/seed/routine-7/800/1000\",\"sku\":\"SKU-TP007\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":8,\"code\":\"TP008\",\"name\":\"Test Product 8\",\"categoryId\":3,\"description\":\"Seed product for automated test 8\",\"price\":239000,\"costPrice\":144000,\"oldPrice\":259000,\"stock\":28,\"minStock\":5,\"imageUrl\":\"https://picsum.photos/seed/routine-8/800/1000\",\"sku\":\"SKU-TP008\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":9,\"code\":\"TP009\",\"name\":\"Test Product 9\",\"categoryId\":4,\"description\":\"Seed product for automated test 9\",\"price\":244000,\"costPrice\":147000,\"oldPrice\":264000,\"stock\":29,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-9/800/1000\",\"sku\":\"SKU-TP009\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":10,\"code\":\"TP010\",\"name\":\"Test Product 10\",\"categoryId\":5,\"description\":\"Seed product for automated test 10\",\"price\":249000,\"costPrice\":150000,\"oldPrice\":269000,\"stock\":30,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-10/800/1000\",\"sku\":\"SKU-TP010\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":11,\"code\":\"TP011\",\"name\":\"Test Product 11\",\"categoryId\":1,\"description\":\"Seed product for automated test 11\",\"price\":254000,\"costPrice\":153000,\"oldPrice\":274000,\"stock\":31,\"minStock\":8,\"imageUrl\":\"https://picsum.photos/seed/routine-11/800/1000\",\"sku\":\"SKU-TP011\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":12,\"code\":\"TP012\",\"name\":\"Test Product 12\",\"categoryId\":2,\"description\":\"Seed product for automated test 12\",\"price\":259000,\"costPrice\":156000,\"oldPrice\":279000,\"stock\":32,\"minStock\":5,\"imageUrl\":\"https://picsum.photos/seed/routine-12/800/1000\",\"sku\":\"SKU-TP012\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":13,\"code\":\"TP013\",\"name\":\"Test Product 13\",\"categoryId\":3,\"description\":\"Seed product for automated test 13\",\"price\":264000,\"costPrice\":159000,\"oldPrice\":284000,\"stock\":33,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-13/800/1000\",\"sku\":\"SKU-TP013\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":14,\"code\":\"TP014\",\"name\":\"Test Product 14\",\"categoryId\":4,\"description\":\"Seed product for automated test 14\",\"price\":269000,\"costPrice\":162000,\"oldPrice\":289000,\"stock\":34,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-14/800/1000\",\"sku\":\"SKU-TP014\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":15,\"code\":\"TP015\",\"name\":\"Test Product 15\",\"categoryId\":5,\"description\":\"Seed product for automated test 15\",\"price\":274000,\"costPrice\":165000,\"oldPrice\":294000,\"stock\":20,\"minStock\":8,\"imageUrl\":\"https://picsum.photos/seed/routine-15/800/1000\",\"sku\":\"SKU-TP015\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":16,\"code\":\"TP016\",\"name\":\"Test Product 16\",\"categoryId\":1,\"description\":\"Seed product for automated test 16\",\"price\":279000,\"costPrice\":168000,\"oldPrice\":299000,\"stock\":21,\"minStock\":5,\"imageUrl\":\"https://picsum.photos/seed/routine-16/800/1000\",\"sku\":\"SKU-TP016\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":17,\"code\":\"TP017\",\"name\":\"Test Product 17\",\"categoryId\":2,\"description\":\"Seed product for automated test 17\",\"price\":284000,\"costPrice\":171000,\"oldPrice\":304000,\"stock\":22,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-17/800/1000\",\"sku\":\"SKU-TP017\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":18,\"code\":\"TP018\",\"name\":\"Test Product 18\",\"categoryId\":3,\"description\":\"Seed product for automated test 18\",\"price\":289000,\"costPrice\":174000,\"oldPrice\":309000,\"stock\":23,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-18/800/1000\",\"sku\":\"SKU-TP018\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":19,\"code\":\"TP019\",\"name\":\"Test Product 19\",\"categoryId\":4,\"description\":\"Seed product for automated test 19\",\"price\":294000,\"costPrice\":177000,\"oldPrice\":314000,\"stock\":24,\"minStock\":8,\"imageUrl\":\"https://picsum.photos/seed/routine-19/800/1000\",\"sku\":\"SKU-TP019\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":20,\"code\":\"TP020\",\"name\":\"Test Product 20\",\"categoryId\":5,\"description\":\"Seed product for automated test 20\",\"price\":299000,\"costPrice\":180000,\"oldPrice\":319000,\"stock\":25,\"minStock\":5,\"imageUrl\":\"https://picsum.photos/seed/routine-20/800/1000\",\"sku\":\"SKU-TP020\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":21,\"code\":\"TP021\",\"name\":\"Test Product 21\",\"categoryId\":1,\"description\":\"Seed product for automated test 21\",\"price\":304000,\"costPrice\":183000,\"oldPrice\":324000,\"stock\":26,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-21/800/1000\",\"sku\":\"SKU-TP021\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":22,\"code\":\"TP022\",\"name\":\"Test Product 22\",\"categoryId\":2,\"description\":\"Seed product for automated test 22\",\"price\":309000,\"costPrice\":186000,\"oldPrice\":329000,\"stock\":27,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-22/800/1000\",\"sku\":\"SKU-TP022\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":23,\"code\":\"TP023\",\"name\":\"Test Product 23\",\"categoryId\":3,\"description\":\"Seed product for automated test 23\",\"price\":314000,\"costPrice\":189000,\"oldPrice\":334000,\"stock\":28,\"minStock\":8,\"imageUrl\":\"https://picsum.photos/seed/routine-23/800/1000\",\"sku\":\"SKU-TP023\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":24,\"code\":\"TP024\",\"name\":\"Test Product 24\",\"categoryId\":4,\"description\":\"Seed product for automated test 24\",\"price\":319000,\"costPrice\":192000,\"oldPrice\":339000,\"stock\":29,\"minStock\":5,\"imageUrl\":\"https://picsum.photos/seed/routine-24/800/1000\",\"sku\":\"SKU-TP024\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":25,\"code\":\"TP025\",\"name\":\"Test Product 25\",\"categoryId\":5,\"description\":\"Seed product for automated test 25\",\"price\":324000,\"costPrice\":195000,\"oldPrice\":344000,\"stock\":30,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-25/800/1000\",\"sku\":\"SKU-TP025\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":26,\"code\":\"TP026\",\"name\":\"Test Product 26\",\"categoryId\":1,\"description\":\"Seed product for automated test 26\",\"price\":329000,\"costPrice\":198000,\"oldPrice\":349000,\"stock\":31,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-26/800/1000\",\"sku\":\"SKU-TP026\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":27,\"code\":\"TP027\",\"name\":\"Test Product 27\",\"categoryId\":2,\"description\":\"Seed product for automated test 27\",\"price\":334000,\"costPrice\":201000,\"oldPrice\":354000,\"stock\":32,\"minStock\":8,\"imageUrl\":\"https://picsum.photos/seed/routine-27/800/1000\",\"sku\":\"SKU-TP027\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":28,\"code\":\"TP028\",\"name\":\"Test Product 28\",\"categoryId\":3,\"description\":\"Seed product for automated test 28\",\"price\":339000,\"costPrice\":204000,\"oldPrice\":359000,\"stock\":33,\"minStock\":5,\"imageUrl\":\"https://picsum.photos/seed/routine-28/800/1000\",\"sku\":\"SKU-TP028\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":29,\"code\":\"TP029\",\"name\":\"Test Product 29\",\"categoryId\":4,\"description\":\"Seed product for automated test 29\",\"price\":344000,\"costPrice\":207000,\"oldPrice\":364000,\"stock\":34,\"minStock\":6,\"imageUrl\":\"https://picsum.photos/seed/routine-29/800/1000\",\"sku\":\"SKU-TP029\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"All\",\"careInstructions\":\"Machine wash cold\"},{\"productNo\":30,\"code\":\"TP030\",\"name\":\"Test Product 30\",\"categoryId\":5,\"description\":\"Seed product for automated test 30\",\"price\":349000,\"costPrice\":210000,\"oldPrice\":369000,\"stock\":20,\"minStock\":7,\"imageUrl\":\"https://picsum.photos/seed/routine-30/800/1000\",\"sku\":\"SKU-TP030\",\"material\":\"Cotton\",\"fit\":\"Regular\",\"season\":\"Summer\",\"careInstructions\":\"Machine wash cold\"}],\"staff\":[{\"fullName\":\"Manager One\",\"email\":\"manager.one@routine.vn\",\"phone\":\"0913999001\",\"role\":\"MANAGER\",\"branch\":\"HQ\",\"isActive\":true,\"password\":\"Aa@12345\"},{\"fullName\":\"Sales One\",\"email\":\"sales.one@routine.vn\",\"phone\":\"0913999002\",\"role\":\"SALES\",\"branch\":\"HCM-1\",\"isActive\":true,\"password\":\"Aa@12345\"},{\"fullName\":\"Warehouse One\",\"email\":\"warehouse.one@routine.vn\",\"phone\":\"0913999003\",\"role\":\"WAREHOUSE\",\"branch\":\"HCM-1\",\"isActive\":true,\"password\":\"Aa@12345\"},{\"fullName\":\"Accountant One\",\"email\":\"accountant.one@routine.vn\",\"phone\":\"0913999004\",\"role\":\"ACCOUNTANT\",\"branch\":\"HQ\",\"isActive\":true,\"password\":\"Aa@12345\"}],\"orders\":[{\"orderNo\":1,\"customerIndex\":1,\"paymentMethod\":\"CASH\",\"notes\":\"Auto order seed 1\",\"items\":[{\"productIndex\":1,\"quantity\":2},{\"productIndex\":8,\"quantity\":1}]},{\"orderNo\":2,\"customerIndex\":2,\"paymentMethod\":\"TRANSFER\",\"notes\":\"Auto order seed 2\",\"items\":[{\"productIndex\":2,\"quantity\":3},{\"productIndex\":9,\"quantity\":2}]},{\"orderNo\":3,\"customerIndex\":3,\"paymentMethod\":\"COD\",\"notes\":\"Auto order seed 3\",\"items\":[{\"productIndex\":3,\"quantity\":1},{\"productIndex\":10,\"quantity\":1}]},{\"orderNo\":4,\"customerIndex\":4,\"paymentMethod\":\"BANK\",\"notes\":\"Auto order seed 4\",\"items\":[{\"productIndex\":4,\"quantity\":2},{\"productIndex\":11,\"quantity\":2}]},{\"orderNo\":5,\"customerIndex\":5,\"paymentMethod\":\"CASH\",\"notes\":\"Auto order seed 5\",\"items\":[{\"productIndex\":5,\"quantity\":3},{\"productIndex\":12,\"quantity\":1}]},{\"orderNo\":6,\"customerIndex\":6,\"paymentMethod\":\"TRANSFER\",\"notes\":\"Auto order seed 6\",\"items\":[{\"productIndex\":6,\"quantity\":1},{\"productIndex\":13,\"quantity\":2}]},{\"orderNo\":7,\"customerIndex\":7,\"paymentMethod\":\"COD\",\"notes\":\"Auto order seed 7\",\"items\":[{\"productIndex\":7,\"quantity\":2},{\"productIndex\":14,\"quantity\":1}]},{\"orderNo\":8,\"customerIndex\":8,\"paymentMethod\":\"BANK\",\"notes\":\"Auto order seed 8\",\"items\":[{\"productIndex\":8,\"quantity\":3},{\"productIndex\":15,\"quantity\":2}]},{\"orderNo\":9,\"customerIndex\":9,\"paymentMethod\":\"CASH\",\"notes\":\"Auto order seed 9\",\"items\":[{\"productIndex\":9,\"quantity\":1},{\"productIndex\":16,\"quantity\":1}]},{\"orderNo\":10,\"customerIndex\":10,\"paymentMethod\":\"TRANSFER\",\"notes\":\"Auto order seed 10\",\"items\":[{\"productIndex\":10,\"quantity\":2},{\"productIndex\":17,\"quantity\":2}]},{\"orderNo\":11,\"customerIndex\":1,\"paymentMethod\":\"COD\",\"notes\":\"Auto order seed 11\",\"items\":[{\"productIndex\":11,\"quantity\":3},{\"productIndex\":18,\"quantity\":1}]},{\"orderNo\":12,\"customerIndex\":2,\"paymentMethod\":\"BANK\",\"notes\":\"Auto order seed 12\",\"items\":[{\"productIndex\":12,\"quantity\":1},{\"productIndex\":19,\"quantity\":2}]},{\"orderNo\":13,\"customerIndex\":3,\"paymentMethod\":\"CASH\",\"notes\":\"Auto order seed 13\",\"items\":[{\"productIndex\":13,\"quantity\":2},{\"productIndex\":20,\"quantity\":1}]},{\"orderNo\":14,\"customerIndex\":4,\"paymentMethod\":\"TRANSFER\",\"notes\":\"Auto order seed 14\",\"items\":[{\"productIndex\":14,\"quantity\":3},{\"productIndex\":21,\"quantity\":2}]},{\"orderNo\":15,\"customerIndex\":5,\"paymentMethod\":\"COD\",\"notes\":\"Auto order seed 15\",\"items\":[{\"productIndex\":15,\"quantity\":1},{\"productIndex\":22,\"quantity\":1}]},{\"orderNo\":16,\"customerIndex\":6,\"paymentMethod\":\"BANK\",\"notes\":\"Auto order seed 16\",\"items\":[{\"productIndex\":16,\"quantity\":2},{\"productIndex\":23,\"quantity\":2}]},{\"orderNo\":17,\"customerIndex\":7,\"paymentMethod\":\"CASH\",\"notes\":\"Auto order seed 17\",\"items\":[{\"productIndex\":17,\"quantity\":3},{\"productIndex\":24,\"quantity\":1}]},{\"orderNo\":18,\"customerIndex\":8,\"paymentMethod\":\"TRANSFER\",\"notes\":\"Auto order seed 18\",\"items\":[{\"productIndex\":18,\"quantity\":1},{\"productIndex\":25,\"quantity\":2}]},{\"orderNo\":19,\"customerIndex\":9,\"paymentMethod\":\"COD\",\"notes\":\"Auto order seed 19\",\"items\":[{\"productIndex\":19,\"quantity\":2},{\"productIndex\":26,\"quantity\":1}]},{\"orderNo\":20,\"customerIndex\":10,\"paymentMethod\":\"BANK\",\"notes\":\"Auto order seed 20\",\"items\":[{\"productIndex\":20,\"quantity\":3},{\"productIndex\":27,\"quantity\":2}]}],\"scenarios\":[{\"id\":\"SC01\",\"name\":\"Register + login 10 customers\",\"uses\":\"customers\"},{\"id\":\"SC02\",\"name\":\"Create 30 products\",\"uses\":\"products\"},{\"id\":\"SC03\",\"name\":\"Create staff accounts\",\"uses\":\"staff\"},{\"id\":\"SC04\",\"name\":\"Create 20 orders\",\"uses\":\"orders\"}]}"
-    }
+    { "key": "baseUrl", "value": "http://localhost:8080/api" },
+    { "key": "adminEmail", "value": "admin@routine.com" },
+    { "key": "adminPassword", "value": "admin123" },
+
+    { "key": "saleStartDate", "value": "2026-03-01" },
+    { "key": "saleEndDate", "value": "2026-04-30" },
+
+    { "key": "runId", "value": "" },
+    { "key": "adminToken", "value": "" },
+
+    { "key": "categoryMap", "value": "{}" },
+
+    { "key": "productSeeds", "value": "[]" },
+    { "key": "customerSeeds", "value": "[]" },
+    { "key": "orderSeeds", "value": "[]" },
+
+    { "key": "seededProducts", "value": "[]" },
+    { "key": "seededCustomers", "value": "[]" },
+
+    { "key": "productIndex", "value": "0" },
+    { "key": "customerIndex", "value": "0" },
+    { "key": "orderIndex", "value": "0" },
+    { "key": "saleSyncIndex", "value": "0" },
+
+    { "key": "currentProductBody", "value": "{}" },
+    { "key": "currentCustomerBody", "value": "{}" },
+    { "key": "currentOrderBody", "value": "{}" },
+    { "key": "currentSyncBody", "value": "{}" }
   ],
   "item": [
     {
-      "name": "01 Admin Login + Init",
+      "name": "00 Init Run",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/categories"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Init endpoint ok', function () { pm.response.to.have.status(200); });",
+              "const runId = String(Date.now());",
+              "pm.collectionVariables.set('runId', runId);",
+              "pm.collectionVariables.set('productIndex', '0');",
+              "pm.collectionVariables.set('customerIndex', '0');",
+              "pm.collectionVariables.set('orderIndex', '0');",
+              "pm.collectionVariables.set('saleSyncIndex', '0');",
+              "pm.collectionVariables.set('seededProducts', '[]');",
+              "pm.collectionVariables.set('seededCustomers', '[]');",
+              "postman.setNextRequest('01 Admin Login');"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "01 Admin Login",
       "request": {
         "method": "POST",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
+          { "key": "Content-Type", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
@@ -34,142 +80,181 @@
       },
       "event": [
         {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "var datasetText = pm.collectionVariables.get('datasetRaw');",
-              "if (!datasetText) {",
-              "  throw new Error('Missing embedded datasetRaw in collection variables.');",
-              "}",
-              "var parsed = JSON.parse(datasetText);",
-              "if (!(parsed && parsed.info && parsed.customers && parsed.products)) {",
-              "  throw new Error('Embedded datasetRaw is invalid.');",
-              "}",
-              "var admin = parsed.adminLogin || {};",
-              "pm.collectionVariables.set('adminEmail', admin.email || 'admin@routine.vn');",
-              "pm.collectionVariables.set('adminPassword', admin.password || 'Aa@12345');",
-              "var runId = String(Date.now());",
-              "pm.collectionVariables.set('runId', runId);",
-              "pm.collectionVariables.set('customerIndex', '0');",
-              "pm.collectionVariables.set('productIndex', '0');",
-              "pm.collectionVariables.set('staffIndex', '0');",
-              "pm.collectionVariables.set('orderIndex', '0');",
-              "pm.collectionVariables.set('createdCustomers', '[]');",
-              "pm.collectionVariables.set('createdProducts', '[]');"
-            ]
-          }
-        },
-        {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Admin login status 200', function () {",
-              "  pm.response.to.have.status(200);",
+              "pm.test('Admin login 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('adminToken', (json.data && json.data.token) || '');",
+              "pm.test('Admin token exists', function () {",
+              "  pm.expect(pm.collectionVariables.get('adminToken')).to.be.a('string').and.not.empty;",
               "});",
-              "pm.test('Admin token received', function () {",
-              "  var body = pm.response.json();",
-              "  pm.expect(body.success).to.eql(true);",
-              "  pm.expect(body.data.token).to.be.a('string');",
-              "  pm.collectionVariables.set('adminToken', body.data.token);",
-              "});",
-              "postman.setNextRequest('02 Seed Customers');"
+              "postman.setNextRequest('02 Build Dataset From Categories');"
             ]
           }
         }
       ]
     },
+
     {
-      "name": "02 Seed Customers",
+      "name": "02 Build Dataset From Categories",
       "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{adminToken}}"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{{currentCustomerBody}}"
-        },
-        "url": "{{baseUrl}}/admin/customers"
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/categories"
       },
       "event": [
         {
-          "listen": "prerequest",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "var data = JSON.parse(pm.collectionVariables.get('datasetRaw'));",
-              "var list = data.customers || [];",
-              "var idx = Number(pm.collectionVariables.get('customerIndex') || '0');",
-              "",
-              "if (idx >= list.length) {",
-              "  postman.setNextRequest('03 Seed Products');",
-              "  return;",
-              "}",
-              "",
-              "var base = list[idx];",
-              "var runId = pm.collectionVariables.get('runId');",
-              "var suffix = runId.slice(-6);",
-              "var no = String(base.customerNo || (idx + 1)).padStart(2, '0');",
-              "var customerBody = {",
-              "  fullName: base.fullName + ' R' + no,",
-              "  phone: '09' + suffix + no,",
-              "  email: 'seed.' + runId + '.' + no + '@routine.vn',",
-              "  address: base.address,",
-              "  tier: base.tier || 'REGULAR'",
-              "};",
-              "",
-              "pm.collectionVariables.set('currentCustomerBody', JSON.stringify(customerBody));"
-            ]
-          }
-        },
-        {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Customer create status is 201', function () {",
-              "  pm.response.to.have.status(201);",
-              "});",
-              "var body = pm.response.json();",
-              "pm.test('Customer create success', function () {",
-              "  pm.expect(body.success).to.eql(true);",
-              "  pm.expect(body.data.id).to.exist;",
+              "pm.test('Categories loaded', function () { pm.response.to.have.status(200); });",
+              "const body = pm.response.json();",
+              "const categories = (body && body.data) || [];",
+              "pm.test('Has categories', function () { pm.expect(categories.length).to.be.greaterThan(0); });",
+              "",
+              "const normalize = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();",
+              "const findCategoryId = (keywords) => {",
+              "  const keyNorm = keywords.map(normalize);",
+              "  const found = categories.find((c) => {",
+              "    const n = normalize(c.name);",
+              "    return keyNorm.some((k) => n.includes(k));",
+              "  });",
+              "  return found ? found.id : categories[0].id;",
+              "};",
+              "",
+              "const categoryMap = {",
+              "  shirt: findCategoryId(['ao so mi', 'so mi', 'ao phong', 'thun', 'polo']),",
+              "  jacket: findCategoryId(['ao khoac', 'khoac', 'jacket']),",
+              "  jeans: findCategoryId(['quan jean', 'jean', 'jeans']),",
+              "  khaki: findCategoryId(['quan kaki', 'kaki']),",
+              "  dress: findCategoryId(['vay', 'dam', 'dress']),",
+              "  accessory: findCategoryId(['phu kien', 'accessory'])",
+              "};",
+              "pm.collectionVariables.set('categoryMap', JSON.stringify(categoryMap));",
+              "",
+              "const saleStart = pm.collectionVariables.get('saleStartDate');",
+              "const saleEnd = pm.collectionVariables.get('saleEndDate');",
+              "const now = new Date();",
+              "const startAt = new Date(`${saleStart}T00:00:00`);",
+              "const endAt = new Date(`${saleEnd}T23:59:59`);",
+              "const inSaleWindow = now >= startAt && now <= endAt;",
+              "",
+              "const productTemplates = [",
+              "  { key: 'shirt', label: 'Ao so mi', image: 'https://images.unsplash.com/photo-1598033129183-c4b91b1c0f58?auto=format&fit=crop&w=1200&q=80', colors: ['white','black','blue','gray'], sizes: ['S','M','L','XL'] },",
+              "  { key: 'shirt', label: 'Ao phong', image: 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=80', colors: ['white','black','red','green'], sizes: ['S','M','L','XL'] },",
+              "  { key: 'shirt', label: 'Ao polo', image: 'https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=1200&q=80', colors: ['navy','white','gray'], sizes: ['M','L','XL','XXL'] },",
+              "  { key: 'jacket', label: 'Ao khoac', image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=1200&q=80', colors: ['black','beige','olive'], sizes: ['M','L','XL','XXL'] },",
+              "  { key: 'jeans', label: 'Quan jeans', image: 'https://images.unsplash.com/photo-1542272604-787c3835535d?auto=format&fit=crop&w=1200&q=80', colors: ['blue','black','gray'], sizes: ['28','29','30','31','32'] },",
+              "  { key: 'khaki', label: 'Quan kaki', image: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?auto=format&fit=crop&w=1200&q=80', colors: ['beige','brown','black'], sizes: ['28','29','30','31','32'] },",
+              "  { key: 'dress', label: 'Vay', image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?auto=format&fit=crop&w=1200&q=80', colors: ['red','black','white','pink'], sizes: ['S','M','L','XL'] },",
+              "  { key: 'accessory', label: 'Phu kien', image: 'https://images.unsplash.com/photo-1523170335258-f5ed11844a49?auto=format&fit=crop&w=1200&q=80', colors: ['black','brown','gray'], sizes: ['M'] }",
+              "];",
+              "",
+              "const products = [];",
+              "for (let i = 0; i < 30; i += 1) {",
+              "  const t = productTemplates[i % productTemplates.length];",
+              "  const no = String(i + 1).padStart(2, '0');",
+              "  const basePrice = 199000 + i * 10000;",
+              "  const salePercent = i < 10 ? (10 + (i % 5) * 5) : 0;",
+              "  const salePrice = Math.round(basePrice * (1 - salePercent / 100));",
+              "",
+              "  let finalPrice = basePrice;",
+              "  let oldPrice = null;",
+              "  if (salePercent > 0 && inSaleWindow) {",
+              "    finalPrice = salePrice;",
+              "    oldPrice = basePrice;",
+              "  }",
+              "",
+              "  const variants = [];",
+              "  const maxVariants = Math.min(5, Math.max(2, t.sizes.length));",
+              "  for (let v = 0; v < maxVariants; v += 1) {",
+              "    variants.push({",
+              "      size: t.sizes[v % t.sizes.length],",
+              "      color: t.colors[v % t.colors.length],",
+              "      stock: 5 + ((i + v) % 20)",
+              "    });",
+              "  }",
+              "",
+              "  products.push({",
+              "    code: `SEED-${pm.collectionVariables.get('runId').slice(-6)}-${no}`,",
+              "    name: `${t.label} ${no}`,",
+              "    categoryId: categoryMap[t.key],",
+              "    description: `${t.label} ${no} - Sale ${saleStart} den ${saleEnd}. Qua han se ve gia goc tu dong khi chay request sync sale.` ,",
+              "    price: finalPrice,",
+              "    oldPrice: oldPrice,",
+              "    costPrice: Math.round(basePrice * 0.62),",
+              "    stock: variants.reduce((s, x) => s + x.stock, 0),",
+              "    minStock: 5 + (i % 4),",
+              "    imageUrl: t.image,",
+              "    imageUrls: [t.image],",
+              "    material: t.key === 'jeans' ? 'Denim' : 'Cotton',",
+              "    fit: t.key === 'dress' ? 'Slim fit' : 'Regular fit',",
+              "    season: i % 2 === 0 ? 'All' : 'Summer',",
+              "    careInstructions: 'Machine wash cold',",
+              "    gender: i % 2 === 0 ? 'MALE' : 'FEMALE',",
+              "    sizes: t.sizes,",
+              "    colors: t.colors,",
+              "    variants: variants,",
+              "    __meta: {",
+              "      key: t.key,",
+              "      basePrice: basePrice,",
+              "      salePercent: salePercent,",
+              "      saleStart: saleStart,",
+              "      saleEnd: saleEnd",
+              "    }",
+              "  });",
+              "}",
+              "",
+              "const customers = [];",
+              "const runId = pm.collectionVariables.get('runId');",
+              "for (let i = 0; i < 10; i += 1) {",
+              "  const no = String(i + 1).padStart(2, '0');",
+              "  customers.push({",
+              "    fullName: `Seed Customer ${no}`,",
+              "    email: `seed.customer.${runId}.${no}@routine.vn`,",
+              "    password: 'Aa@12345',",
+              "    phone: `09${runId.slice(-6)}${no}`",
+              "  });",
+              "}",
+              "",
+              "const orders = [];",
+              "for (let i = 0; i < 20; i += 1) {",
+              "  orders.push({",
+              "    customerSeedIndex: i % 10,",
+              "    productSeedIndex: i % 30,",
+              "    quantity: 1 + (i % 3),",
+              "    paymentMethod: ['CASH', 'COD', 'BANK', 'TRANSFER'][i % 4],",
+              "    notes: `Seed order ${String(i + 1).padStart(2, '0')} by run ${runId}`",
+              "  });",
+              "}",
+              "",
+              "pm.collectionVariables.set('productSeeds', JSON.stringify(products));",
+              "pm.collectionVariables.set('customerSeeds', JSON.stringify(customers));",
+              "pm.collectionVariables.set('orderSeeds', JSON.stringify(orders));",
+              "",
+              "pm.test('Seed data built', function () {",
+              "  pm.expect(products.length).to.eql(30);",
+              "  pm.expect(customers.length).to.eql(10);",
+              "  pm.expect(orders.length).to.eql(20);",
               "});",
               "",
-              "var created = JSON.parse(pm.collectionVariables.get('createdCustomers') || '[]');",
-              "created.push(body.data.id);",
-              "pm.collectionVariables.set('createdCustomers', JSON.stringify(created));",
-              "",
-              "var idx = Number(pm.collectionVariables.get('customerIndex') || '0') + 1;",
-              "pm.collectionVariables.set('customerIndex', String(idx));",
-              "postman.setNextRequest('02 Seed Customers');"
+              "postman.setNextRequest('03 Seed Products (Loop 30)');"
             ]
           }
         }
       ]
     },
+
     {
-      "name": "03 Seed Products",
+      "name": "03 Seed Products (Loop 30)",
       "request": {
         "method": "POST",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{adminToken}}"
-          }
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
         ],
         "body": {
           "mode": "raw",
@@ -183,37 +268,15 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "var data = JSON.parse(pm.collectionVariables.get('datasetRaw'));",
-              "var list = data.products || [];",
-              "var idx = Number(pm.collectionVariables.get('productIndex') || '0');",
-              "",
-              "if (idx >= list.length) {",
-              "  postman.setNextRequest('04 Seed Staff');",
+              "const seeds = JSON.parse(pm.collectionVariables.get('productSeeds') || '[]');",
+              "const idx = Number(pm.collectionVariables.get('productIndex') || '0');",
+              "if (idx >= seeds.length) {",
+              "  postman.setNextRequest('04 Seed Customers (Loop 10)');",
               "  return;",
               "}",
-              "",
-              "var base = list[idx];",
-              "var runId = pm.collectionVariables.get('runId');",
-              "var no = String(base.productNo || (idx + 1)).padStart(3, '0');",
-              "var productBody = {",
-              "  code: (base.code || ('TP' + no)) + '-' + runId.slice(-4),",
-              "  name: base.name + ' R' + no,",
-              "  categoryId: Number(base.categoryId || 1),",
-              "  description: base.description || 'Seed product',",
-              "  price: Number(base.price || 200000),",
-              "  costPrice: Number(base.costPrice || 120000),",
-              "  oldPrice: Number(base.oldPrice || 220000),",
-              "  stock: Number(base.stock || 20),",
-              "  minStock: Number(base.minStock || 5),",
-              "  imageUrl: base.imageUrl,",
-              "  sku: base.sku || ('SKU-' + no),",
-              "  material: base.material || 'Cotton',",
-              "  fit: base.fit || 'Regular',",
-              "  season: base.season || 'All',",
-              "  careInstructions: base.careInstructions || 'Machine wash'",
-              "};",
-              "",
-              "pm.collectionVariables.set('currentProductBody', JSON.stringify(productBody));"
+              "const body = { ...seeds[idx] };",
+              "delete body.__meta;",
+              "pm.collectionVariables.set('currentProductBody', JSON.stringify(body));"
             ]
           }
         },
@@ -222,46 +285,53 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Product create status is 201', function () {",
-              "  pm.response.to.have.status(201);",
+              "pm.test('Create product 201', function () { pm.response.to.have.status(201); });",
+              "const res = pm.response.json();",
+              "const data = (res && res.data) || {};",
+              "const idx = Number(pm.collectionVariables.get('productIndex') || '0');",
+              "const seeds = JSON.parse(pm.collectionVariables.get('productSeeds') || '[]');",
+              "const seededProducts = JSON.parse(pm.collectionVariables.get('seededProducts') || '[]');",
+              "seededProducts.push({",
+              "  id: data.id,",
+              "  code: data.code || seeds[idx].code,",
+              "  name: data.name || seeds[idx].name,",
+              "  categoryId: seeds[idx].categoryId,",
+              "  basePrice: seeds[idx].__meta.basePrice,",
+              "  salePercent: seeds[idx].__meta.salePercent,",
+              "  saleStart: seeds[idx].__meta.saleStart,",
+              "  saleEnd: seeds[idx].__meta.saleEnd,",
+              "  templateKey: seeds[idx].__meta.key,",
+              "  imageUrl: seeds[idx].imageUrl,",
+              "  material: seeds[idx].material,",
+              "  fit: seeds[idx].fit,",
+              "  season: seeds[idx].season,",
+              "  careInstructions: seeds[idx].careInstructions,",
+              "  gender: seeds[idx].gender,",
+              "  sizes: seeds[idx].sizes,",
+              "  colors: seeds[idx].colors,",
+              "  variants: seeds[idx].variants",
               "});",
-              "var body = pm.response.json();",
-              "pm.test('Product create success', function () {",
-              "  pm.expect(body.success).to.eql(true);",
-              "  pm.expect(body.data.id).to.exist;",
-              "});",
-              "",
-              "var created = JSON.parse(pm.collectionVariables.get('createdProducts') || '[]');",
-              "created.push({ id: body.data.id, price: Number(body.data.price || 0) });",
-              "pm.collectionVariables.set('createdProducts', JSON.stringify(created));",
-              "",
-              "var idx = Number(pm.collectionVariables.get('productIndex') || '0') + 1;",
-              "pm.collectionVariables.set('productIndex', String(idx));",
-              "postman.setNextRequest('03 Seed Products');"
+              "pm.collectionVariables.set('seededProducts', JSON.stringify(seededProducts));",
+              "pm.collectionVariables.set('productIndex', String(idx + 1));",
+              "postman.setNextRequest('03 Seed Products (Loop 30)');"
             ]
           }
         }
       ]
     },
+
     {
-      "name": "04 Seed Staff",
+      "name": "04 Seed Customers (Loop 10)",
       "request": {
         "method": "POST",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{adminToken}}"
-          }
+          { "key": "Content-Type", "value": "application/json" }
         ],
         "body": {
           "mode": "raw",
-          "raw": "{{currentStaffBody}}"
+          "raw": "{{currentCustomerBody}}"
         },
-        "url": "{{baseUrl}}/admin/staff"
+        "url": "{{baseUrl}}/auth/customer/register"
       },
       "event": [
         {
@@ -269,29 +339,13 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "var data = JSON.parse(pm.collectionVariables.get('datasetRaw'));",
-              "var list = data.staff || [];",
-              "var idx = Number(pm.collectionVariables.get('staffIndex') || '0');",
-              "",
-              "if (idx >= list.length) {",
-              "  postman.setNextRequest('05 Seed Orders');",
+              "const seeds = JSON.parse(pm.collectionVariables.get('customerSeeds') || '[]');",
+              "const idx = Number(pm.collectionVariables.get('customerIndex') || '0');",
+              "if (idx >= seeds.length) {",
+              "  postman.setNextRequest('05 Seed Orders (Loop 20)');",
               "  return;",
               "}",
-              "",
-              "var base = list[idx];",
-              "var runId = pm.collectionVariables.get('runId');",
-              "var no = String(idx + 1).padStart(2, '0');",
-              "var staffBody = {",
-              "  fullName: base.fullName + ' R' + no,",
-              "  email: 'staff.' + runId + '.' + no + '@routine.vn',",
-              "  phone: '093' + runId.slice(-5) + no,",
-              "  role: base.role || 'SALES',",
-              "  isActive: base.isActive !== false,",
-              "  branch: base.branch || 'HQ',",
-              "  password: base.password || 'Aa@12345'",
-              "};",
-              "",
-              "pm.collectionVariables.set('currentStaffBody', JSON.stringify(staffBody));"
+              "pm.collectionVariables.set('currentCustomerBody', JSON.stringify(seeds[idx]));"
             ]
           }
         },
@@ -300,36 +354,34 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Staff create status is 201', function () {",
-              "  pm.response.to.have.status(201);",
+              "pm.test('Register customer 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "const data = (res && res.data) || {};",
+              "const idx = Number(pm.collectionVariables.get('customerIndex') || '0');",
+              "const seeds = JSON.parse(pm.collectionVariables.get('customerSeeds') || '[]');",
+              "const seededCustomers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
+              "seededCustomers.push({",
+              "  id: data.id || (data.user && data.user.id),",
+              "  email: seeds[idx].email,",
+              "  fullName: seeds[idx].fullName,",
+              "  phone: seeds[idx].phone",
               "});",
-              "var body = pm.response.json();",
-              "pm.test('Staff create success', function () {",
-              "  pm.expect(body.success).to.eql(true);",
-              "  pm.expect(body.data.id).to.exist;",
-              "});",
-              "",
-              "var idx = Number(pm.collectionVariables.get('staffIndex') || '0') + 1;",
-              "pm.collectionVariables.set('staffIndex', String(idx));",
-              "postman.setNextRequest('04 Seed Staff');"
+              "pm.collectionVariables.set('seededCustomers', JSON.stringify(seededCustomers));",
+              "pm.collectionVariables.set('customerIndex', String(idx + 1));",
+              "postman.setNextRequest('04 Seed Customers (Loop 10)');"
             ]
           }
         }
       ]
     },
+
     {
-      "name": "05 Seed Orders",
+      "name": "05 Seed Orders (Loop 20)",
       "request": {
         "method": "POST",
         "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          },
-          {
-            "key": "Authorization",
-            "value": "Bearer {{adminToken}}"
-          }
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
         ],
         "body": {
           "mode": "raw",
@@ -343,47 +395,45 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "var data = JSON.parse(pm.collectionVariables.get('datasetRaw'));",
-              "var list = data.orders || [];",
-              "var idx = Number(pm.collectionVariables.get('orderIndex') || '0');",
-              "",
-              "if (idx >= list.length) {",
-              "  postman.setNextRequest('06 Verify Summary');",
+              "const orderSeeds = JSON.parse(pm.collectionVariables.get('orderSeeds') || '[]');",
+              "const products = JSON.parse(pm.collectionVariables.get('seededProducts') || '[]');",
+              "const customers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
+              "const idx = Number(pm.collectionVariables.get('orderIndex') || '0');",
+              "if (idx >= orderSeeds.length) {",
+              "  postman.setNextRequest('06 Sync Sale Status (Loop 10 sale products)');",
               "  return;",
               "}",
               "",
-              "var customers = JSON.parse(pm.collectionVariables.get('createdCustomers') || '[]');",
-              "var products = JSON.parse(pm.collectionVariables.get('createdProducts') || '[]');",
-              "if (!customers.length || !products.length) {",
-              "  throw new Error('No seeded customers/products available to create orders.');",
-              "}",
+              "const s = orderSeeds[idx];",
+              "const customer = customers[s.customerSeedIndex];",
+              "const product = products[s.productSeedIndex];",
+              "const qty = s.quantity;",
+              "const activePrice = (product.salePercent > 0 && (new Date() <= new Date(`${product.saleEnd}T23:59:59`) && new Date() >= new Date(`${product.saleStart}T00:00:00`)))",
+              "  ? Math.round(product.basePrice * (1 - product.salePercent / 100))",
+              "  : product.basePrice;",
+              "const subtotal = activePrice * qty;",
               "",
-              "var base = list[idx];",
-              "var customerId = customers[((base.customerIndex || 1) - 1) % customers.length];",
-              "var items = (base.items || []).map(function (it) {",
-              "  var p = products[((it.productIndex || 1) - 1) % products.length];",
-              "  var qty = Number(it.quantity || 1);",
-              "  return {",
-              "    productId: p.id,",
-              "    quantity: qty,",
-              "    price: p.price,",
-              "    size: 'M',",
-              "    color: 'Black'",
-              "  };",
-              "});",
+              "const variant = (product.variants && product.variants.length > 0) ? product.variants[idx % product.variants.length] : { size: 'M', color: 'black' };",
               "",
-              "var subtotal = items.reduce(function (s, it) { return s + (Number(it.price) * Number(it.quantity)); }, 0);",
-              "var orderBody = {",
-              "  customerId: customerId,",
-              "  items: items,",
+              "const body = {",
+              "  customerId: customer.id,",
+              "  items: [",
+              "    {",
+              "      productId: product.id,",
+              "      quantity: qty,",
+              "      price: activePrice,",
+              "      size: variant.size,",
+              "      color: variant.color",
+              "    }",
+              "  ],",
               "  subtotal: subtotal,",
               "  discount: 0,",
               "  total: subtotal,",
-              "  paymentMethod: base.paymentMethod || 'CASH',",
-              "  notes: base.notes || ('Seed order ' + (idx + 1))",
+              "  paymentMethod: s.paymentMethod,",
+              "  notes: s.notes",
               "};",
               "",
-              "pm.collectionVariables.set('currentOrderBody', JSON.stringify(orderBody));"
+              "pm.collectionVariables.set('currentOrderBody', JSON.stringify(body));"
             ]
           }
         },
@@ -392,34 +442,103 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Order create status is 201', function () {",
-              "  pm.response.to.have.status(201);",
-              "});",
-              "var body = pm.response.json();",
-              "pm.test('Order create success', function () {",
-              "  pm.expect(body.success).to.eql(true);",
-              "  pm.expect(body.data.id).to.exist;",
-              "});",
-              "",
-              "var idx = Number(pm.collectionVariables.get('orderIndex') || '0') + 1;",
-              "pm.collectionVariables.set('orderIndex', String(idx));",
-              "postman.setNextRequest('05 Seed Orders');"
+              "pm.test('Create order 201', function () { pm.response.to.have.status(201); });",
+              "const idx = Number(pm.collectionVariables.get('orderIndex') || '0');",
+              "pm.collectionVariables.set('orderIndex', String(idx + 1));",
+              "postman.setNextRequest('05 Seed Orders (Loop 20)');"
             ]
           }
         }
       ]
     },
+
     {
-      "name": "06 Verify Summary",
+      "name": "06 Sync Sale Status (Loop 10 sale products)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{currentSyncBody}}"
+        },
+        "url": "{{baseUrl}}/products/{{syncProductId}}"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const products = JSON.parse(pm.collectionVariables.get('seededProducts') || '[]');",
+              "const idx = Number(pm.collectionVariables.get('saleSyncIndex') || '0');",
+              "const saleProducts = products.filter((p) => Number(p.salePercent || 0) > 0).slice(0, 10);",
+              "if (idx >= saleProducts.length) {",
+              "  postman.setNextRequest('07 Verify Summary');",
+              "  return;",
+              "}",
+              "",
+              "const p = saleProducts[idx];",
+              "const now = new Date();",
+              "const startAt = new Date(`${p.saleStart}T00:00:00`);",
+              "const endAt = new Date(`${p.saleEnd}T23:59:59`);",
+              "const inWindow = now >= startAt && now <= endAt;",
+              "const salePrice = Math.round(p.basePrice * (1 - p.salePercent / 100));",
+              "const activePrice = inWindow ? salePrice : p.basePrice;",
+              "const activeOldPrice = inWindow ? p.basePrice : null;",
+              "",
+              "const body = {",
+              "  code: p.code,",
+              "  name: p.name,",
+              "  categoryId: p.categoryId,",
+              "  description: `${p.name} - sale ${p.saleStart} den ${p.saleEnd}. ${inWindow ? 'Dang sale' : 'Het sale, da ve gia goc'}`,",
+              "  price: activePrice,",
+              "  oldPrice: activeOldPrice,",
+              "  costPrice: Math.round(p.basePrice * 0.62),",
+              "  stock: (p.variants || []).reduce((s, x) => s + Number(x.stock || 0), 0),",
+              "  minStock: 5,",
+              "  imageUrl: p.imageUrl,",
+              "  imageUrls: [p.imageUrl],",
+              "  material: p.material,",
+              "  fit: p.fit,",
+              "  season: p.season,",
+              "  careInstructions: p.careInstructions,",
+              "  gender: p.gender,",
+              "  sizes: p.sizes,",
+              "  colors: p.colors,",
+              "  variants: p.variants",
+              "};",
+              "",
+              "pm.collectionVariables.set('syncProductId', String(p.id));",
+              "pm.collectionVariables.set('currentSyncBody', JSON.stringify(body));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Sync sale update 200', function () { pm.response.to.have.status(200); });",
+              "const idx = Number(pm.collectionVariables.get('saleSyncIndex') || '0');",
+              "pm.collectionVariables.set('saleSyncIndex', String(idx + 1));",
+              "postman.setNextRequest('06 Sync Sale Status (Loop 10 sale products)');"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "07 Verify Summary",
       "request": {
         "method": "GET",
         "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{adminToken}}"
-          }
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
         ],
-        "url": "{{baseUrl}}/admin/dashboard/summary?range=7days"
+        "url": "{{baseUrl}}/orders"
       },
       "event": [
         {
@@ -427,13 +546,15 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Summary status is 200', function () {",
-              "  pm.response.to.have.status(200);",
+              "pm.test('Orders endpoint 200', function () { pm.response.to.have.status(200); });",
+              "const products = JSON.parse(pm.collectionVariables.get('seededProducts') || '[]');",
+              "const customers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
+              "pm.test('Seeded products count = 30', function () { pm.expect(products.length).to.eql(30); });",
+              "pm.test('Seeded customers count = 10', function () { pm.expect(customers.length).to.eql(10); });",
+              "pm.test('At least 10 sale candidates', function () {",
+              "  pm.expect(products.filter((p) => Number(p.salePercent || 0) > 0).length).to.be.at.least(10);",
               "});",
-              "pm.test('Summary response success', function () {",
-              "  var body = pm.response.json();",
-              "  pm.expect(body.success).to.eql(true);",
-              "});"
+              "postman.setNextRequest(null);"
             ]
           }
         }

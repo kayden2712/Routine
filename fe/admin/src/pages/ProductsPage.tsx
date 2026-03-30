@@ -42,6 +42,52 @@ import type { Product } from '@/types';
 type SortMode = 'newest' | 'price-desc' | 'price-asc' | 'stock-low';
 type ProductStatusFilter = 'all' | 'active' | 'out_of_stock' | 'inactive';
 const PRODUCT_SAVE_TIMEOUT_MS = 5000;
+const MAX_IMAGE_DATA_URL_LENGTH = 350_000;
+
+async function fileToOptimizedDataUrl(file: File): Promise<string> {
+  const toDataUrl = (input: File | Blob) =>
+    new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result ?? ''));
+      reader.readAsDataURL(input);
+    });
+
+  if (!file.type.startsWith('image/')) {
+    return toDataUrl(file);
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Không thể đọc ảnh đã chọn.'));
+      img.src = objectUrl;
+    });
+
+    const maxDimension = 1280;
+    const ratio = Math.min(maxDimension / image.width, maxDimension / image.height, 1);
+    const width = Math.max(1, Math.round(image.width * ratio));
+    const height = Math.max(1, Math.round(image.height * ratio));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return toDataUrl(file);
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+    const optimized = canvas.toDataURL('image/jpeg', 0.82);
+    return optimized;
+  } catch {
+    return toDataUrl(file);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
 
 interface ProductFormState {
   id?: string;
@@ -50,6 +96,7 @@ interface ProductFormState {
   category: string;
   gender: 'male' | 'female';
   price: string;
+  salePercent: string;
   costPrice: string;
   stock: string;
   description: string;
@@ -63,6 +110,16 @@ interface ProductFormState {
 }
 
 const SIZE_OPTIONS = ['M', 'S', 'XL', 'XXL', 'L'] as const;
+const COLOR_OPTIONS = [
+  { value: 'black', label: 'Đen' },
+  { value: 'white', label: 'Trắng' },
+  { value: 'red', label: 'Đỏ' },
+  { value: 'blue', label: 'Xanh dương' },
+  { value: 'green', label: 'Xanh lá' },
+  { value: 'gray', label: 'Xám' },
+  { value: 'beige', label: 'Be' },
+  { value: 'brown', label: 'Nâu' },
+] as const;
 
 const CATEGORY_LABELS: Record<string, string> = {
   'Ao so mi': 'Áo sơ mi',
@@ -117,7 +174,7 @@ function productStatusFromStock(stock: number): Product['status'] {
 function createEmptyVariantForm() {
   return {
     size: SIZE_OPTIONS[0],
-    color: 'black',
+    color: COLOR_OPTIONS[0].value,
     stock: '0',
   };
 }
@@ -129,6 +186,7 @@ function createEmptyForm(defaultCategory: string): ProductFormState {
     category: defaultCategory,
     gender: 'male',
     price: '',
+    salePercent: '0',
     costPrice: '',
     stock: '0',
     description: '',
@@ -138,8 +196,16 @@ function createEmptyForm(defaultCategory: string): ProductFormState {
   };
 }
 
-function generateCode(): string {
-  return `SP${Math.floor(100 + Math.random() * 900)}`;
+function generateCode(existingCodes: Set<string>): string {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const suffix = `${Date.now().toString().slice(-5)}${Math.floor(Math.random() * 10)}`;
+    const candidate = `SP${suffix}`;
+    if (!existingCodes.has(candidate)) {
+      return candidate;
+    }
+  }
+
+  return `SP${Date.now()}${Math.floor(Math.random() * 100)}`;
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string): Promise<T> {
@@ -271,7 +337,12 @@ export function ProductsPage() {
       return;
     }
 
-    setFormState(createEmptyForm(categories[0] ?? 'Ao so mi'));
+    const existingCodes = new Set(products.map((item) => item.code.trim().toUpperCase()));
+    const initialCode = generateCode(existingCodes);
+    setFormState({
+      ...createEmptyForm(categories[0] ?? 'Ao so mi'),
+      code: initialCode,
+    });
     setVariantOpen(false);
     setFormOpen(true);
   };
@@ -298,10 +369,14 @@ export function ProductsPage() {
       code: product.code,
       category: product.category,
       gender: product.gender,
-      price: String(product.price),
+      price: String(product.oldPrice ?? product.price),
+      salePercent:
+        product.oldPrice && product.oldPrice > 0 && product.oldPrice > product.price
+          ? String(Math.round(((product.oldPrice - product.price) / product.oldPrice) * 100))
+          : '0',
       costPrice: String(product.costPrice ?? 0),
       stock: String(totalStock),
-      description: '',
+      description: product.description ?? '',
       minStock: String(product.minStock),
       imageUrls:
         (product.imageUrls ?? []).length > 0
@@ -321,20 +396,23 @@ export function ProductsPage() {
       return;
     }
 
-    const readFile = (file: File) =>
-      new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result ?? ''));
-        reader.readAsDataURL(file);
-      });
-
-    const nextImages = (await Promise.all(files.map((file) => readFile(file))))
+    const converted = await Promise.all(files.map((file) => fileToOptimizedDataUrl(file)));
+    const nextImages = converted
       .map((url) => url.trim())
       .filter((url) => url.length > 0);
 
+    const acceptedImages = nextImages.filter(
+      (url) => !url.startsWith('data:') || url.length <= MAX_IMAGE_DATA_URL_LENGTH,
+    );
+
+    const droppedCount = nextImages.length - acceptedImages.length;
+    if (droppedCount > 0) {
+      toast.error('Một số ảnh quá lớn nên không thể lưu. Vui lòng chọn ảnh nhỏ hơn.');
+    }
+
     setFormState((prev) => ({
       ...prev,
-      imageUrls: Array.from(new Set([...prev.imageUrls, ...nextImages])),
+      imageUrls: Array.from(new Set([...prev.imageUrls, ...acceptedImages])),
     }));
 
     // Allow re-selecting the same file(s) by resetting input value.
@@ -352,7 +430,25 @@ export function ProductsPage() {
       return;
     }
 
-    const parsedPrice = Number(formState.price);
+    const existingCodes = new Set(
+      products
+        .filter((item) => item.id !== formState.id)
+        .map((item) => item.code.trim().toUpperCase()),
+    );
+
+    let normalizedCode = formState.code.trim().toUpperCase();
+    if (existingCodes.has(normalizedCode)) {
+      if (formState.id) {
+        toast.error('Mã sản phẩm đã tồn tại. Vui lòng dùng mã khác.');
+        return;
+      }
+
+      normalizedCode = generateCode(existingCodes);
+      setFormState((prev) => ({ ...prev, code: normalizedCode }));
+    }
+
+    const parsedBasePrice = Number(formState.price);
+    const parsedSalePercent = Number(formState.salePercent || 0);
     const parsedCost = Number(formState.costPrice || 0);
     const parsedMinStock = Number(formState.minStock || 0);
 
@@ -367,8 +463,21 @@ export function ProductsPage() {
 
     const parsedStock = normalizedVariants.reduce((sum, variant) => sum + variant.stock, 0);
 
-    if (Number.isNaN(parsedPrice)) {
-      toast.error('Giá bán phải là số hợp lệ');
+    if (Number.isNaN(parsedBasePrice)) {
+      toast.error('Giá gốc phải là số hợp lệ');
+      return;
+    }
+
+    if (Number.isNaN(parsedSalePercent) || parsedSalePercent < 0 || parsedSalePercent > 100) {
+      toast.error('Sale (%) phải nằm trong khoảng 0 - 100');
+      return;
+    }
+
+    const effectivePrice = Math.max(0, Math.round(parsedBasePrice * (1 - parsedSalePercent / 100)));
+    const effectiveOldPrice = parsedSalePercent > 0 ? parsedBasePrice : undefined;
+
+    if (effectivePrice <= 0) {
+      toast.error('Giá hiện tại phải lớn hơn 0. Vui lòng giảm % sale.');
       return;
     }
 
@@ -399,15 +508,18 @@ export function ProductsPage() {
     const colors = Array.from(new Set(variants.map((variant) => variant.color)));
     const normalizedImageUrls = formState.imageUrls
       .map((url) => String(url ?? '').trim())
-      .filter((url) => url.length > 0);
+      .filter((url) => url.length > 0)
+      .filter((url) => !url.startsWith('data:') || url.length <= MAX_IMAGE_DATA_URL_LENGTH);
 
     const baseProduct: Product = {
       id: formState.id ?? `p-${Date.now()}`,
-      code: formState.code.trim().toUpperCase(),
+      code: normalizedCode,
       name: formState.name.trim(),
       category: formState.category,
       gender: formState.gender,
-      price: parsedPrice,
+      description: formState.description.trim(),
+      price: effectivePrice,
+      oldPrice: effectiveOldPrice,
       costPrice: parsedCost,
       stock: parsedStock,
       minStock: parsedMinStock,
@@ -973,7 +1085,15 @@ export function ProductsPage() {
                   <Button
                     variant="outline"
                     className="h-9 gap-1"
-                    onClick={() => setFormState((prev) => ({ ...prev, code: generateCode() }))}
+                    onClick={() => {
+                      const existingCodes = new Set(
+                        products
+                          .filter((item) => item.id !== formState.id)
+                          .map((item) => item.code.trim().toUpperCase()),
+                      );
+
+                      setFormState((prev) => ({ ...prev, code: generateCode(existingCodes) }));
+                    }}
                   >
                     <RefreshCw size={14} />
                   </Button>
@@ -1023,7 +1143,7 @@ export function ProductsPage() {
 
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
-                  <Label>Giá bán* (₫)</Label>
+                  <Label>Giá gốc* (₫)</Label>
                   <div className="relative mt-1">
                     <Input
                       type="number"
@@ -1034,6 +1154,36 @@ export function ProductsPage() {
                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--color-text-muted)]">₫</span>
                   </div>
                 </div>
+
+                <div>
+                  <Label>Sale (%)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={formState.salePercent}
+                    onChange={(event) => setFormState((prev) => ({ ...prev, salePercent: event.target.value }))}
+                    className="mt-1 h-9"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Giá hiện tại (₫)</Label>
+                <Input
+                  readOnly
+                  value={(() => {
+                    const basePrice = Number(formState.price || 0);
+                    const salePercent = Number(formState.salePercent || 0);
+                    if (Number.isNaN(basePrice) || Number.isNaN(salePercent)) {
+                      return '';
+                    }
+
+                    const currentPrice = Math.max(0, Math.round(basePrice * (1 - salePercent / 100)));
+                    return String(currentPrice);
+                  })()}
+                  className="mt-1 h-9 bg-[var(--color-bg)]"
+                />
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -1145,19 +1295,30 @@ export function ProductsPage() {
                           </SelectContent>
                         </Select>
 
-                        <Input
-                          value={variant.color}
-                          onChange={(event) =>
+                        <Select
+                          value={variant.color || COLOR_OPTIONS[0].value}
+                          onValueChange={(value) =>
                             setFormState((prev) => ({
                               ...prev,
                               variants: prev.variants.map((item, i) =>
-                                i === index ? { ...item, color: event.target.value } : item,
+                                i === index ? { ...item, color: value ?? item.color } : item,
                               ),
                             }))
                           }
-                          placeholder="Màu"
-                          className="h-8 min-w-[140px] flex-1"
-                        />
+                        >
+                          <SelectTrigger className="h-8 min-w-[140px] flex-1">
+                            <SelectValue>
+                              {COLOR_OPTIONS.find((option) => option.value === variant.color)?.label ?? 'Màu'}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {COLOR_OPTIONS.map((option) => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
 
                         <Input
                           type="number"
