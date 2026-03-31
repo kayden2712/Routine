@@ -1,5 +1,0 @@
-open | /login
-type | id=email | admin@routine.com
-type | id=password | admin123
-click | xpath=//button[contains(.,'Đăng nhập')]
-waitForElementVisible | css=.grid:nth-child(3)  

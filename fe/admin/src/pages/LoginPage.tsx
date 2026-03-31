@@ -113,7 +113,7 @@ export function LoginPage() {
             <p className="mt-2 text-[14px] text-[var(--color-text-secondary)]">Nhập thông tin truy cập hệ thống</p>
           </header>
 
-          <form onSubmit={submit} className="space-y-4">
+          <form noValidate onSubmit={submit} className="space-y-4">
             <div>
               <p className="mb-2 text-[12px] font-medium uppercase tracking-[0.06em] text-[var(--color-text-muted)]">Vai trò của bạn</p>
               <div className="grid grid-cols-2 gap-2">
