@@ -21,7 +21,6 @@ USE routine_db;
 
 -- Verify setup
 SELECT 'Database created successfully!' AS status;
-SHOW DATABASES LIKE 'routine_db';
 
 -- Show connection info
 SELECT 

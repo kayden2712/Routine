@@ -1,150 +1,269 @@
-# Routine
+# 📦 Routine - E-commerce Management System
 
-Routine la he thong ban le gom 3 phan chay trong cung workspace:
+Hệ thống quản lý bán lẻ toàn diện gồm 3 thành phần chạy trong cùng workspace:
 
-- Backend API (Spring Boot) xu ly nghiep vu va du lieu.
-- Admin app (React + Vite) cho van hanh noi bo.
-- Storefront app (React + Vite) cho khach hang mua sam.
+- **Backend API** (Spring Boot 21) - Xử lý nghiệp vụ và dữ liệu
+- **Admin App** (React + Vite) - Ứng dụng quản trị nội bộ
+- **Storefront App** (React + Vite) - Ứng dụng bán hàng cho khách
 
-## Tong quan thanh phan
+---
 
-- `be`: Backend Java 21, Spring Boot, JPA, JWT, MySQL, WebSocket.
-- `fe/admin`: Ung dung quan tri (POS, don hang, san pham, kho, bao cao).
-- `fe/storefront`: Ung dung khach hang (duyet san pham, gio hang, dat hang, theo doi don).
-- `postman/routine-full-dataset-runner.postman_collection.json`: Bo request phuc vu seed/test API.
-- `startAll.bat`: Script chay nhanh toan bo he thong tren Windows.
+## 🏗 Kiến trúc
 
-## Yeu cau moi truong
+| Thành phần | Công nghệ | Chức năng |
+|-----------|-----------|---------|
+| **be/** | Java 21, Spring Boot, JPA, JWT, MySQL 8+, WebSocket | API, xử lý logic, quản lý dữ liệu |
+| **fe/admin/** | React 18, Vite, TypeScript, TailwindCSS | POS, quản lý đơn, sản phẩm, kho, báo cáo |
+| **fe/storefront/** | React 18, Vite, TypeScript, TailwindCSS | Khách hàng: duyệt sản phẩm, giỏ hàng, đặt hàng |
+| **postman/** | Postman Collection | API testing & seed data |
 
-- Java 21
-- MySQL 8+
-- Node.js 20+ (khuyen nghi LTS)
-- npm 10+
+---
 
-## Cau hinh database backend
+## ✅ Yêu cầu môi trường
 
-Cap nhat thong tin ket noi trong file:
+- **Java**: 21+
+- **MySQL**: 8.0+
+- **Node.js**: 20+ (LTS)
+- **npm**: 10+
 
-`be/src/main/resources/application.properties`
+---
 
-Gia tri can kiem tra:
+## 🚀 Cài đặt lần đầu
 
-- `spring.datasource.url`
-- `spring.datasource.username`
-- `spring.datasource.password`
+### 1️⃣ Cài đặt Frontend
 
-## Cai dat lan dau
-
-Tu thu muc goc du an:
-
-```bat
-cd fe\storefront
+```bash
+# Storefront
+cd fe/storefront
 npm install
 
-cd ..\admin
+# Admin
+cd ../admin
 npm install
 ```
 
-Backend su dung Maven Wrapper (`be/mvnw.cmd`), khong can cai Maven global.
+### 2️⃣ Cài đặt Database
 
-## Chay nhanh toan he thong (Windows)
+Frontend sẽ tự động sử dụng Maven Wrapper (`be/mvnw.cmd`) - không cần cài Maven global.
 
-Tu thu muc goc:
+**Database chính (production):**
+```bash
+mysql -u root -p < be\setup-database.sql
+```
 
-```bat
+**Database test (tuỳ chọn - cho testing):**
+```bash
+mysql -u root -p < be\setup-test-database.sql
+```
+*Chi tiết: Xem [TEST-DATABASE-SETUP.md](be/TEST-DATABASE-SETUP.md)*
+
+---
+
+## 🎯 Chạy hệ thống
+
+### 🟢 Chạy với Database Gốc (Production)
+
+**Windows:**
+```bash
 startAll.bat
 ```
 
-Script se:
+**Linux/Mac:**
+```bash
+# Coming soon
+```
 
-- Kiem tra cac port 8080, 5173, 5174.
-- Mo 3 cua so terminal rieng cho backend, storefront, admin.
+**Kết quả:** chạy backend + 2 frontend trên các cửa sổ terminal riêng
 
-Dia chi mac dinh:
+### 🔵 Chạy với Database Test (Recommended for Development)
 
-- Backend API: `http://localhost:8080/api`
-- Storefront: `http://localhost:5173`
-- Admin: `http://localhost:5174`
+Database test sẽ **tự động reset** dữ liệu khi startup.
 
-## Chay thu cong tung phan
+**Windows:**
+```bash
+startAll-test.bat
+```
 
-### 1. Backend
+**Effect:** Backend kết nối `routine_test_db` (tách biệt hoàn toàn từ database gốc)
 
-```bat
+---
+
+## 📍 Địa chỉ mặc định
+
+| Dịch vụ | URL | Mục đích |
+|--------|-----|---------|
+| **Backend** | `http://localhost:8080/api` | API endpoints |
+| **Swagger UI** | `http://localhost:8080/api/swagger-ui.html` | API documentation |
+| **Admin** | `http://localhost:5174` | Quản trị viên |
+| **Storefront** | `http://localhost:5173` | Khách hàng |
+
+---
+
+## 🔧 Chạy từng phần riêng
+
+### Backend
+
+```bash
 cd be
 mvnw.cmd spring-boot:run
 ```
 
-### 2. Storefront
+**Với test database:**
+```bash
+set SPRING_PROFILES_ACTIVE=dev
+mvnw.cmd spring-boot:run
+```
 
-```bat
-cd fe\storefront
+### Frontend - Storefront
+
+```bash
+cd fe/storefront
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-### 3. Admin
+### Frontend - Admin
 
-```bat
-cd fe\admin
+```bash
+cd fe/admin
 npm run dev -- --host 0.0.0.0 --port 5174
 ```
 
-## Build va test
+---
+
+## 🏗 Build & Tests
 
 ### Backend
 
-```bat
+```bash
 cd be
+
+# Run tests
 mvnw.cmd clean test
+
+# Build JAR
 mvnw.cmd clean package
+
+# Build with specific profile
+mvnw.cmd clean package -P prod
 ```
 
-### Storefront
+### Frontend
 
-```bat
-cd fe\storefront
+```bash
+# Storefront
+cd fe/storefront
+npm run build
+
+# Admin
+cd fe/admin
 npm run build
 ```
 
-### Admin
+---
 
-```bat
-cd fe\admin
-npm run build
+## 📊 Database Configuration
+
+### Production (default)
+- **Database**: `routine_db`
+- **User**: `root` (hoặc `routine_user`)
+- **Config**: `be/src/main/resources/application.properties`
+
+### Development/Test (profile: dev)
+- **Database**: `routine_test_db`
+- **User**: `routine_user` / `Routine@2026!`
+- **Config**: `be/src/main/resources/application-dev.properties`
+- **Feature**: Auto-reset dữ liệu khi startup
+
+---
+
+## ✨ Những tính năng nổi bật
+
+✅ **Real-time Order Tracking** - WebSocket cập nhật trạng thái đơn hàng realtime  
+✅ **Admin POS System** - Bán hàng tại quầy, quản lý hàng tồn  
+✅ **Inventory Management** - Theo dõi kho, cảnh báo hết hàng  
+✅ **Order Lifecycle** - Tạo → Giao → Hoàn/Hủy → Đánh giá  
+✅ **Customer Profiles** - Lưu địa chỉ, lịch sử mua hàng  
+✅ **Product Gallery** - Hình ảnh sản phẩm, reviews  
+✅ **JWT Authentication** - Bảo mật API endpoints  
+✅ **Test Database** - Môi trường testing với auto-reset  
+
+---
+
+## 🐛 Troubleshooting
+
+| Vấn đề | Giải pháp |
+|--------|----------|
+| **Port đã bị chiếm** | Dừng process dùng port, chạy lại script |
+| **Backend không khởi động** | Chạy lệnh trong thư mục `be` hoặc kiểm tra Java version |
+| **Không kết nối DB** | Xem cấu hình datasource trong `application.properties` |
+| **Frontend gọi API lỗi** | Kiểm tra backend có chạy, `VITE_API_URL` đúng |
+| **Test DB không reset** | Kiểm tra profile `dev` được activate, `app.test.reset-data.enabled=true` |
+
+---
+
+## 📚 Tài liệu thêm
+
+- [Test Database Setup](be/TEST-DATABASE-SETUP.md) - Hướng dẫn chi tiết test database
+- [API Documentation](be/README.md) - Chi tiết backend
+- [Error Codes](docs/error-codes.md) - Danh sách lỗi hệ thống
+
+---
+
+## 📁 Cấu trúc thư mục
+
 ```
-
-## API docs
-
-Khi backend dang chay:
-
-- Swagger UI: `http://localhost:8080/api/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/api/api-docs`
-
-## Tinh nang noi bat
-
-- Theo doi trang thai don hang realtime qua WebSocket.
-- Don online trong admin uu tien cac don vua thay doi trang thai.
-- Lich su don cua khach hang tu dong cap nhat theo trang thai moi.
-- Ho tro quy trinh huy don, hoan don, xac nhan giao thanh cong.
-- Danh gia san pham sau khi don hoan tat, co ho tro dinh kem anh.
-
-## Cau truc thu muc
-
-```text
 Routine/
-  README.md
-  startAll.bat
-  be/
-  fe/
-    admin/
-    storefront/
-  postman/
-  testing/
+├── README.md                              # File này
+├── startAll.bat                           # Chạy tất cả với DB gốc
+├── startAll-test.bat                      # Chạy tất cả với DB test
+├── be/                                    # Backend (Java 21, Spring Boot)
+│   ├── src/main/java/com/example/be/
+│   ├── src/main/resources/
+│   │   ├── application.properties         # Config production
+│   │   └── application-dev.properties     # Config test database
+│   ├── setup-database.sql                 # SQL tạo DB gốc
+│   ├── setup-test-database.sql            # SQL tạo test DB
+│   ├── TEST-DATABASE-SETUP.md             # Hướng dẫn test DB
+│   └── mvnw.cmd
+├── fe/
+│   ├── admin/                             # Admin app (React + Vite)
+│   │   └── src/
+│   └── storefront/                        # Storefront app (React + Vite)
+│       └── src/
+├── postman/                               # Postman collection & environment
+├── testing/                               # Selenium test scripts
+└── docs/                                  # Tài liệu
+    └── error-codes.md
 ```
 
-## Troubleshooting
+---
 
-- Port da duoc su dung: dung process dang chiem 8080/5173/5174 roi chay lai.
-- Backend khong len: chay lenh trong dung thu muc `be` (hoac dung `-f .\be\pom.xml` neu chay tu root).
-- Khong ket noi duoc DB: kiem tra lai cau hinh datasource trong `application.properties`.
-- Frontend goi API loi: dam bao backend da chay va `VITE_API_URL` dung.
+## 🎓 Workflow thường gặp
+
+### Phát triển tính năng mới
+```bash
+# 1. Chạy với test database
+startAll-test.bat
+
+# 2. Code bình thường, test DB tự reset mỗi khi restart
+
+# 3. Kiểm tra trước merge
+mvnw.cmd clean test   # backend tests
+npm run build         # frontend builds
+```
+
+### Staging/Demo
+```bash
+startAll.bat          # Dùng database gốc
+```
+
+### Production
+```bash
+# Build image Docker (coming soon)
+docker build -f be/Dockerfile -t routine-backend .
+```
+
+---
+
+**Hỗ trợ**: Liên hệ team development hoặc check issues tại repository.
+
