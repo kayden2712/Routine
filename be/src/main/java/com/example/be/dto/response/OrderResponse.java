@@ -27,7 +27,9 @@ public class OrderResponse {
     private String createdByName;
     private String notes;
     private LocalDateTime createdAt;
-    
+    private LocalDateTime updatedAt;
+    private LocalDateTime deliveredAt;
+
     @Data
     @Builder
     public static class CustomerSummary {
@@ -36,7 +38,7 @@ public class OrderResponse {
         private String phone;
         private String email;
     }
-    
+
     @Data
     @Builder
     public static class OrderItemResponse {

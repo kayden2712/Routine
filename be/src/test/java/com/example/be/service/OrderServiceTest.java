@@ -1,5 +1,20 @@
 package com.example.be.service;
 
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import static org.mockito.Mockito.when;
+import org.mockito.Spy;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import com.example.be.dto.request.CreateOrderRequest;
 import com.example.be.dto.response.OrderResponse;
 import com.example.be.entity.Order;
@@ -8,24 +23,13 @@ import com.example.be.entity.Product;
 import com.example.be.entity.ProductStatus;
 import com.example.be.entity.User;
 import com.example.be.exception.BadRequestException;
+import com.example.be.money.MonetaryService;
 import com.example.be.repository.CustomerRepository;
 import com.example.be.repository.OrderRepository;
+import com.example.be.repository.OrderStatusHistoryRepository;
 import com.example.be.repository.ProductRepository;
+import com.example.be.repository.ShipmentRepository;
 import com.example.be.repository.UserRepository;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
@@ -41,6 +45,18 @@ class OrderServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private OrderStatusHistoryRepository orderStatusHistoryRepository;
+
+    @Mock
+    private ShipmentRepository shipmentRepository;
+
+    @Mock
+    private OrderRealtimePublisher orderRealtimePublisher;
+
+    @Spy
+    private MonetaryService monetaryService = new MonetaryService();
 
     @InjectMocks
     private OrderService orderService;
@@ -60,8 +76,8 @@ class OrderServiceTest {
         product.setStock(10);
         product.setStatus(ProductStatus.ACTIVE);
 
-        CreateOrderRequest.OrderItemRequest itemRequest =
-                new CreateOrderRequest.OrderItemRequest(7L, 2, BigDecimal.ONE, "M", "Blue");
+        CreateOrderRequest.OrderItemRequest itemRequest = new CreateOrderRequest.OrderItemRequest(7L, 2, BigDecimal.ONE,
+                "M", "Blue");
         CreateOrderRequest request = new CreateOrderRequest(
                 null,
                 List.of(itemRequest),
@@ -69,8 +85,7 @@ class OrderServiceTest {
                 BigDecimal.valueOf(50_000),
                 BigDecimal.ONE,
                 PaymentMethod.CASH,
-                "note"
-        );
+                "note");
 
         when(userRepository.findByEmail("manager@example.com")).thenReturn(Optional.of(user));
         when(productRepository.findById(7L)).thenReturn(Optional.of(product));
@@ -83,8 +98,8 @@ class OrderServiceTest {
 
         OrderResponse response = orderService.createOrder(request, "manager@example.com");
 
-        assertEquals(BigDecimal.valueOf(500_000), response.getSubtotal());
-        assertEquals(BigDecimal.valueOf(450_000), response.getTotal());
+        assertEquals(BigDecimal.valueOf(500_000).setScale(2), response.getSubtotal());
+        assertEquals(BigDecimal.valueOf(450_000).setScale(2), response.getTotal());
         assertEquals(BigDecimal.valueOf(250_000), response.getItems().get(0).getPrice());
         assertEquals(8, product.getStock());
     }
@@ -109,8 +124,7 @@ class OrderServiceTest {
                 BigDecimal.valueOf(150_000),
                 BigDecimal.ZERO,
                 PaymentMethod.CASH,
-                null
-        );
+                null);
 
         when(userRepository.findByEmail("manager@example.com")).thenReturn(Optional.of(user));
         when(productRepository.findById(7L)).thenReturn(Optional.of(product));

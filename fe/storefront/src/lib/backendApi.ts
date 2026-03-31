@@ -43,26 +43,52 @@ interface BackendOrder {
   subtotal?: number;
   discount?: number;
   total?: number;
+  notes?: string;
   createdAt?: string;
+  updatedAt?: string;
+  deliveredAt?: string;
   items: Array<{
+    id?: number;
     productId: number;
+    productCode?: string;
     productName: string;
+    price?: number;
     quantity: number;
+    subtotal?: number;
+    size?: string;
+    color?: string;
   }>;
 }
 
 export interface StorefrontOrder {
   id: string;
   orderNumber: string;
-  status: 'shipping' | 'received' | 'cancelled';
+  status:
+    | 'processing'
+    | 'preparing'
+    | 'shipping'
+    | 'received'
+    | 'cancelled'
+    | 'cancel_requested'
+    | 'refund_requested'
+    | 'refunded';
   subtotal: number;
   discount: number;
   total: number;
+  notes?: string;
   createdAt: Date;
+  updatedAt?: Date;
+  deliveredAt?: Date;
   items: Array<{
+    id?: string;
     productId: string;
+    productCode?: string;
     productName: string;
+    price?: number;
     quantity: number;
+    subtotal?: number;
+    size?: string;
+    color?: string;
   }>;
 }
 
@@ -117,8 +143,21 @@ function parseDate(value?: string): Date {
 
 function mapOrderStatus(status?: string): StorefrontOrder['status'] {
   if (status === 'CANCELLED') return 'cancelled';
-  if (status === 'PAID') return 'received';
-  return 'shipping';
+  if (status === 'CANCEL_REQUESTED') return 'cancel_requested';
+  if (
+    status === 'RETURN_REQUESTED'
+    || status === 'RETURN_APPROVED'
+    || status === 'RETURN_RECEIVED'
+    || status === 'REFUND_PENDING'
+  ) {
+    return 'refund_requested';
+  }
+  if (status === 'REFUNDED') return 'refunded';
+  if (status === 'RETURN_REJECTED') return 'received';
+  if (status === 'COMPLETED' || status === 'DELIVERED' || status === 'PAID') return 'received';
+  if (status === 'IN_TRANSIT' || status === 'OUT_FOR_DELIVERY') return 'shipping';
+  if (status === 'CONFIRMED' || status === 'PACKING' || status === 'READY_TO_SHIP') return 'preparing';
+  return 'processing';
 }
 
 function mapProductGender(value?: string): Product['gender'] {
@@ -247,11 +286,20 @@ export async function fetchMyOrdersApi(): Promise<StorefrontOrder[]> {
     subtotal: Number(item.subtotal ?? 0),
     discount: Number(item.discount ?? 0),
     total: Number(item.total ?? 0),
+    notes: item.notes,
     createdAt: parseDate(item.createdAt),
+    updatedAt: item.updatedAt ? parseDate(item.updatedAt) : undefined,
+    deliveredAt: item.deliveredAt ? parseDate(item.deliveredAt) : undefined,
     items: (item.items ?? []).map((orderItem) => ({
+      id: orderItem.id != null ? String(orderItem.id) : undefined,
       productId: String(orderItem.productId),
+      productCode: orderItem.productCode,
       productName: orderItem.productName,
+      price: orderItem.price != null ? Number(orderItem.price) : undefined,
       quantity: Number(orderItem.quantity ?? 0),
+      subtotal: orderItem.subtotal != null ? Number(orderItem.subtotal) : undefined,
+      size: orderItem.size,
+      color: orderItem.color,
     })),
   }));
 }
@@ -291,11 +339,152 @@ export async function createCustomerOrderApi(payload: CreateStorefrontOrderPaylo
     subtotal: Number(order.subtotal ?? 0),
     discount: Number(order.discount ?? 0),
     total: Number(order.total ?? 0),
+    notes: order.notes,
     createdAt: parseDate(order.createdAt),
+    updatedAt: order.updatedAt ? parseDate(order.updatedAt) : undefined,
     items: (order.items ?? []).map((orderItem) => ({
+      id: orderItem.id != null ? String(orderItem.id) : undefined,
       productId: String(orderItem.productId),
+      productCode: orderItem.productCode,
       productName: orderItem.productName,
+      price: orderItem.price != null ? Number(orderItem.price) : undefined,
       quantity: Number(orderItem.quantity ?? 0),
+      subtotal: orderItem.subtotal != null ? Number(orderItem.subtotal) : undefined,
+      size: orderItem.size,
+      color: orderItem.color,
     })),
   };
+}
+
+export async function requestOrderCancellationApi(orderId: string, reason: string): Promise<StorefrontOrder> {
+  const response = await apiClient.put<BackendOrder>(`/customer/orders/${orderId}/cancel-request`, {
+    reason,
+  });
+  const item = response.data;
+  return {
+    id: String(item.id),
+    orderNumber: item.orderNumber,
+    status: mapOrderStatus(item.status),
+    subtotal: Number(item.subtotal ?? 0),
+    discount: Number(item.discount ?? 0),
+    total: Number(item.total ?? 0),
+    notes: item.notes,
+    createdAt: parseDate(item.createdAt),
+    items: (item.items ?? []).map((orderItem) => ({
+      id: orderItem.id != null ? String(orderItem.id) : undefined,
+      productId: String(orderItem.productId),
+      productCode: orderItem.productCode,
+      productName: orderItem.productName,
+      price: orderItem.price != null ? Number(orderItem.price) : undefined,
+      quantity: Number(orderItem.quantity ?? 0),
+      subtotal: orderItem.subtotal != null ? Number(orderItem.subtotal) : undefined,
+      size: orderItem.size,
+      color: orderItem.color,
+    })),
+  };
+}
+
+export async function revokeOrderCancellationApi(orderId: string): Promise<StorefrontOrder> {
+  const response = await apiClient.put<BackendOrder>(`/customer/orders/${orderId}/cancel-request/revoke`);
+  const item = response.data;
+  return {
+    id: String(item.id),
+    orderNumber: item.orderNumber,
+    status: mapOrderStatus(item.status),
+    subtotal: Number(item.subtotal ?? 0),
+    discount: Number(item.discount ?? 0),
+    total: Number(item.total ?? 0),
+    notes: item.notes,
+    createdAt: parseDate(item.createdAt),
+    deliveredAt: item.deliveredAt ? parseDate(item.deliveredAt) : undefined,
+    items: (item.items ?? []).map((orderItem) => ({
+      id: orderItem.id != null ? String(orderItem.id) : undefined,
+      productId: String(orderItem.productId),
+      productCode: orderItem.productCode,
+      productName: orderItem.productName,
+      price: orderItem.price != null ? Number(orderItem.price) : undefined,
+      quantity: Number(orderItem.quantity ?? 0),
+      subtotal: orderItem.subtotal != null ? Number(orderItem.subtotal) : undefined,
+      size: orderItem.size,
+      color: orderItem.color,
+    })),
+  };
+}
+
+export async function requestOrderReturnApi(orderId: string, reason: string): Promise<StorefrontOrder> {
+  const response = await apiClient.put<BackendOrder>(`/customer/orders/${orderId}/return-request`, {
+    reason,
+  });
+  const item = response.data;
+  return {
+    id: String(item.id),
+    orderNumber: item.orderNumber,
+    status: mapOrderStatus(item.status),
+    subtotal: Number(item.subtotal ?? 0),
+    discount: Number(item.discount ?? 0),
+    total: Number(item.total ?? 0),
+    notes: item.notes,
+    createdAt: parseDate(item.createdAt),
+    deliveredAt: item.deliveredAt ? parseDate(item.deliveredAt) : undefined,
+    items: (item.items ?? []).map((orderItem) => ({
+      id: orderItem.id != null ? String(orderItem.id) : undefined,
+      productId: String(orderItem.productId),
+      productCode: orderItem.productCode,
+      productName: orderItem.productName,
+      price: orderItem.price != null ? Number(orderItem.price) : undefined,
+      quantity: Number(orderItem.quantity ?? 0),
+      subtotal: orderItem.subtotal != null ? Number(orderItem.subtotal) : undefined,
+      size: orderItem.size,
+      color: orderItem.color,
+    })),
+  };
+}
+
+export async function confirmCompletedOrderApi(orderId: string): Promise<StorefrontOrder> {
+  const response = await apiClient.put<BackendOrder>(`/customer/orders/${orderId}/confirm-completed`);
+  const item = response.data;
+  return {
+    id: String(item.id),
+    orderNumber: item.orderNumber,
+    status: mapOrderStatus(item.status),
+    subtotal: Number(item.subtotal ?? 0),
+    discount: Number(item.discount ?? 0),
+    total: Number(item.total ?? 0),
+    notes: item.notes,
+    createdAt: parseDate(item.createdAt),
+    deliveredAt: item.deliveredAt ? parseDate(item.deliveredAt) : undefined,
+    items: (item.items ?? []).map((orderItem) => ({
+      id: orderItem.id != null ? String(orderItem.id) : undefined,
+      productId: String(orderItem.productId),
+      productCode: orderItem.productCode,
+      productName: orderItem.productName,
+      price: orderItem.price != null ? Number(orderItem.price) : undefined,
+      quantity: Number(orderItem.quantity ?? 0),
+      subtotal: orderItem.subtotal != null ? Number(orderItem.subtotal) : undefined,
+      size: orderItem.size,
+      color: orderItem.color,
+    })),
+  };
+}
+
+export async function submitOrderProductReviewApi(
+  orderId: string,
+  payload: {
+    productId: string;
+    rating: number;
+    comment?: string;
+    imageUrls?: string[];
+  },
+): Promise<void> {
+  const productId = Number.parseInt(payload.productId, 10);
+  if (!Number.isFinite(productId)) {
+    throw new Error('Mã sản phẩm không hợp lệ để đánh giá.');
+  }
+
+  await apiClient.post(`/customer/orders/${orderId}/reviews`, {
+    productId,
+    rating: payload.rating,
+    comment: payload.comment?.trim() || '',
+    imageUrls: payload.imageUrls ?? [],
+  });
 }

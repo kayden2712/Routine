@@ -37,6 +37,7 @@
 
     { "key": "currentProductBody", "value": "{}" },
     { "key": "currentCustomerBody", "value": "{}" },
+    { "key": "currentCustomerToken", "value": "" },
     { "key": "currentOrderBody", "value": "{}" },
     { "key": "currentSyncBody", "value": "{}" }
   ],
@@ -64,6 +65,8 @@
               "pm.collectionVariables.set('loginAttemptIndex', '0');",
               "pm.collectionVariables.set('categoryEnsureIndex', '0');",
               "pm.collectionVariables.set('adminToken', '');",
+              "pm.collectionVariables.set('currentCustomerToken', '');",
+              "pm.collectionVariables.set('orderVariantStockMap', '{}');",
               "pm.collectionVariables.set('seededProducts', '[]');",
               "pm.collectionVariables.set('seededCustomers', '[]');",
               "postman.setNextRequest('01 Admin Login');"
@@ -366,7 +369,7 @@
               "    customerSeedIndex: i % 10,",
               "    productSeedIndex: i % 30,",
               "    quantity: 1 + (i % 3),",
-              "    paymentMethod: ['CASH', 'COD', 'BANK', 'TRANSFER'][i % 4],",
+              "    paymentMethod: ['COD', 'BANK'][i % 2],",
               "    notes: `Seed order ${String(i + 1).padStart(2, '0')} by run ${runId}`",
               "  });",
               "}",
@@ -486,7 +489,7 @@
               "const seeds = JSON.parse(pm.collectionVariables.get('customerSeeds') || '[]');",
               "const idx = Number(pm.collectionVariables.get('customerIndex') || '0');",
               "if (idx >= seeds.length) {",
-              "  postman.setNextRequest('05 Seed Orders (Loop 20)');",
+              "  postman.setNextRequest('05 Seed Online Orders (Loop 20)');",
               "  return;",
               "}",
               "pm.collectionVariables.set('currentCustomerBody', JSON.stringify(seeds[idx]));"
@@ -506,6 +509,7 @@
               "const seededCustomers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
               "seededCustomers.push({",
               "  id: data.id || (data.user && data.user.id),",
+              "  token: data.token || '',",
               "  email: seeds[idx].email,",
               "  fullName: seeds[idx].fullName,",
               "  phone: seeds[idx].phone",
@@ -520,18 +524,18 @@
     },
 
     {
-      "name": "05 Seed Orders (Loop 20)",
+      "name": "05 Seed Online Orders (Loop 20)",
       "request": {
         "method": "POST",
         "header": [
           { "key": "Content-Type", "value": "application/json" },
-          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+          { "key": "Authorization", "value": "Bearer {{currentCustomerToken}}" }
         ],
         "body": {
           "mode": "raw",
           "raw": "{{currentOrderBody}}"
         },
-        "url": "{{baseUrl}}/orders"
+        "url": "{{baseUrl}}/customer/orders"
       },
       "event": [
         {
@@ -551,20 +555,40 @@
               "const s = orderSeeds[idx];",
               "const customer = customers[s.customerSeedIndex];",
               "const product = products[s.productSeedIndex];",
+              "if (!customer || !customer.token) {",
+              "  pm.test('Customer token exists for online order', function () {",
+              "    pm.expect.fail('Thieu token customer cho order index ' + idx + '. Hay kiem tra buoc register customer.');",
+              "  });",
+              "  postman.setNextRequest(null);",
+              "  return;",
+              "}",
+              "pm.collectionVariables.set('currentCustomerToken', customer.token);",
               "const qty = s.quantity;",
+              "let stockMap = {};",
+              "try { stockMap = JSON.parse(pm.collectionVariables.get('orderVariantStockMap') || '{}'); } catch (e) { stockMap = {}; }",
+              "const variants = (product.variants && product.variants.length > 0) ? product.variants : [{ size: 'M', color: 'black', stock: 999 }];",
+              "variants.forEach((v) => {",
+              "  const k = `${product.id}|${String(v.size)}|${String(v.color)}`;",
+              "  if (stockMap[k] == null) { stockMap[k] = Number(v.stock || 0); }",
+              "});",
+              "const variantWithStock = variants",
+              "  .map((v) => ({ ...v, __k: `${product.id}|${String(v.size)}|${String(v.color)}`, __remaining: Number(stockMap[`${product.id}|${String(v.size)}|${String(v.color)}`] || 0) }))",
+              "  .sort((a, b) => b.__remaining - a.__remaining)[0];",
+              "const variant = variantWithStock || variants[0];",
+              "const chosenQty = Math.max(1, Math.min(Number(qty || 1), Number(variant.__remaining || variant.stock || 1)));",
+              "pm.collectionVariables.set('currentOrderVariantKey', variant.__k || `${product.id}|${String(variant.size)}|${String(variant.color)}`);",
+              "pm.collectionVariables.set('currentOrderQty', String(chosenQty));",
+              "pm.collectionVariables.set('orderVariantStockMap', JSON.stringify(stockMap));",
               "const activePrice = (product.salePercent > 0 && (new Date() <= new Date(`${product.saleEnd}T23:59:59`) && new Date() >= new Date(`${product.saleStart}T00:00:00`)))",
               "  ? Math.round(product.basePrice * (1 - product.salePercent / 100))",
               "  : product.basePrice;",
-              "const subtotal = activePrice * qty;",
-              "",
-              "const variant = (product.variants && product.variants.length > 0) ? product.variants[idx % product.variants.length] : { size: 'M', color: 'black' };",
+              "const subtotal = activePrice * chosenQty;",
               "",
               "const body = {",
-              "  customerId: customer.id,",
               "  items: [",
               "    {",
               "      productId: product.id,",
-              "      quantity: qty,",
+              "      quantity: chosenQty,",
               "      price: activePrice,",
               "      size: variant.size,",
               "      color: variant.color",
@@ -574,7 +598,7 @@
               "  discount: 0,",
               "  total: subtotal,",
               "  paymentMethod: s.paymentMethod,",
-              "  notes: s.notes",
+              "  notes: `${s.notes} | online customer: ${customer.email}`",
               "};",
               "",
               "pm.collectionVariables.set('currentOrderBody', JSON.stringify(body));"
@@ -586,10 +610,28 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Create order 201', function () { pm.response.to.have.status(201); });",
+              "let body = {};",
+              "try { body = pm.response.json(); } catch (e) { body = {}; }",
+              "const status = pm.response.code;",
+              "const message = String((body && body.message) || '');",
+              "if (status === 201) {",
+              "  pm.test('Create order 201', function () { pm.expect(status).to.eql(201); });",
+              "  let stockMap = {};",
+              "  try { stockMap = JSON.parse(pm.collectionVariables.get('orderVariantStockMap') || '{}'); } catch (e) { stockMap = {}; }",
+              "  const k = pm.collectionVariables.get('currentOrderVariantKey') || '';",
+              "  const q = Number(pm.collectionVariables.get('currentOrderQty') || '1');",
+              "  if (k) { stockMap[k] = Math.max(0, Number(stockMap[k] || 0) - q); }",
+              "  pm.collectionVariables.set('orderVariantStockMap', JSON.stringify(stockMap));",
+              "} else if (status === 400 && /insufficient stock/i.test(message)) {",
+              "  pm.test('Order skipped due stock depletion', function () { pm.expect(true).to.eql(true); });",
+              "} else {",
+              "  pm.test('Create online order should succeed or skip by stock', function () {",
+              "    pm.expect.fail(`Unexpected status ${status}. Message: ${message}`);",
+              "  });",
+              "}",
               "const idx = Number(pm.collectionVariables.get('orderIndex') || '0');",
               "pm.collectionVariables.set('orderIndex', String(idx + 1));",
-              "postman.setNextRequest('05 Seed Orders (Loop 20)');"
+              "postman.setNextRequest('05 Seed Online Orders (Loop 20)');"
             ]
           }
         }

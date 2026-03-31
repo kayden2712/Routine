@@ -1,77 +1,71 @@
-# Routine Storefront
+# Routine Storefront (`fe/storefront`)
 
-Ứng dụng bán hàng phía khách (customer-facing) của Routine.
-
-Project này tập trung vào trải nghiệm mua sắm online: duyệt sản phẩm, lọc tìm kiếm, wishlist, giỏ hàng, checkout và quản lý tài khoản khách hàng.
-
-## Phạm vi dự án
-
-Đây là phần storefront dành cho khách mua hàng.
-
-- Không bao gồm nghiệp vụ vận hành nội bộ như POS/kho/nhân sự.
-- Dùng mock data để mô phỏng luồng mua sắm.
-- Tối ưu cho trải nghiệm giao diện và tương tác người dùng.
+Ứng dụng khách hàng của Routine, phục vụ luồng mua sắm online từ duyệt sản phẩm đến theo dõi đơn hàng.
 
 ## Công nghệ
 
 - React 18
 - TypeScript 5
 - Vite
-- Tailwind CSS v4
+- Tailwind CSS
 - Zustand
 - React Router
-- Radix UI (một số primitives)
-- date-fns
-- Lucide React
+- STOMP client cho realtime order updates
 
-## Tính năng chính
+## Kết nối backend
 
-- Trang chủ, danh sách sản phẩm, trang chi tiết sản phẩm.
-- Lọc theo danh mục, giới tính, khuyến mãi, yêu thích và từ khóa tìm kiếm.
-- Wishlist và giỏ hàng với trạng thái đồng bộ.
-- Điều hướng nhanh từ navbar (search, sale, wishlist).
-- Trang tài khoản khách hàng, đăng nhập/đăng ký.
-- Luồng checkout và trang thành công đơn hàng.
-- Trung tâm hỗ trợ khách hàng.
+Storefront gọi API tại `VITE_API_URL`.
 
-## Chạy dự án
+Mặc định local:
 
-Chạy lệnh trong đúng thư mục storefront:
+`http://localhost:8080/api`
 
-```bash
-cd storefront
-npm install
-npm run dev
+Tạo `.env.local` nếu cần thay đổi:
+
+```env
+VITE_API_URL=http://localhost:8080/api
 ```
 
-Build production:
+## Chạy local
 
-```bash
+```bat
+cd fe\storefront
+npm install
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+
+## Build
+
+```bat
+cd fe\storefront
 npm run build
 npm run preview
 ```
 
-Kiểm tra lint:
+## Tính năng hiện có
 
-```bash
-npm run lint
-```
+- Duyệt sản phẩm, tìm kiếm, lọc.
+- Giỏ hàng và checkout.
+- Lịch sử đơn hàng luôn sắp xếp mới đến cũ.
+- Trạng thái đơn hàng tự cập nhật realtime qua WebSocket.
+- Xác nhận hoàn thành đơn khi đang giao.
+- Yêu cầu hủy đơn, hủy yêu cầu hủy, yêu cầu hoàn tiền theo đúng trạng thái cho phép.
+- Đánh giá sản phẩm sau đơn thành công.
+- Đánh giá có thể đính kèm ảnh (preview trước khi gửi).
 
 ## Cấu trúc thư mục
 
 ```text
-storefront/
-  src/
-    app/            # Router
-    components/     # Layout, shared components, ui primitives
-    lib/            # Mock data, helper functions
-    pages/          # Home, ProductList, ProductDetail, Cart, Checkout, Account...
-    store/          # Zustand stores (cart, wishlist, auth)
-    styles/         # Global styles
-    types/          # Kiểu dữ liệu storefront
+src/
+  app/          router
+  components/   layout + shared UI
+  lib/          api client, backend mapping, utils
+  pages/        màn hình khách hàng
+  store/        zustand stores
+  types/        kiểu dữ liệu
 ```
 
-## Ghi chú phát triển
+## Ghi chú
 
-- Dữ liệu mẫu nằm trong src/lib/mockData.ts.
-- Có thể thay mock data bằng API thật mà không cần đổi cấu trúc route chính.
+- Khi backend không chạy, các luồng lấy dữ liệu sẽ lỗi network.
+- Nếu cần realtime ổn định, đảm bảo backend mở endpoint websocket `/api/ws`.

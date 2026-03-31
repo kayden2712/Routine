@@ -1,87 +1,91 @@
 # Routine
 
-Routine la he thong ban le gom 3 phan:
-- Backend API (Spring Boot)
-- Admin app (React + Vite) cho nhan vien noi bo
-- Storefront app (React + Vite) cho khach hang
+Routine la he thong ban le gom 3 phan chay trong cung workspace:
 
-## Tong quan workspace
+- Backend API (Spring Boot) xu ly nghiep vu va du lieu.
+- Admin app (React + Vite) cho van hanh noi bo.
+- Storefront app (React + Vite) cho khach hang mua sam.
 
-- `be`: backend Java 21, Spring Boot 3.5.x, Spring Security JWT, JPA, MySQL
-- `fe/admin`: giao dien quan tri noi bo (POS, san pham, kho, nhan su, hoa don, bao cao)
-- `fe/storefront`: giao dien mua sam cho khach hang
-- `startAll.bat`: script chay nhanh ca 3 service tren Windows
-- `postman/routine-full-dataset-runner.postman_collection.json`: collection seed/test du lieu
+## Tong quan thanh phan
 
-## Kien truc va cong nghe
-
-### Backend (`be`)
-- Java 21
-- Spring Boot 3.5.12
-- Spring Web, Spring Data JPA, Spring Security
-- JWT (admin + customer)
-- MySQL 8
-- Maven Wrapper (`mvnw.cmd`)
-
-### Frontend Admin (`fe/admin`)
-- React 18 + TypeScript + Vite
-- Zustand
-- React Router
-- TanStack Table
-- Recharts
-
-### Frontend Storefront (`fe/storefront`)
-- React 18 + TypeScript + Vite
-- Zustand
-- React Router
+- `be`: Backend Java 21, Spring Boot, JPA, JWT, MySQL, WebSocket.
+- `fe/admin`: Ung dung quan tri (POS, don hang, san pham, kho, bao cao).
+- `fe/storefront`: Ung dung khach hang (duyet san pham, gio hang, dat hang, theo doi don).
+- `postman/routine-full-dataset-runner.postman_collection.json`: Bo request phuc vu seed/test API.
+- `startAll.bat`: Script chay nhanh toan bo he thong tren Windows.
 
 ## Yeu cau moi truong
 
+- Java 21
+- MySQL 8+
 - Node.js 20+ (khuyen nghi LTS)
 - npm 10+
-- Java 21
-- MySQL 8.x
-- Windows PowerShell hoac Command Prompt
 
-## Cach chay nhanh (khuyen nghi)
+## Cau hinh database backend
 
-Chay tu root workspace:
+Cap nhat thong tin ket noi trong file:
+
+`be/src/main/resources/application.properties`
+
+Gia tri can kiem tra:
+
+- `spring.datasource.url`
+- `spring.datasource.username`
+- `spring.datasource.password`
+
+## Cai dat lan dau
+
+Tu thu muc goc du an:
+
+```bat
+cd fe\storefront
+npm install
+
+cd ..\admin
+npm install
+```
+
+Backend su dung Maven Wrapper (`be/mvnw.cmd`), khong can cai Maven global.
+
+## Chay nhanh toan he thong (Windows)
+
+Tu thu muc goc:
 
 ```bat
 startAll.bat
 ```
 
-Script se khoi dong:
-- Backend: `http://localhost:8080`
+Script se:
+
+- Kiem tra cac port 8080, 5173, 5174.
+- Mo 3 cua so terminal rieng cho backend, storefront, admin.
+
+Dia chi mac dinh:
+
+- Backend API: `http://localhost:8080/api`
 - Storefront: `http://localhost:5173`
 - Admin: `http://localhost:5174`
 
-Luu y:
-- Script se kiem tra port `8080`, `5173`, `5174` truoc khi chay.
-- Neu port dang bi dung, hay tat process do roi chay lai.
+## Chay thu cong tung phan
 
-## Cach chay thu cong
-
-### 1. Chay backend
+### 1. Backend
 
 ```bat
 cd be
 mvnw.cmd spring-boot:run
 ```
 
-### 2. Chay storefront
+### 2. Storefront
 
 ```bat
 cd fe\storefront
-npm install
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-### 3. Chay admin
+### 3. Admin
 
 ```bat
 cd fe\admin
-npm install
 npm run dev -- --host 0.0.0.0 --port 5174
 ```
 
@@ -95,48 +99,34 @@ mvnw.cmd clean test
 mvnw.cmd clean package
 ```
 
-### Admin
-
-```bat
-cd fe\admin
-npm run lint
-npm run build
-npm run preview
-```
-
 ### Storefront
 
 ```bat
 cd fe\storefront
-npm run lint
 npm run build
-npm run preview
 ```
 
-## Tai khoan mac dinh local
+### Admin
 
-Tai khoan admin da seed cho local development:
+```bat
+cd fe\admin
+npm run build
+```
 
-- Email: `admin@routine.vn`
-- Password: `Aa@12345`
-- Role: `MANAGER`
-
-Ghi chu:
-- Du lieu dang ky khach hang luu trong bang `customers`.
-- Tai khoan nhan vien/admin luu trong bang `users`.
-
-## Endpoint va tai lieu API
+## API docs
 
 Khi backend dang chay:
 
 - Swagger UI: `http://localhost:8080/api/swagger-ui.html`
-- OpenAPI docs: `http://localhost:8080/api/api-docs`
+- OpenAPI JSON: `http://localhost:8080/api/api-docs`
 
-## CORS local
+## Tinh nang noi bat
 
-Backend cho phep frontend local:
-- `http://localhost:5173` (storefront)
-- `http://localhost:5174` (admin)
+- Theo doi trang thai don hang realtime qua WebSocket.
+- Don online trong admin uu tien cac don vua thay doi trang thai.
+- Lich su don cua khach hang tu dong cap nhat theo trang thai moi.
+- Ho tro quy trinh huy don, hoan don, xac nhan giao thanh cong.
+- Danh gia san pham sau khi don hoan tat, co ho tro dinh kem anh.
 
 ## Cau truc thu muc
 
@@ -145,35 +135,16 @@ Routine/
   README.md
   startAll.bat
   be/
-    pom.xml
-    src/
   fe/
     admin/
-      package.json
-      src/
     storefront/
-      package.json
-      src/
   postman/
   testing/
 ```
 
-## Troubleshooting nhanh
+## Troubleshooting
 
-- Loi `npm not found`:
-  Cai Node.js LTS, mo terminal moi, kiem tra bang `npm -v`.
-
-- Port bi trung:
-  Dung process dang chiem port 8080/5173/5174 roi chay lai.
-
-- Khong ket noi duoc database:
-  Kiem tra cau hinh trong `be/src/main/resources/application.properties`.
-
-- Frontend goi API loi CORS:
-  Kiem tra dung URL local va backend dang chay tren cong 8080.
-
-## Ghi chu phat trien
-
-- Backend va frontend dang phuc vu luong nghiep vu ban le (POS + e-commerce).
-- Co the dung Postman collection trong thu muc `postman` de seed/kiem thu nhanh.
-- Neu can bo sung huong dan theo moi truong (dev/staging/prod), co the tao them cac section rieng trong README nay.
+- Port da duoc su dung: dung process dang chiem 8080/5173/5174 roi chay lai.
+- Backend khong len: chay lenh trong dung thu muc `be` (hoac dung `-f .\be\pom.xml` neu chay tu root).
+- Khong ket noi duoc DB: kiem tra lai cau hinh datasource trong `application.properties`.
+- Frontend goi API loi: dam bao backend da chay va `VITE_API_URL` dung.

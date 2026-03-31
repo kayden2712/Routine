@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { createCustomerOrderApi, fetchMyProfileApi, updateCustomerProfileApi } from '@/lib/backendApi'
+import { createCustomerOrderApi, fetchMyProfileApi, fetchProductsApi, updateCustomerProfileApi } from '@/lib/backendApi'
 import { cn, formatVnd } from '@/lib/utils'
 import { useCartStore } from '@/store/cartStore'
 import { useCustomerAuthStore } from '@/store/customerAuthStore'
@@ -99,6 +99,54 @@ export const CheckoutPage = () => {
 
     setIsSubmitting(true)
     try {
+      const latestProducts = await fetchProductsApi()
+      const productsById = new Map(latestProducts.map((product) => [product.id, product]))
+      const requestedByProduct = new Map<string, number>()
+      const requestedByVariant = new Map<string, number>()
+
+      for (const item of items) {
+        const product = productsById.get(item.productId)
+        if (!product) {
+          throw new Error(`Sản phẩm ${item.name} hiện không còn tồn tại.`)
+        }
+
+        const requiredQty = Math.max(0, item.quantity)
+        if (requiredQty === 0) {
+          throw new Error(`Số lượng sản phẩm ${item.name} không hợp lệ.`)
+        }
+
+        if (product.variants && product.variants.length > 0) {
+          const variant = product.variants.find(
+            (value) =>
+              String(value.size ?? '').toUpperCase() === String(item.size ?? '').toUpperCase() &&
+              String(value.color ?? '').trim().toLowerCase() === String(item.color ?? '').trim().toLowerCase(),
+          )
+
+          if (!variant) {
+            throw new Error(`Biến thể ${item.name} (${item.size}/${item.color}) không còn khả dụng.`)
+          }
+
+          const variantKey = `${item.productId}|${String(item.size ?? '').toUpperCase()}|${String(item.color ?? '').trim().toLowerCase()}`
+          const nextRequested = (requestedByVariant.get(variantKey) ?? 0) + requiredQty
+          const availableVariantStock = Number(variant.stock ?? 0)
+
+          if (nextRequested > availableVariantStock) {
+            throw new Error(
+              `Sản phẩm ${item.name} (${item.size}/${item.color}) chỉ còn ${availableVariantStock} sản phẩm trong kho.`,
+            )
+          }
+
+          requestedByVariant.set(variantKey, nextRequested)
+        }
+
+        const nextRequestedProduct = (requestedByProduct.get(item.productId) ?? 0) + requiredQty
+        const availableProductStock = Number(product.stock ?? 0)
+        if (nextRequestedProduct > availableProductStock) {
+          throw new Error(`Sản phẩm ${item.name} chỉ còn ${availableProductStock} sản phẩm trong kho.`)
+        }
+        requestedByProduct.set(item.productId, nextRequestedProduct)
+      }
+
       const updatedProfile = await updateCustomerProfileApi({
         fullName: form.fullName.trim(),
         phone: form.phone.trim(),

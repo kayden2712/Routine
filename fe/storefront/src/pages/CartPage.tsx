@@ -64,15 +64,22 @@ export const CartPage = () => {
                 key={`${item.productId}-${item.size}-${item.color}`}
                 className="flex gap-4 rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-5"
               >
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="h-[100px] w-[80px] rounded-lg bg-[#E8E5E0] object-cover"
-                />
+                <Link to={`/san-pham/${item.productId}`} className="shrink-0">
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="h-[100px] w-[80px] rounded-lg bg-[#E8E5E0] object-cover"
+                  />
+                </Link>
 
                 <div className="flex min-w-0 flex-1 justify-between gap-4">
                   <div className="min-w-0">
-                    <p className="truncate text-[14px] font-medium text-[var(--text-primary)]">{item.name}</p>
+                    <Link
+                      to={`/san-pham/${item.productId}`}
+                      className="block truncate text-[14px] font-medium text-[var(--text-primary)] transition-colors hover:text-[var(--color-accent)]"
+                    >
+                      {item.name}
+                    </Link>
                     <p className="mt-1 text-[12px] text-[var(--text-secondary)]">
                       Màu: {item.color} | Size: {item.size}
                     </p>

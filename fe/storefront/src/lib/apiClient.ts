@@ -93,7 +93,7 @@ apiClient.interceptors.response.use(
       
       // 500 Server Error
       if (status >= 500) {
-        return Promise.reject(new Error('Server error. Please try again later.'));
+        return Promise.reject(new Error(extractErrorMessage(data) || 'Server error. Please try again later.'));
       }
       
       // Other errors

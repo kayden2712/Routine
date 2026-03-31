@@ -1,87 +1,78 @@
-# Routine Admin
+# Routine Admin (`fe/admin`)
 
-Ứng dụng quản trị nội bộ cho hệ thống bán lẻ Routine.
+Ứng dụng nội bộ cho nhân viên vận hành cửa hàng Routine.
 
-Mục tiêu của project này là hỗ trợ vận hành cửa hàng với các nghiệp vụ chính: bán hàng tại quầy (POS), quản lý sản phẩm, khách hàng, tồn kho, nhân sự, hóa đơn và báo cáo.
+## Mục tiêu
 
-## Phạm vi dự án
+Hỗ trợ các tác vụ chính:
 
-Đây là phần admin, dùng cho nhân viên nội bộ.
-
-- Không phải giao diện bán hàng cho khách lẻ.
-- Dữ liệu hiện tại chạy theo mock data để demo luồng nghiệp vụ.
-- Có phân quyền theo vai trò để điều hướng trang phù hợp.
+- POS bán tại quầy.
+- Quản lý sản phẩm, tồn kho, khách hàng.
+- Quản lý đơn hàng online/offline và cập nhật trạng thái.
+- Theo dõi báo cáo vận hành.
 
 ## Công nghệ
 
 - React 18
 - TypeScript 5
 - Vite
-- Tailwind CSS v4
+- Tailwind CSS
 - Zustand
 - React Router
-- TanStack Table
-- Recharts
-- date-fns
-- Lucide React
 
-## Tính năng chính
+## Kết nối backend
 
-- Đăng nhập mock theo vai trò.
-- Dashboard tổng quan doanh thu, đơn hàng và cảnh báo tồn kho.
-- POS tạo hóa đơn tại quầy, giỏ hàng, mã giảm giá, thanh toán.
-- Quản lý sản phẩm: tìm kiếm, lọc, sắp xếp, thêm/sửa/xóa, xem chi tiết.
-- Quản lý khách hàng và lịch sử mua hàng.
-- Quản lý kho: theo dõi tồn, lọc mức tồn, nhập/xuất nhanh.
-- Quản lý nhân viên và trạng thái làm việc.
-- Quản lý hóa đơn và khu vực cài đặt (placeholder mở rộng).
-- Báo cáo đa tab theo doanh thu, sản phẩm, khách hàng, tồn kho.
+Admin gọi API backend tại `VITE_API_URL`.
 
-## Vai trò và điều hướng
+Mặc định local:
 
-- manager -> dashboard
-- sales -> pos
-- warehouse -> inventory
-- accountant -> reports
+`http://localhost:8080/api`
 
-## Chạy dự án
+Nếu cần đổi API URL, tạo file `.env.local`:
 
-Chạy lệnh trong đúng thư mục admin:
-
-```bash
-cd admin
-npm install
-npm run dev
+```env
+VITE_API_URL=http://localhost:8080/api
 ```
 
-Build production:
+## Chạy local
 
-```bash
+```bat
+cd fe\admin
+npm install
+npm run dev -- --host 0.0.0.0 --port 5174
+```
+
+## Build
+
+```bat
+cd fe\admin
 npm run build
 npm run preview
 ```
 
-Kiểm tra lint:
+## Tính năng hiện có
 
-```bash
-npm run lint
-```
+- Dashboard tổng quan.
+- POS tạo hóa đơn.
+- Bắt buộc xác định khách hàng trước khi thanh toán trong POS.
+- Quản lý sản phẩm và tồn kho.
+- Quản lý khách hàng và nhân viên.
+- Màn hình đơn online với lọc trạng thái, tìm kiếm và xử lý nghiệp vụ.
+- Danh sách đơn online ưu tiên đơn vừa thay đổi trạng thái.
 
 ## Cấu trúc thư mục
 
 ```text
-admin/
-  src/
-    app/            # Router, guard, metadata route
-    components/     # Layout, shared components, ui primitives
-    lib/            # Mock data, utils, toast helpers
-    pages/          # Dashboard, POS, Products, Customers, Inventory, Staff, Invoices...
-    store/          # Zustand stores (auth, cart, product, ui)
-    styles/         # Global styles
-    types/          # Type domain cho admin
+src/
+  app/          router
+  components/   layout + shared UI
+  lib/          api client, backend mapping, utils
+  pages/        màn hình nghiệp vụ
+  store/        zustand stores
+  types/        kiểu dữ liệu
 ```
 
-## Ghi chú phát triển
+## Ghi chú
 
-- Dữ liệu mock nằm trong src/lib/mockData.ts.
-- Nhiều màn hình đã có nền tảng sẵn để thay bằng API thật trong bước tiếp theo.
+- Dự án dùng TypeScript strict mode.
+- Build có thể cảnh báo chunk lớn, không phải lỗi runtime.

@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
+  Area,
+  AreaChart,
   Bar,
   CartesianGrid,
   Cell,
-  ComposedChart,
   Legend,
   Line,
   LineChart,
@@ -40,6 +41,8 @@ import {
   startOfDay,
   subDays,
 } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { DataTable } from '@/components/shared/DataTable';
 import {
   DropdownMenu,
@@ -58,10 +61,11 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { fetchCustomersApi, fetchOrdersApi, fetchProductsApi } from '@/lib/backendApi';
+import { exportRowsToExcel } from '@/lib/excel';
 import { formatVND } from '@/lib/utils';
 import { toast } from '@/lib/toast';
-import type { Customer, Order, Product } from '@/types';
+import type { Product } from '@/types';
+import { useReportsData } from '@/pages/reports/useReportsData';
 
 interface DateRange {
   from: Date;
@@ -69,6 +73,8 @@ interface DateRange {
 }
 
 type RevenuePeriodMode = 'week' | 'month' | 'custom';
+type RevenueChannelMode = 'all' | 'online' | 'offline';
+type ProductChannelMode = 'all' | 'online' | 'offline';
 
 interface RevenueRow {
   dateLabel: string;
@@ -98,6 +104,19 @@ function categoryColor(index: number): string {
   return palette[index % palette.length];
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function formatMoneyVnd(value: number): string {
+  return `${new Intl.NumberFormat('vi-VN').format(Math.round(value))} VND`;
+}
+
 export function ReportsPage() {
   const navigate = useNavigate();
 
@@ -114,51 +133,15 @@ export function ReportsPage() {
   const [draftFrom, setDraftFrom] = useState(format(subDays(today, 29), 'yyyy-MM-dd'));
   const [draftTo, setDraftTo] = useState(format(today, 'yyyy-MM-dd'));
   const [revenueMode, setRevenueMode] = useState<RevenuePeriodMode>('week');
-  const [isLoading, setIsLoading] = useState(true);
-  const [canViewCustomers, setCanViewCustomers] = useState(true);
-  const [ordersData, setOrdersData] = useState<Order[]>([]);
-  const [productsData, setProductsData] = useState<Product[]>([]);
-  const [customersData, setCustomersData] = useState<Customer[]>([]);
-
-  useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      const [ordersResult, productsResult, customersResult] = await Promise.allSettled([
-        fetchOrdersApi(),
-        fetchProductsApi(),
-        fetchCustomersApi(),
-      ]);
-
-      if (ordersResult.status === 'fulfilled') {
-        setOrdersData(ordersResult.value);
-      } else {
-        toast.error(ordersResult.reason instanceof Error ? ordersResult.reason.message : 'Không thể tải dữ liệu đơn hàng');
-      }
-
-      if (productsResult.status === 'fulfilled') {
-        setProductsData(productsResult.value);
-      } else {
-        toast.error(productsResult.reason instanceof Error ? productsResult.reason.message : 'Không thể tải dữ liệu sản phẩm');
-      }
-
-      if (customersResult.status === 'fulfilled') {
-        setCustomersData(customersResult.value);
-        setCanViewCustomers(true);
-      } else {
-        const message = customersResult.reason instanceof Error ? customersResult.reason.message : '';
-        const isPermissionError = message.toLowerCase().includes('permission');
-        setCustomersData([]);
-        setCanViewCustomers(!isPermissionError);
-        if (!isPermissionError) {
-          toast.error(message || 'Không thể tải dữ liệu khách hàng');
-        }
-      }
-
-      setIsLoading(false);
-    };
-
-    void loadData();
-  }, []);
+  const [revenueChannelMode, setRevenueChannelMode] = useState<RevenueChannelMode>('all');
+  const [productChannelMode, setProductChannelMode] = useState<ProductChannelMode>('all');
+  const {
+    isLoading,
+    canViewCustomers,
+    ordersData,
+    productsData,
+    customersData,
+  } = useReportsData();
 
   const productById = useMemo(() => {
     const map = new Map<string, Product>();
@@ -172,6 +155,10 @@ export function ReportsPage() {
     const map = new Map<string, { parsedDate: Date; revenue: number; orders: number }>();
 
     ordersData.forEach((order) => {
+      if (revenueChannelMode !== 'all' && order.channel !== revenueChannelMode) {
+        return;
+      }
+
       const day = startOfDay(order.createdAt);
       const key = format(day, 'yyyy-MM-dd');
       const current = map.get(key) ?? { parsedDate: day, revenue: 0, orders: 0 };
@@ -188,7 +175,7 @@ export function ReportsPage() {
         revenue: item.revenue,
         orders: item.orders,
       }));
-  }, [ordersData]);
+  }, [ordersData, revenueChannelMode]);
 
   const filteredRevenueBase = useMemo(() => {
     return revenueByDay
@@ -222,19 +209,95 @@ export function ReportsPage() {
     });
   }, [filteredRevenueBase, revenueMode]);
 
-  const totalRevenue = revenueSeries.reduce((sum, row) => sum + row.revenue, 0);
-  const totalInvoices = revenueSeries.reduce((sum, row) => sum + row.orders, 0);
-  const avgOrderValue = totalInvoices === 0 ? 0 : Math.round(totalRevenue / totalInvoices);
-  const periodDelta = revenueSeries.length > 1 ? revenueSeries[revenueSeries.length - 1].changePct : 0;
+  const revenueDateKeys = useMemo(() => {
+    const source =
+      revenueMode === 'week'
+        ? filteredRevenueBase.slice(-7)
+        : revenueMode === 'month'
+          ? filteredRevenueBase.slice(-30)
+          : filteredRevenueBase;
+
+    return new Set(source.map((item) => format(item.parsedDate, 'yyyy-MM-dd')));
+  }, [filteredRevenueBase, revenueMode]);
+
+  const revenueOrders = useMemo(() => {
+    return ordersData.filter((order) => {
+      if (revenueChannelMode !== 'all' && order.channel !== revenueChannelMode) {
+        return false;
+      }
+      const key = format(startOfDay(order.createdAt), 'yyyy-MM-dd');
+      return revenueDateKeys.has(key);
+    });
+  }, [ordersData, revenueDateKeys, revenueChannelMode]);
+
+  const totalRevenue = revenueOrders.reduce((sum, order) => sum + order.total, 0);
+  const totalInvoices = revenueOrders.length;
+  const onlineRevenue = revenueOrders
+    .filter((order) => order.channel === 'online')
+    .reduce((sum, order) => sum + order.total, 0);
+  const offlineRevenue = revenueOrders
+    .filter((order) => order.channel === 'offline')
+    .reduce((sum, order) => sum + order.total, 0);
+  const averageOrderValue = totalInvoices === 0 ? 0 : Math.round(totalRevenue / totalInvoices);
+  const revenueHeadingLabel = revenueChannelMode === 'online'
+    ? 'Doanh thu online'
+    : revenueChannelMode === 'offline'
+      ? 'Doanh thu offline'
+      : 'Tổng doanh thu';
+
+  const firstRevenuePoint = revenueSeries[0];
+  const lastRevenuePoint = revenueSeries[revenueSeries.length - 1];
+
+  const calcGrowthPct = (current: number, previous: number): number => {
+    if (previous <= 0) {
+      return 0;
+    }
+    return ((current - previous) / previous) * 100;
+  };
+
+  const revenueGrowthPct = firstRevenuePoint && lastRevenuePoint
+    ? calcGrowthPct(lastRevenuePoint.revenue, firstRevenuePoint.revenue)
+    : 0;
+  const invoiceGrowthPct = firstRevenuePoint && lastRevenuePoint
+    ? calcGrowthPct(lastRevenuePoint.orders, firstRevenuePoint.orders)
+    : 0;
+  const firstAvgOrderValue = firstRevenuePoint
+    ? Math.round(firstRevenuePoint.revenue / Math.max(1, firstRevenuePoint.orders))
+    : 0;
+  const avgOrderGrowthPct = calcGrowthPct(averageOrderValue, firstAvgOrderValue);
+
+  const revenueTrendSeries = useMemo(() => {
+    return revenueSeries.map((row) => {
+      const baseline = Math.max(0, row.revenue - row.dayDiff);
+      const orderSignal = row.orders * Math.max(1, averageOrderValue * 0.55);
+      return {
+        ...row,
+        baseline,
+        orderSignal,
+      };
+    });
+  }, [averageOrderValue, revenueSeries]);
 
   const filteredOrders = useMemo(() => {
     return ordersData.filter((order) => inRange(order.createdAt, dateRange));
   }, [dateRange, ordersData]);
 
+  const filteredProductOrders = useMemo(() => {
+    return ordersData.filter((order) => {
+      if (!inRange(order.createdAt, dateRange)) {
+        return false;
+      }
+      if (productChannelMode === 'all') {
+        return true;
+      }
+      return order.channel === productChannelMode;
+    });
+  }, [dateRange, ordersData, productChannelMode]);
+
   const topProducts = useMemo<TopProductRow[]>(() => {
     const map = new Map<string, TopProductRow>();
 
-    filteredOrders.forEach((order) => {
+    filteredProductOrders.forEach((order) => {
       order.items.forEach((item) => {
         const mappedProduct = productById.get(item.productId);
         const existing = map.get(item.productId);
@@ -263,7 +326,7 @@ export function ReportsPage() {
       ...row,
       performance: Math.round((row.sold / maxSold) * 100),
     }));
-  }, [filteredOrders, productById]);
+  }, [filteredProductOrders, productById]);
 
   const categoryPieData = useMemo(() => {
     const map = new Map<string, number>();
@@ -525,11 +588,200 @@ export function ReportsPage() {
     },
   ];
 
-  const handleExportClick = (label: string) => {
-    toast.success('Đang chuẩn bị file...', label);
+  const reportDateRangeLabel = `${format(dateRange.from, 'dd/MM/yyyy')} - ${format(dateRange.to, 'dd/MM/yyyy')}`;
+
+  const revenueTableRows = useMemo(() => {
+    return revenueSeries.map((row) => [
+      row.dateLabel,
+      String(row.orders),
+      formatMoneyVnd(row.revenue),
+      formatMoneyVnd(row.dayDiff),
+      `${row.changePct.toFixed(1)}%`,
+    ]);
+  }, [revenueSeries]);
+
+  const exportPdfReport = () => {
+    if (revenueSeries.length === 0) {
+      toast.error('Khong co du lieu de xuat PDF trong khoang thoi gian da chon');
+      return;
+    }
+
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const generatedAt = format(new Date(), 'dd/MM/yyyy HH:mm');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Bao cao doanh thu', 40, 42);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Khoang thoi gian: ${reportDateRangeLabel}`, 40, 62);
+    doc.text(`Xuat luc: ${generatedAt}`, 40, 76);
+    doc.text(`Tong doanh thu: ${formatMoneyVnd(totalRevenue)}`, 40, 96);
+    doc.text(`So hoa don: ${totalInvoices}`, 40, 110);
+    doc.text(`Doanh thu online: ${formatMoneyVnd(onlineRevenue)}`, 40, 124);
+    doc.text(`Doanh thu offline: ${formatMoneyVnd(offlineRevenue)}`, 40, 138);
+
+    autoTable(doc, {
+      startY: 156,
+      head: [['Ngay', 'So don', 'Doanh thu', 'So hom truoc', '% thay doi']],
+      body: revenueTableRows,
+      styles: {
+        fontSize: 9,
+        cellPadding: 6,
+      },
+      headStyles: {
+        fillColor: [45, 107, 228],
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+    });
+
+    doc.save(`bao-cao-${format(new Date(), 'yyyyMMdd-HHmm')}.pdf`);
+    toast.success('Da xuat bao cao PDF');
+  };
+
+  const exportExcelReport = () => {
+    if (revenueSeries.length === 0) {
+      toast.error('Khong co du lieu de xuat Excel trong khoang thoi gian da chon');
+      return;
+    }
+
+    exportRowsToExcel({
+      fileName: `bao-cao-${format(new Date(), 'yyyyMMdd-HHmm')}`,
+      sheetName: 'BaoCao',
+      headers: ['Ngay', 'So don', 'Doanh thu', 'So hom truoc', '% thay doi'],
+      rows: revenueSeries.map((row) => [
+        row.dateLabel,
+        row.orders,
+        row.revenue,
+        row.dayDiff,
+        Number(row.changePct.toFixed(2)),
+      ]),
+    });
+
+    toast.success('Da xuat bao cao Excel');
+  };
+
+  const printReport = () => {
+    if (revenueSeries.length === 0) {
+      toast.error('Khong co du lieu de in bao cao trong khoang thoi gian da chon');
+      return;
+    }
+
+    const reportHtml = `
+      <!doctype html>
+      <html lang="vi">
+      <head>
+        <meta charset="utf-8" />
+        <title>Bao cao doanh thu</title>
+        <style>
+          :root { color-scheme: light; }
+          body {
+            margin: 28px;
+            color: #111827;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 12px;
+          }
+          h1 {
+            margin: 0 0 6px;
+            font-size: 24px;
+          }
+          .meta {
+            margin-bottom: 4px;
+            color: #4b5563;
+          }
+          .stats {
+            margin: 16px 0;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 6px 12px;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+          }
+          th, td {
+            border: 1px solid #e5e7eb;
+            padding: 8px;
+            text-align: left;
+          }
+          th {
+            background: #f3f4f6;
+            font-weight: 700;
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Bao cao doanh thu</h1>
+        <div class="meta">Khoang thoi gian: ${escapeHtml(reportDateRangeLabel)}</div>
+        <div class="meta">Xuat luc: ${escapeHtml(format(new Date(), 'dd/MM/yyyy HH:mm'))}</div>
+        <div class="stats">
+          <div><strong>Tong doanh thu:</strong> ${escapeHtml(formatMoneyVnd(totalRevenue))}</div>
+          <div><strong>So hoa don:</strong> ${totalInvoices}</div>
+          <div><strong>Doanh thu online:</strong> ${escapeHtml(formatMoneyVnd(onlineRevenue))}</div>
+          <div><strong>Doanh thu offline:</strong> ${escapeHtml(formatMoneyVnd(offlineRevenue))}</div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Ngay</th>
+              <th>So don</th>
+              <th>Doanh thu</th>
+              <th>So hom truoc</th>
+              <th>% thay doi</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${revenueSeries
+              .map((row) => `
+                <tr>
+                  <td>${escapeHtml(row.dateLabel)}</td>
+                  <td>${row.orders}</td>
+                  <td>${escapeHtml(formatMoneyVnd(row.revenue))}</td>
+                  <td>${escapeHtml(formatMoneyVnd(row.dayDiff))}</td>
+                  <td>${escapeHtml(`${row.changePct.toFixed(1)}%`)}</td>
+                </tr>
+              `)
+              .join('')}
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1024,height=768');
+    if (!printWindow) {
+      toast.error('Trinh duyet dang chan cua so in. Vui long cho phep pop-up');
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(reportHtml);
+    printWindow.document.close();
+    printWindow.focus();
+
     window.setTimeout(() => {
-      toast.success('Xuất báo cáo thành công', label);
-    }, 900);
+      printWindow.print();
+    }, 180);
+  };
+
+  const handleExportClick = (action: 'pdf' | 'excel' | 'print') => {
+    if (action === 'pdf') {
+      exportPdfReport();
+      return;
+    }
+    if (action === 'excel') {
+      exportExcelReport();
+      return;
+    }
+    printReport();
   };
 
   const applyDraftRange = () => {
@@ -622,13 +874,13 @@ export function ReportsPage() {
               }
             />
             <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem onClick={() => handleExportClick('Xuất PDF')}>
+              <DropdownMenuItem onClick={() => handleExportClick('pdf')}>
                 <FileText size={14} /> Xuất PDF
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportClick('Xuất Excel')}>
+              <DropdownMenuItem onClick={() => handleExportClick('excel')}>
                 <Sheet size={14} /> Xuất Excel
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExportClick('In báo cáo')}>
+              <DropdownMenuItem onClick={() => handleExportClick('print')}>
                 <Printer size={14} /> In báo cáo
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -646,81 +898,133 @@ export function ReportsPage() {
         </TabsList>
 
         <TabsContent value="revenue" className="mt-4 space-y-4">
-          <section className="grid gap-3 md:grid-cols-3">
-            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
-              <p className="text-sm text-[var(--color-text-secondary)]">Tổng doanh thu</p>
-              <p className="font-[var(--font-display)] text-[24px] font-bold text-[var(--color-text-primary)]">{formatVND(totalRevenue)}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">Trong kỳ được chọn</p>
-            </div>
-            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
-              <p className="text-sm text-[var(--color-text-secondary)]">Số hóa đơn</p>
-              <p className="font-[var(--font-display)] text-[24px] font-bold text-[var(--color-text-primary)]">{totalInvoices}</p>
-              <p className={periodDelta >= 0 ? 'text-xs text-[var(--color-success)]' : 'text-xs text-[var(--color-error)]'}>
-                {periodDelta >= 0 ? '+' : ''}{periodDelta.toFixed(1)}% so với kỳ trước
+          <section className="grid gap-3 lg:grid-cols-3">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#1E3A8A] via-[#1D4ED8] to-[#1E40AF] p-5 text-white shadow-[0_12px_28px_rgba(29,78,216,0.28)]">
+              <p className="text-sm font-medium text-white/80">{revenueHeadingLabel}</p>
+              <p className="mt-2 font-[var(--font-display)] text-[40px] font-bold leading-none">{formatVND(totalRevenue)}</p>
+              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-200">
+                <ArrowUpRight size={14} />
+                {revenueGrowthPct.toFixed(1)}% so với đầu kỳ
               </p>
+              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
             </div>
-            <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
-              <p className="text-sm text-[var(--color-text-secondary)]">TB/đơn</p>
-              <p className="font-[var(--font-display)] text-[24px] font-bold text-[var(--color-text-primary)]">{formatVND(avgOrderValue)}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">Giá trị trung bình mỗi hóa đơn</p>
+
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#0F766E] via-[#0F766E] to-[#115E59] p-5 text-white shadow-[0_12px_28px_rgba(15,118,110,0.28)]">
+              <p className="text-sm font-medium text-white/80">Số hóa đơn</p>
+              <p className="mt-2 font-[var(--font-display)] text-[40px] font-bold leading-none">{totalInvoices}</p>
+              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-200">
+                <ArrowUpRight size={14} />
+                {invoiceGrowthPct.toFixed(1)}% theo kỳ chọn
+              </p>
+              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
+            </div>
+
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#5B1E72] via-[#6B21A8] to-[#4C1D95] p-5 text-white shadow-[0_12px_28px_rgba(107,33,168,0.28)]">
+              <p className="text-sm font-medium text-white/80">TB/đơn</p>
+              <p className="mt-2 font-[var(--font-display)] text-[40px] font-bold leading-none">{formatVND(averageOrderValue)}</p>
+              <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-emerald-200">
+                <ArrowUpRight size={14} />
+                {avgOrderGrowthPct.toFixed(1)}% so với đầu kỳ
+              </p>
+              <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
             </div>
           </section>
 
-          <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-6">
+          <section className="rounded-2xl border border-[var(--color-border)] bg-white p-6">
             <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[30px] font-semibold text-[var(--color-text-primary)]">Doanh thu</h3>
               <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className={revenueMode === 'week' ? 'rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-xs text-[var(--color-accent)]' : 'rounded-full border px-3 py-1 text-xs'}
-                  onClick={() => setRevenueMode('week')}
-                >
-                  Tuần
-                </button>
-                <button
-                  type="button"
-                  className={revenueMode === 'month' ? 'rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-xs text-[var(--color-accent)]' : 'rounded-full border px-3 py-1 text-xs'}
-                  onClick={() => setRevenueMode('month')}
-                >
-                  Tháng
-                </button>
-                <button
-                  type="button"
-                  className={revenueMode === 'custom' ? 'rounded-full bg-[var(--color-accent-light)] px-3 py-1 text-xs text-[var(--color-accent)]' : 'rounded-full border px-3 py-1 text-xs'}
-                  onClick={() => setRevenueMode('custom')}
-                >
-                  Tùy chọn
-                </button>
+                <div className="inline-flex items-center gap-1 rounded-full bg-[#F6F7FB] p-1">
+                  <button
+                    type="button"
+                    className={revenueChannelMode === 'all' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                    onClick={() => setRevenueChannelMode('all')}
+                  >
+                    Tổng
+                  </button>
+                  <button
+                    type="button"
+                    className={revenueChannelMode === 'online' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                    onClick={() => setRevenueChannelMode('online')}
+                  >
+                    Online
+                  </button>
+                  <button
+                    type="button"
+                    className={revenueChannelMode === 'offline' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                    onClick={() => setRevenueChannelMode('offline')}
+                  >
+                    Offline
+                  </button>
+                </div>
+
+                <div className="inline-flex items-center gap-2 rounded-full bg-[#F6F7FB] p-1">
+                  <button
+                    type="button"
+                    className={revenueMode === 'week' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                    onClick={() => setRevenueMode('week')}
+                  >
+                    Tuần
+                  </button>
+                  <button
+                    type="button"
+                    className={revenueMode === 'month' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                    onClick={() => setRevenueMode('month')}
+                  >
+                    Tháng
+                  </button>
+                  <button
+                    type="button"
+                    className={revenueMode === 'custom' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                    onClick={() => setRevenueMode('custom')}
+                  >
+                    Tùy chọn
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="h-[320px]">
+            <div className="h-[340px] rounded-xl border border-[#EEF1F6] bg-[#FBFCFF] px-3 pt-3">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Đang tải dữ liệu biểu đồ...</div>
               ) : revenueSeries.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có dữ liệu doanh thu trong khoảng thời gian đã chọn.</div>
               ) : (
                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <ComposedChart data={revenueSeries}>
-                    <CartesianGrid vertical={false} stroke="#F0EEE9" />
-                    <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#A09D99' }} axisLine={false} tickLine={false} />
+                  <AreaChart data={revenueTrendSeries}>
+                    <defs>
+                      <linearGradient id="revenueAreaFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.04} />
+                      </linearGradient>
+                      <linearGradient id="baselineAreaFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
+                        <stop offset="100%" stopColor="#10B981" stopOpacity={0.03} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid vertical={false} stroke="#E6EAF2" />
+                    <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#7B8698' }} axisLine={false} tickLine={false} />
                     <YAxis
-                      tick={{ fontSize: 12, fill: '#A09D99' }}
+                      tick={{ fontSize: 12, fill: '#7B8698' }}
                       axisLine={false}
                       tickLine={false}
                       tickFormatter={(value: number) => `${Math.round(value / 1000000)}M`}
                     />
                     <Tooltip
-                      contentStyle={{ border: '1px solid #E8E6E3', borderRadius: '8px', background: '#fff' }}
+                      contentStyle={{ border: '1px solid #DCE3F0', borderRadius: '10px', background: '#111827', color: '#fff' }}
                       formatter={(value, name, item) => {
                         if (name === 'revenue') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Doanh thu'];
+                        if (name === 'baseline') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Mốc tham chiếu'];
+                        if (name === 'orderSignal') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Nhịp số đơn'];
                         if (name === 'orders') return [item.payload?.orders ?? 0, 'Số đơn'];
                         return [value, name];
                       }}
                     />
-                    <Legend verticalAlign="bottom" />
-                    <Bar name="Doanh thu" dataKey="revenue" fill="#2D6BE4" opacity={0.9} radius={[4, 4, 0, 0]} />
-                    <Line name="Lũy kế" dataKey="cumulative" stroke="#16A34A" strokeWidth={2} dot={false} />
-                  </ComposedChart>
+                    <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 8 }} />
+                    <Area type="monotone" name="Doanh thu" dataKey="revenue" fill="url(#revenueAreaFill)" stroke="#3B82F6" strokeWidth={2.5} />
+                    <Area type="monotone" name="Mốc tham chiếu" dataKey="baseline" fill="url(#baselineAreaFill)" stroke="#10B981" strokeWidth={2} />
+                    <Line type="monotone" name="Nhịp số đơn" dataKey="orderSignal" stroke="#F59E0B" strokeWidth={2} dot={false} />
+                  </AreaChart>
                 </ResponsiveContainer>
               )}
             </div>
@@ -732,6 +1036,32 @@ export function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="products" className="mt-4 space-y-4">
+          <section className="flex items-center justify-end">
+            <div className="inline-flex items-center gap-1 rounded-full bg-[#F6F7FB] p-1">
+              <button
+                type="button"
+                className={productChannelMode === 'all' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                onClick={() => setProductChannelMode('all')}
+              >
+                Tổng
+              </button>
+              <button
+                type="button"
+                className={productChannelMode === 'online' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                onClick={() => setProductChannelMode('online')}
+              >
+                Online
+              </button>
+              <button
+                type="button"
+                className={productChannelMode === 'offline' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                onClick={() => setProductChannelMode('offline')}
+              >
+                Offline
+              </button>
+            </div>
+          </section>
+
           <section className="grid gap-4 xl:grid-cols-[3fr,2fr]">
             <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
               <h3 className="mb-3 text-base font-semibold">Top sản phẩm bán chạy</h3>

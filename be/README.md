@@ -1,176 +1,94 @@
-# Routine E-commerce Backend
+# Routine Backend (`be`)
 
-Backend API cho hệ thống Routine E-commerce với 2 frontends: **Admin** (POS) và **Storefront** (Khách hàng).
+Backend API cho hệ thống Routine, phục vụ đồng thời:
 
-## 🚀 Tech Stack
+- Admin app (nội bộ).
+- Storefront app (khách hàng).
 
-- **Java 21**
-- **Spring Boot 3.5.12**
-- **Spring Security** + JWT Authentication
-- **Spring Data JPA** + Hibernate
-- **MySQL 8.x**
-- **Maven**
-- **Lombok**
-- **Swagger/OpenAPI 3**
+## Công nghệ
 
-## 📁 Architecture
-
-**Layered Architecture** (4 layers):
-
-```
-├── Controller Layer    → REST API endpoints
-├── Service Layer       → Business logic
-├── Repository Layer    → Data access (JPA)
-└── Entity Layer        → Domain models
-```
-
-## 🗄️ Database Entities
-
-1. **User** - Admin staff (Manager, Sales, Warehouse, Accountant)
-2. **Customer** - Khách hàng (Regular, VIP)
-3. **Category** - Danh mục sản phẩm
-4. **Product** - Sản phẩm
-5. **ProductVariant** - Biến thể (size, màu)
-6. **ProductImage** - Ảnh sản phẩm
-7. **Order** - Đơn hàng (POS)
-8. **OrderItem** - Chi tiết đơn hàng
-9. **CartItem** - Giỏ hàng
-10. **WishlistItem** - Danh sách yêu thích
-11. **DiscountCode** - Mã giảm giá
-12. **ProductReview** - Đánh giá sản phẩm
-
-## 🔐 Authentication
-
-**Dual JWT Authentication:**
-- **Admin JWT** - Cho User (staff): `/api/auth/admin/login`
-- **Customer JWT** - Cho Customer: `/api/auth/customer/login`
-
-**Roles:**
-- `MANAGER` - Full access
-- `SALES` - POS, Products, Customers, Orders
-- `WAREHOUSE` - Inventory, Stock management
-- `ACCOUNTANT` - Reports, Invoices
-- `CUSTOMER` - Browse, Cart, Wishlist, Orders
-
-## 📡 API Endpoints
-
-### Auth
-- `POST /api/auth/admin/register` - Register admin staff
-- `POST /api/auth/admin/login` - Admin login
-- `POST /api/auth/customer/register` - Register customer
-- `POST /api/auth/customer/login` - Customer login
-
-### Products
-- `GET /api/products` - Get all products
-- `GET /api/products/{id}` - Get product by ID
-- `GET /api/products/category/{categoryId}` - Get products by category
-- `GET /api/products/search?query=` - Search products
-- `GET /api/products/low-stock` - Get low stock products (Admin)
-- `POST /api/products` - Create product (Admin)
-- `PUT /api/products/{id}` - Update product (Admin)
-- `PUT /api/products/{id}/stock` - Update stock (Admin)
-- `DELETE /api/products/{id}` - Delete product (Admin)
-
-### Orders (POS)
-- `GET /api/orders` - Get all orders (Admin)
-- `GET /api/orders/{id}` - Get order by ID (Admin)
-- `GET /api/orders/customer/{customerId}` - Get customer orders (Admin)
-- `GET /api/orders/status/{status}` - Get orders by status (Admin)
-- `POST /api/orders` - Create order (Admin)
-- `PUT /api/orders/{id}/status` - Update order status (Admin)
-
-### Cart (Customer)
-- `GET /api/cart` - Get cart items
-- `POST /api/cart` - Add to cart
-- `PUT /api/cart/{id}` - Update quantity
-- `DELETE /api/cart/{id}` - Remove item
-- `DELETE /api/cart` - Clear cart
-
-## 🛠️ Setup & Installation
-
-### Prerequisites
 - Java 21
-- Maven 3.6+
-- MySQL 8.x
+- Spring Boot 3.5.x
+- Spring Web, Spring Data JPA, Spring Security
+- JWT (admin và customer)
+- MySQL 8+
+- Spring WebSocket (STOMP broker nội bộ)
+- Maven Wrapper (`mvnw.cmd`)
 
-### 1. Clone & Navigate
-```bash
-cd D:\Development\Routine\be
+## Cấu trúc code
+
+```text
+src/main/java/com/example/be/
+	controller/     REST controllers
+	service/        business logic
+	repository/     JPA repositories
+	entity/         domain entities
+	dto/            request/response models
+	security/       JWT filter + auth components
+	config/         security, CORS, websocket, init data
+	exception/      custom exceptions
 ```
 
-### 2. Configure Database
-Update `src/main/resources/application.properties`:
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/routine_db?createDatabaseIfNotExist=true
-spring.datasource.username=root
-spring.datasource.password=your_password
+## Thiết lập và chạy
+
+### 1. Cấu hình database
+
+File cấu hình: `src/main/resources/application.properties`
+
+Các thuộc tính quan trọng:
+
+- `spring.datasource.url`
+- `spring.datasource.username`
+- `spring.datasource.password`
+
+### 2. Chạy local
+
+```bat
+cd be
+mvnw.cmd spring-boot:run
 ```
 
-### 3. Build
-```bash
-mvn clean install
+Base URL mặc định: `http://localhost:8080/api`
+
+## Build và test
+
+```bat
+cd be
+mvnw.cmd clean test
+mvnw.cmd clean package
 ```
 
-### 4. Run
-```bash
-mvn spring-boot:run
-```
+## API docs
 
-Server starts at: `http://localhost:8080/api`
+- Swagger UI: `http://localhost:8080/api/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/api/api-docs`
 
-## 📚 API Documentation
+## Nghiệp vụ nổi bật
 
-Swagger UI: http://localhost:8080/api/swagger-ui.html
+- Luồng đơn hàng online/offline.
+- Kiểm tra tồn kho khi xác nhận đơn.
+- Quản lý trạng thái đơn, lịch sử trạng thái và timeline tracking.
+- Realtime thông báo đổi trạng thái đơn qua WebSocket topic.
+- Khách hàng gửi đánh giá sản phẩm sau đơn thành công.
+- Đánh giá hỗ trợ đính kèm ảnh (`imageUrls`).
 
-OpenAPI JSON: http://localhost:8080/api/api-docs
+## Realtime (WebSocket)
 
-## 🔑 Default Admin Account
+- Endpoint handshake: `/ws`
+- Broker topic: `/topic/orders/status-changed`
 
-```
-Email: admin@routine.com
-Password: admin123
-Role: MANAGER
-```
+Storefront và admin có thể subscribe topic để cập nhật trạng thái đơn theo thời gian thực.
 
-## 🌐 CORS Configuration
+## CORS local
 
-Allowed origins (configured in `application.properties`):
-- `http://localhost:5173` - Admin frontend
-- `http://localhost:5174` - Storefront frontend
+Mặc định cho phép:
 
-## 📦 Project Structure
+- `http://localhost:5173` (storefront)
+- `http://localhost:5174` (admin)
 
-```
-be/
-├── src/main/java/com/example/be/
-│   ├── controller/         # REST Controllers
-│   ├── service/            # Business Logic
-│   ├── repository/         # Data Access
-│   ├── entity/             # JPA Entities
-│   ├── dto/
-│   │   ├── request/        # Request DTOs
-│   │   └── response/       # Response DTOs
-│   ├── security/           # JWT & Security
-│   ├── config/             # Configurations
-│   ├── exception/          # Exception Handling
-│   └── BeApplication.java  # Main Application
-├── src/main/resources/
-│   ├── application.properties
-│   └── schema.sql          # Database Schema
-└── pom.xml
-```
+Giá trị cấu hình tại `cors.allowed-origins` trong `application.properties`.
 
-## 🧪 Testing
+## Lưu ý
 
-```bash
-mvn test
-```
-
-## 📄 License
-
-MIT License
-
-## 👥 Contributors
-
-- Backend Developer: Spring Boot + MySQL + JWT
-- Frontend Teams: Admin (React) + Storefront (React)
+- Dự án đang dùng `spring.jpa.hibernate.ddl-auto=update`, schema sẽ tự cập nhật khi thêm trường mới.
+- Khi thay đổi entity, nên chạy lại backend để Hibernate cập nhật bảng.

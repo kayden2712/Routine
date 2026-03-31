@@ -70,9 +70,29 @@ export interface Order {
   discount: number;
   total: number;
   paymentMethod: 'cash' | 'transfer';
-  status: 'pending' | 'paid' | 'cancelled';
+  status:
+    | 'pending'
+    | 'confirmed'
+    | 'packing'
+    | 'ready_to_ship'
+    | 'in_transit'
+    | 'out_for_delivery'
+    | 'delivered'
+    | 'completed'
+    | 'cancel_requested'
+    | 'paid'
+    | 'cancelled'
+    | 'return_requested'
+    | 'return_approved'
+    | 'return_rejected'
+    | 'return_received'
+    | 'refund_pending'
+    | 'refunded'
+    | 'failed_delivery';
   channel: 'online' | 'offline';
+  notes?: string;
   createdAt: Date;
+  updatedAt?: Date;
   createdBy: string;
 }
 

@@ -31,7 +31,7 @@ import { toast } from '@/lib/toast';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useProductStore } from '@/store/productStore';
-import type { Customer, Product } from '@/types';
+import type { Customer, Order, Product } from '@/types';
 
 type CategoryKey = 'all' | 'ao' | 'quan' | 'vay' | 'ao-khoac' | 'phu-kien';
 type PaymentMethod = 'cash' | 'transfer';
@@ -50,7 +50,7 @@ interface InvoiceExportSnapshot {
   orderNumber: string;
   createdAt: Date;
   paymentMethod: PaymentMethod;
-  status: 'pending' | 'paid' | 'cancelled';
+  status: Order['status'];
   customerName: string;
   customerPhone: string;
   cashierName: string;
@@ -337,6 +337,17 @@ export function POSPage() {
     return customerDirectory.find((item) => item.phone === phone);
   };
 
+  const customerResolvedFromSearch = useMemo(() => {
+    const phone = extractPhone(customerSearch);
+    if (!/^0\d{9}$/.test(phone)) {
+      return null;
+    }
+
+    return customerDirectory.find((item) => item.phone === phone) ?? null;
+  }, [customerDirectory, customerSearch]);
+
+  const resolvedCustomer = customer ?? customerResolvedFromSearch;
+
   const openAddCustomerDialog = () => {
     setCustomerForm({
       name: '',
@@ -379,25 +390,6 @@ export function POSPage() {
     } finally {
       setSavingCustomer(false);
     }
-  };
-
-  const ensureCustomerForInvoice = (): Customer | null => {
-    if (customer) {
-      return customer;
-    }
-
-    const phone = extractPhone(customerSearch);
-    if (!/^0\d{9}$/.test(phone)) {
-      return null;
-    }
-
-    const existed = customerDirectory.find((item) => item.phone === phone);
-    if (existed) {
-      setCustomer(existed);
-      return existed;
-    }
-
-    return null;
   };
 
   const cashReceived = Number(cashReceivedInput || 0);
@@ -461,6 +453,15 @@ export function POSPage() {
       return;
     }
 
+    if (!resolvedCustomer) {
+      toast.error('Vui lòng xác định khách hàng', 'Chọn khách hàng trước khi thanh toán.');
+      return;
+    }
+
+    if (!customer && customerResolvedFromSearch) {
+      setCustomer(customerResolvedFromSearch);
+    }
+
     setPaymentMethod('cash');
     setCashReceivedInput('');
     setPaymentSuccess(false);
@@ -490,16 +491,26 @@ export function POSPage() {
   };
 
   const handleConfirmPayment = async () => {
-    const invoiceCustomer = ensureCustomerForInvoice();
-    if (!invoiceCustomer && customerSearch.trim()) {
-      const phone = extractPhone(customerSearch);
-      if (!/^0\d{9}$/.test(phone)) {
-        toast.error('Số điện thoại khách hàng không hợp lệ', 'Vui lòng nhập đúng định dạng 0xxxxxxxxx.');
+    const invoiceCustomer = resolvedCustomer;
+
+    if (!invoiceCustomer) {
+      if (customerSearch.trim()) {
+        const phone = extractPhone(customerSearch);
+        if (!/^0\d{9}$/.test(phone)) {
+          toast.error('Số điện thoại khách hàng không hợp lệ', 'Vui lòng nhập đúng định dạng 0xxxxxxxxx.');
+          return;
+        }
+
+        toast.error('Khách hàng chưa tồn tại', 'Vui lòng bấm "Thêm khách hàng" để tạo nhanh tên và số điện thoại.');
         return;
       }
 
-      toast.error('Khách hàng chưa tồn tại', 'Vui lòng bấm "Thêm khách hàng" để tạo nhanh tên và số điện thoại.');
+      toast.error('Vui lòng xác định khách hàng', 'Chọn khách hàng trước khi hoàn thành hóa đơn.');
       return;
+    }
+
+    if (!customer && customerResolvedFromSearch) {
+      setCustomer(customerResolvedFromSearch);
     }
 
     if (paymentMethod === 'cash' && cashReceived < total) {
@@ -899,7 +910,7 @@ export function POSPage() {
               <Button
                 className="h-[52px] w-full justify-between rounded-[8px] bg-[#1A1A18] px-4 text-base font-semibold text-white hover:bg-[#2D2D2A]"
                 onClick={handleCheckoutClick}
-                disabled={items.length === 0}
+                disabled={items.length === 0 || !resolvedCustomer}
               >
                 Thanh toán
                 <ArrowRight size={20} />
@@ -1048,7 +1059,7 @@ export function POSPage() {
                     Màu {selectedColor} · Size {selectedSize}
                   </span>
                   {(() => {
-                    const variant = pendingProduct.variants?.find(
+                    const variant = pendingProduct?.variants?.find(
                       (v) => v.color === selectedColor && v.size === selectedSize,
                     );
                     const stock = variant?.stock ?? 0;
@@ -1185,7 +1196,7 @@ export function POSPage() {
                 <Button
                   className="h-12 w-full text-base"
                   onClick={handleConfirmPayment}
-                  disabled={isConfirming}
+                  disabled={isConfirming || !resolvedCustomer}
                 >
                   {isConfirming ? 'Đang xử lý...' : 'Xác nhận & In hóa đơn'}
                 </Button>

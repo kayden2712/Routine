@@ -12,6 +12,7 @@ import com.example.be.dto.response.AdminCustomerResponse;
 import com.example.be.entity.Customer;
 import com.example.be.entity.CustomerTier;
 import com.example.be.exception.BadRequestException;
+import com.example.be.exception.ErrorCode;
 import com.example.be.exception.ResourceNotFoundException;
 import com.example.be.repository.CustomerRepository;
 
@@ -44,10 +45,11 @@ public class AdminCustomerService {
     @Transactional
     public AdminCustomerResponse createCustomer(AdminCustomerRequest request) {
         if (StringUtils.hasText(request.getEmail()) && customerRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already registered");
+            throw new BadRequestException(ErrorCode.USER_EMAIL_ALREADY_REGISTERED, "Email is already registered");
         }
         if (customerRepository.existsByPhone(request.getPhone())) {
-            throw new BadRequestException("Phone number is already registered");
+            throw new BadRequestException(ErrorCode.USER_PHONE_ALREADY_REGISTERED,
+                    "Phone number is already registered");
         }
 
         Customer customer = new Customer();
@@ -64,11 +66,12 @@ public class AdminCustomerService {
         if (StringUtils.hasText(request.getEmail())
                 && !request.getEmail().equalsIgnoreCase(customer.getEmail())
                 && customerRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already registered");
+            throw new BadRequestException(ErrorCode.USER_EMAIL_ALREADY_REGISTERED, "Email is already registered");
         }
 
         if (!request.getPhone().equals(customer.getPhone()) && customerRepository.existsByPhone(request.getPhone())) {
-            throw new BadRequestException("Phone number is already registered");
+            throw new BadRequestException(ErrorCode.USER_PHONE_ALREADY_REGISTERED,
+                    "Phone number is already registered");
         }
 
         applyRequest(customer, request);

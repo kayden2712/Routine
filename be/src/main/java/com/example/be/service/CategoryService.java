@@ -12,6 +12,7 @@ import com.example.be.dto.request.CreateCategoryRequest;
 import com.example.be.dto.response.CategoryResponse;
 import com.example.be.entity.Category;
 import com.example.be.exception.BadRequestException;
+import com.example.be.exception.ErrorCode;
 import com.example.be.repository.CategoryRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,11 +27,11 @@ public class CategoryService {
     public CategoryResponse createCategory(CreateCategoryRequest request) {
         String name = request.getName() != null ? request.getName().trim() : "";
         if (name.isEmpty()) {
-            throw new BadRequestException("Category name is required");
+            throw new BadRequestException(ErrorCode.CATEGORY_NAME_REQUIRED, "Category name is required");
         }
 
         if (categoryRepository.existsByNameIgnoreCase(name)) {
-            throw new BadRequestException("Category name already exists");
+            throw new BadRequestException(ErrorCode.CATEGORY_NAME_ALREADY_EXISTS, "Category name already exists");
         }
 
         String baseSlug = slugify(name);

@@ -19,7 +19,7 @@ if not exist "%ROOT_DIR%\be\mvnw.cmd" (
   echo [ERROR] Backend wrapper not found: %ROOT_DIR%\be\mvnw.cmd
   exit /b 1
 )
-'
+
 for %%P in (8080 5173 5174) do (
   for /f "tokens=5" %%A in ('netstat -ano ^| findstr /R /C:":%%P .*LISTENING"') do (
     echo [ERROR] Port %%P is already in use by PID %%A.
@@ -42,3 +42,5 @@ echo All start commands were launched in separate windows.
 echo Close this window or keep it for logs.
 
 endlocal
+
+

@@ -12,6 +12,7 @@ import com.example.be.dto.request.AdminStaffRequest;
 import com.example.be.dto.response.AdminStaffResponse;
 import com.example.be.entity.User;
 import com.example.be.exception.BadRequestException;
+import com.example.be.exception.ErrorCode;
 import com.example.be.exception.ResourceNotFoundException;
 import com.example.be.repository.UserRepository;
 
@@ -37,13 +38,15 @@ public class AdminStaffService {
     @Transactional
     public AdminStaffResponse createStaff(AdminStaffRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already registered");
+            throw new BadRequestException(ErrorCode.USER_EMAIL_ALREADY_REGISTERED, "Email is already registered");
         }
         if (StringUtils.hasText(request.getPhone()) && userRepository.existsByPhone(request.getPhone())) {
-            throw new BadRequestException("Phone number is already registered");
+            throw new BadRequestException(ErrorCode.USER_PHONE_ALREADY_REGISTERED,
+                    "Phone number is already registered");
         }
         if (!StringUtils.hasText(request.getPassword())) {
-            throw new BadRequestException("Password is required when creating staff");
+            throw new BadRequestException(ErrorCode.STAFF_PASSWORD_REQUIRED,
+                    "Password is required when creating staff");
         }
 
         User user = new User();
@@ -64,13 +67,14 @@ public class AdminStaffService {
                 .orElseThrow(() -> new ResourceNotFoundException("Staff not found with id: " + id));
 
         if (!request.getEmail().equalsIgnoreCase(user.getEmail()) && userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already registered");
+            throw new BadRequestException(ErrorCode.USER_EMAIL_ALREADY_REGISTERED, "Email is already registered");
         }
 
         if (StringUtils.hasText(request.getPhone())
                 && !request.getPhone().equals(user.getPhone())
                 && userRepository.existsByPhone(request.getPhone())) {
-            throw new BadRequestException("Phone number is already registered");
+            throw new BadRequestException(ErrorCode.USER_PHONE_ALREADY_REGISTERED,
+                    "Phone number is already registered");
         }
 
         user.setEmail(request.getEmail());

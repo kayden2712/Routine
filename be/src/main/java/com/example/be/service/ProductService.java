@@ -23,6 +23,7 @@ import com.example.be.entity.ProductImage;
 import com.example.be.entity.ProductStatus;
 import com.example.be.entity.ProductVariant;
 import com.example.be.exception.BadRequestException;
+import com.example.be.exception.ErrorCode;
 import com.example.be.exception.ResourceNotFoundException;
 import com.example.be.repository.CategoryRepository;
 import com.example.be.repository.ProductRepository;
@@ -71,7 +72,8 @@ public class ProductService {
         String normalizedCode = normalizeProductCode(request.getCode());
 
         if (productRepository.existsByNormalizedCode(normalizedCode)) {
-            throw new BadRequestException("Product code already exists: " + normalizedCode);
+            throw new BadRequestException(ErrorCode.PRODUCT_CODE_ALREADY_EXISTS,
+                    "Product code already exists: " + normalizedCode);
         }
 
         Category category = categoryRepository.findById(request.getCategoryId())
@@ -113,7 +115,8 @@ public class ProductService {
 
         if (!product.getCode().equalsIgnoreCase(normalizedCode)
                 && productRepository.existsByNormalizedCodeAndIdNot(normalizedCode, id)) {
-            throw new BadRequestException("Product code already exists: " + normalizedCode);
+            throw new BadRequestException(ErrorCode.PRODUCT_CODE_ALREADY_EXISTS,
+                    "Product code already exists: " + normalizedCode);
         }
 
         Category category = categoryRepository.findById(request.getCategoryId())
@@ -246,7 +249,7 @@ public class ProductService {
             return ProductGender.FEMALE;
         }
 
-        throw new BadRequestException("Invalid gender value: " + value);
+        throw new BadRequestException(ErrorCode.PRODUCT_GENDER_INVALID, "Invalid gender value: " + value);
     }
 
     private void syncVariants(Product product, ProductRequest request) {
@@ -277,7 +280,8 @@ public class ProductService {
                 String normalizedColor = manualVariant.getColor().trim().toLowerCase(Locale.ROOT);
                 String uniqueKey = normalizedSize + "::" + normalizedColor;
                 if (!uniqueVariantKeys.add(uniqueKey)) {
-                    throw new BadRequestException("Duplicate variant: " + normalizedSize + "/" + normalizedColor);
+                    throw new BadRequestException(ErrorCode.PRODUCT_VARIANT_DUPLICATE,
+                            "Duplicate variant: " + normalizedSize + "/" + normalizedColor);
                 }
 
                 ProductVariant variant = new ProductVariant();
@@ -396,7 +400,7 @@ public class ProductService {
 
     private String normalizeProductCode(String code) {
         if (code == null || code.isBlank()) {
-            throw new BadRequestException("Product code is required");
+            throw new BadRequestException(ErrorCode.PRODUCT_CODE_REQUIRED, "Product code is required");
         }
         return code.trim().toUpperCase(Locale.ROOT);
     }

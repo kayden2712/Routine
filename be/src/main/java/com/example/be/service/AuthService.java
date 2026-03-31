@@ -21,6 +21,7 @@ import com.example.be.entity.Customer;
 import com.example.be.entity.CustomerTier;
 import com.example.be.entity.User;
 import com.example.be.exception.BadRequestException;
+import com.example.be.exception.ErrorCode;
 import com.example.be.repository.CustomerRepository;
 import com.example.be.repository.UserRepository;
 import com.example.be.security.JwtTokenProvider;
@@ -40,7 +41,7 @@ public class AuthService {
     @Transactional
     public AuthResponse registerUser(RegisterUserRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already registered");
+            throw new BadRequestException(ErrorCode.USER_EMAIL_ALREADY_REGISTERED, "Email is already registered");
         }
 
         User user = new User();
@@ -66,7 +67,7 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadRequestException("User not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "User not found"));
 
         return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
                 tokenProvider.generateRefreshToken(authentication));
@@ -75,11 +76,12 @@ public class AuthService {
     @Transactional
     public AuthResponse registerCustomer(RegisterCustomerRequest request) {
         if (customerRepository.existsByEmail(request.getEmail())) {
-            throw new BadRequestException("Email is already registered");
+            throw new BadRequestException(ErrorCode.USER_EMAIL_ALREADY_REGISTERED, "Email is already registered");
         }
 
         if (customerRepository.existsByPhone(request.getPhone())) {
-            throw new BadRequestException("Phone number is already registered");
+            throw new BadRequestException(ErrorCode.USER_PHONE_ALREADY_REGISTERED,
+                    "Phone number is already registered");
         }
 
         Customer customer = new Customer();
@@ -107,7 +109,7 @@ public class AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         Customer customer = customerRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadRequestException("Customer not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "Customer not found"));
 
         return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication),
                 tokenProvider.generateRefreshToken(authentication));
@@ -115,7 +117,7 @@ public class AuthService {
 
     public AuthResponse refreshToken(RefreshTokenRequest request) {
         if (!tokenProvider.validateRefreshToken(request.getRefreshToken())) {
-            throw new BadRequestException("Invalid refresh token");
+            throw new BadRequestException(ErrorCode.REFRESH_TOKEN_INVALID, "Invalid refresh token");
         }
 
         String email = tokenProvider.getEmailFromToken(request.getRefreshToken());
@@ -127,7 +129,8 @@ public class AuthService {
         }
 
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("User not found for refresh token"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.REFRESH_TOKEN_SUBJECT_NOT_FOUND,
+                        "User not found for refresh token"));
         Authentication authentication = new UsernamePasswordAuthenticationToken(email, null);
         return buildCustomerAuthResponse(customer, tokenProvider.generateCustomerToken(authentication),
                 tokenProvider.generateRefreshTokenByEmail(email));
@@ -140,18 +143,19 @@ public class AuthService {
         }
 
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("Current user not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "Current user not found"));
         return buildCustomerAuthResponse(customer, null, null);
     }
 
     @Transactional
     public AuthResponse updateCustomerProfile(String customerEmail, UpdateCustomerProfileRequest request) {
         Customer customer = customerRepository.findByEmail(customerEmail)
-                .orElseThrow(() -> new BadRequestException("Customer not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "Customer not found"));
 
         String normalizedPhone = request.getPhone() != null ? request.getPhone().trim() : "";
         if (!normalizedPhone.equals(customer.getPhone()) && customerRepository.existsByPhone(normalizedPhone)) {
-            throw new BadRequestException("Phone number is already registered");
+            throw new BadRequestException(ErrorCode.USER_PHONE_ALREADY_REGISTERED,
+                    "Phone number is already registered");
         }
 
         customer.setFullName(request.getFullName().trim());
@@ -169,7 +173,8 @@ public class AuthService {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
             if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-                throw new BadRequestException("Current password is incorrect");
+                throw new BadRequestException(ErrorCode.CURRENT_PASSWORD_INCORRECT,
+                        "Current password is incorrect");
             }
             user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
             userRepository.save(user);
@@ -177,9 +182,9 @@ public class AuthService {
         }
 
         Customer customer = customerRepository.findByEmail(email)
-                .orElseThrow(() -> new BadRequestException("Current user not found"));
+                .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "Current user not found"));
         if (!passwordEncoder.matches(request.getCurrentPassword(), customer.getPasswordHash())) {
-            throw new BadRequestException("Current password is incorrect");
+            throw new BadRequestException(ErrorCode.CURRENT_PASSWORD_INCORRECT, "Current password is incorrect");
         }
         customer.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         customerRepository.save(customer);

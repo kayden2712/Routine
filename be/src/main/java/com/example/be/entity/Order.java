@@ -1,6 +1,7 @@
 package com.example.be.entity;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,6 +73,12 @@ public class Order extends BaseEntity {
 
     @Column(columnDefinition = "TEXT")
     private String notes;
+
+    @Column(name = "delivered_at")
+    private LocalDateTime deliveredAt;
+
+    @Column(name = "stock_deducted", nullable = false)
+    private Boolean stockDeducted = false;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();

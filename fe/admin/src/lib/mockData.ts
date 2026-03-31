@@ -143,6 +143,7 @@ export const orders: Order[] = Array.from({ length: 30 }, (_, index) => {
     total: subtotal - discount,
     paymentMethod: index % 2 === 0 ? 'cash' : 'transfer',
     status: index % 11 === 0 ? 'pending' : 'paid',
+    channel: index % 4 === 0 ? 'online' : 'offline',
     createdAt: subDays(new Date(), index % 7),
     createdBy: pick(managers, index).name,
   };

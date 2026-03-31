@@ -7,6 +7,7 @@ import { CustomersPage } from '../pages/CustomersPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { InvoicesPage } from '../pages/InvoicesPage';
+import { OnlineOrdersPage } from '../pages/OnlineOrdersPage';
 import { LoginPage } from '../pages/LoginPage';
 import { POSPage } from '../pages/POSPage';
 import { ProductsPage } from '../pages/ProductsPage';
@@ -148,6 +149,15 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['manager', 'accountant']}>
             <InvoicesPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/online-orders',
+        element: (
+          <ProtectedRoute roles={['manager', 'accountant']}>
+            <OnlineOrdersPage />
           </ProtectedRoute>
         ),
         errorElement: <RouteErrorBoundary />,

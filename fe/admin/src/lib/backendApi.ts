@@ -72,7 +72,9 @@ interface BackendOrder {
   status: string;
   channel: string;
   createdByName: string;
+  notes?: string;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 interface BackendCategory {
@@ -136,9 +138,29 @@ function mapProductGender(gender?: string): Product['gender'] {
 }
 
 function mapOrderStatus(status?: string): Order['status'] {
-  if (status === 'PAID') return 'paid';
-  if (status === 'CANCELLED') return 'cancelled';
-  return 'pending';
+  const normalized = String(status ?? 'PENDING').toUpperCase();
+  const statusMap: Record<string, Order['status']> = {
+    PENDING: 'pending',
+    CONFIRMED: 'confirmed',
+    PACKING: 'packing',
+    READY_TO_SHIP: 'ready_to_ship',
+    IN_TRANSIT: 'in_transit',
+    OUT_FOR_DELIVERY: 'out_for_delivery',
+    DELIVERED: 'delivered',
+    COMPLETED: 'completed',
+    CANCEL_REQUESTED: 'cancel_requested',
+    PAID: 'paid',
+    CANCELLED: 'cancelled',
+    RETURN_REQUESTED: 'return_requested',
+    RETURN_APPROVED: 'return_approved',
+    RETURN_REJECTED: 'return_rejected',
+    RETURN_RECEIVED: 'return_received',
+    REFUND_PENDING: 'refund_pending',
+    REFUNDED: 'refunded',
+    FAILED_DELIVERY: 'failed_delivery',
+  };
+
+  return statusMap[normalized] ?? 'pending';
 }
 
 function mapPaymentMethod(value?: string): Order['paymentMethod'] {
@@ -255,7 +277,9 @@ export function mapBackendOrder(item: BackendOrder): Order {
     paymentMethod: mapPaymentMethod(item.paymentMethod),
     status: mapOrderStatus(item.status),
     channel: (item.channel ?? 'OFFLINE').toLowerCase() === 'online' ? 'online' : 'offline',
+    notes: item.notes,
     createdAt: parseDate(item.createdAt),
+    updatedAt: parseDate(item.updatedAt ?? item.createdAt),
     createdBy: item.createdByName,
   };
 }
@@ -463,6 +487,16 @@ export async function createOrderApi(payload: {
     notes: payload.notes,
   });
 
+  return mapBackendOrder(response.data);
+}
+
+export async function updateOrderStatusApi(id: string, status: Order['status'], reason?: string): Promise<Order> {
+  const mappedStatus = status.toUpperCase();
+  const reasonQuery = reason ? `&reason=${encodeURIComponent(reason)}` : '';
+
+  const response = await apiClient.put<BackendOrder>(
+    `/orders/${id}/status?status=${encodeURIComponent(mappedStatus)}${reasonQuery}`,
+  );
   return mapBackendOrder(response.data);
 }
 

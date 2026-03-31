@@ -104,6 +104,7 @@ function parseRevenueDate(dateString: string): Date {
 export function DashboardPage() {
   const navigate = useNavigate();
   const [isBootLoading, setIsBootLoading] = useState(true);
+  const [isRevenueChartReady, setIsRevenueChartReady] = useState(false);
   const [selectedRange, setSelectedRange] = useState<RangeKey>('7days');
   const [ordersData, setOrdersData] = useState<Order[]>([]);
   const [summary, setSummary] = useState({
@@ -118,6 +119,16 @@ export function DashboardPage() {
 
   useEffect(() => {
     document.title = 'Dashboard | Routine';
+  }, []);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      setIsRevenueChartReady(true);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
   }, []);
 
   useEffect(() => {
@@ -328,8 +339,9 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="h-[240px] w-full">
-            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+          <div className="h-[240px] w-full min-w-0">
+            {isRevenueChartReady ? (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
               <ComposedChart data={chartData} margin={{ left: 0, right: 8, top: 8, bottom: 0 }}>
                 <defs>
                   <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -377,7 +389,10 @@ export function DashboardPage() {
                   dot={false}
                 />
               </ComposedChart>
-            </ResponsiveContainer>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full rounded-[8px] bg-[#F7F6F4]" />
+            )}
           </div>
         </article>
 

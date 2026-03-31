@@ -42,9 +42,19 @@ class AdminStaffServiceTest {
     }
 
     @Test
-    void createStaffUsesDefaultPasswordWhenBlank() {
+    void createStaffRejectsWhenPasswordBlank() {
         AdminStaffRequest request = new AdminStaffRequest("Staff", "staff@routine.vn", "0901111222", "Q1",
                 UserRole.SALES, true, null);
+        when(userRepository.existsByEmail("staff@routine.vn")).thenReturn(false);
+        when(userRepository.existsByPhone("0901111222")).thenReturn(false);
+
+        assertThrows(BadRequestException.class, () -> adminStaffService.createStaff(request));
+    }
+
+    @Test
+    void createStaffWithPasswordSuccess() {
+        AdminStaffRequest request = new AdminStaffRequest("Staff", "staff@routine.vn", "0901111222", "Q1",
+                UserRole.SALES, true, "Staff@123");
         when(userRepository.existsByEmail("staff@routine.vn")).thenReturn(false);
         when(userRepository.existsByPhone("0901111222")).thenReturn(false);
         when(passwordEncoder.encode("Staff@123")).thenReturn("encoded-default");
