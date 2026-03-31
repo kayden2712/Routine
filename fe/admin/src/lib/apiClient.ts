@@ -76,9 +76,18 @@ apiClient.interceptors.response.use(
       
       // 401 Unauthorized - Token expired or invalid
       if (status === 401) {
-        localStorage.removeItem('routine-auth');
-        window.location.href = '/login';
-        return Promise.reject(new Error('Session expired. Please login again.'));
+        // Don't redirect on login endpoint - let component handle it
+        const isLoginRequest = error.config?.url?.includes('/auth/admin/login') || 
+                              error.config?.url?.includes('/auth/customer/login');
+        
+        if (!isLoginRequest) {
+          localStorage.removeItem('routine-auth');
+          window.location.href = '/login';
+          return Promise.reject(new Error('Session expired. Please login again.'));
+        }
+        
+        // For login requests, return Vietnamese error message
+        return Promise.reject(new Error('Email hoặc mật khẩu không đúng'));
       }
       
       // 403 Forbidden - Insufficient permissions
