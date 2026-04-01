@@ -74,7 +74,7 @@ apiClient.interceptors.response.use(
     if (error.response) {
       const { status, data } = error.response;
       
-      // 401 Unauthorized - Token expired or invalid
+      // 401 Unauthorized - Token expired or invalid (but NOT for login endpoint)
       if (status === 401) {
         // Don't redirect on login endpoint - let component handle it
         const isLoginRequest = error.config?.url?.includes('/auth/admin/login') || 
@@ -85,9 +85,7 @@ apiClient.interceptors.response.use(
           window.location.href = '/login';
           return Promise.reject(new Error('Session expired. Please login again.'));
         }
-        
-        // For login requests, return Vietnamese error message
-        return Promise.reject(new Error('Email hoặc mật khẩu không đúng'));
+        // For login endpoint, fall through to extract error message below
       }
       
       // 403 Forbidden - Insufficient permissions

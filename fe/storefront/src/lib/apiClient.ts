@@ -72,13 +72,17 @@ apiClient.interceptors.response.use(
   (error: AxiosError<{ success: boolean; message: string; data: null }>) => {
     // Handle common errors
     if (error.response) {
-      const { status, data } = error.response;
+      const { status, data, config } = error.response;
       
-      // 401 Unauthorized - Token expired or invalid
+      // 401 Unauthorized - Token expired or invalid (but NOT for login endpoint)
       if (status === 401) {
-        localStorage.removeItem('routine-customer-auth');
-        window.location.href = '/login';
-        return Promise.reject(new Error('Session expired. Please login again.'));
+        const isLoginEndpoint = config?.url?.includes('/auth/customer/login') || config?.url?.includes('/auth/admin/login');
+        
+        if (!isLoginEndpoint) {
+          localStorage.removeItem('routine-customer-auth');
+          window.location.href = '/login';
+          return Promise.reject(new Error('Session expired. Please login again.'));
+        }
       }
       
       // 403 Forbidden - Insufficient permissions

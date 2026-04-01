@@ -1,0 +1,122 @@
+{
+  "id": "8c2d9e1f-3a4b-5c6d-7e8f-9a1b2c3d4e5f",
+  "version": "2.0",
+  "name": "search",
+  "url": "http://localhost:5173",
+  "tests": [
+    {
+      "id": "t1-search-basic",
+      "name": "search_01_product_by_keyword",
+      "commands": [
+        {
+          "id": "c1-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c1-1",
+          "command": "open",
+          "target": "/san-pham",
+          "value": ""
+        },
+        {
+          "id": "c1-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//button[contains(@aria-label,'Tìm')]",
+          "value": "30000"
+        },
+        {
+          "id": "c1-3",
+          "command": "click",
+          "target": "xpath=//button[contains(@aria-label,'Tìm')]",
+          "value": ""
+        }
+      ]
+    },
+    {
+      "id": "t2-search-empty-result",
+      "name": "search_02_no_result_found",
+      "commands": [
+        {
+          "id": "c2-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c2-1",
+          "command": "open",
+          "target": "/san-pham",
+          "value": ""
+        },
+        {
+          "id": "c2-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//button[contains(@aria-label,'Tìm')]",
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t3-search-from-navbar",
+      "name": "search_03_icon_in_navbar",
+      "commands": [
+        {
+          "id": "c3-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c3-1",
+          "command": "open",
+          "target": "/",
+          "value": ""
+        },
+        {
+          "id": "c3-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//button[contains(@aria-label,'Tìm')]",
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t4-search-url-params",
+      "name": "search_04_url_has_search_param",
+      "commands": [
+        {
+          "id": "c4-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c4-1",
+          "command": "open",
+          "target": "/san-pham?search=shirt",
+          "value": ""
+        },
+        {
+          "id": "c4-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//*",
+          "value": "30000"
+        }
+      ]
+    }
+  ],
+  "suites": [
+    {
+      "id": "s-search-001",
+      "name": "Search Test Suite",
+      "persistSession": false,
+      "parallel": false,
+      "timeout": 300,
+      "tests": ["t1-search-basic", "t2-search-empty-result", "t3-search-from-navbar", "t4-search-url-params"]
+    }
+  ],
+  "urls": ["http://localhost:5173"],
+  "plugins": []
+}

@@ -1,7 +1,7 @@
 {
   "id": "f6de590b-d4c4-45b5-aecb-14b756d81787",
   "version": "2.0",
-  "name": "loginCustomer\\",
+  "name": "registerCustomer\\",
   "url": "http://localhost:5173",
   "tests": [{
     "id": "a5fbf68a-946a-4a61-9cff-f4ac4c6348d6",

@@ -3,6 +3,7 @@ package com.example.be.service;
 import java.math.BigDecimal;
 
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +23,7 @@ import com.example.be.entity.CustomerTier;
 import com.example.be.entity.User;
 import com.example.be.exception.BadRequestException;
 import com.example.be.exception.ErrorCode;
+import com.example.be.exception.UnauthorizedException;
 import com.example.be.repository.CustomerRepository;
 import com.example.be.repository.UserRepository;
 import com.example.be.security.JwtTokenProvider;
@@ -62,15 +64,25 @@ public class AuthService {
     }
 
     public AuthResponse loginUser(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
+            SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "User not found"));
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "User not found"));
 
-        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
-                tokenProvider.generateRefreshToken(authentication));
+            return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
+                    tokenProvider.generateRefreshToken(authentication));
+        } catch (BadCredentialsException e) {
+            // Check if user exists to provide appropriate error message
+            boolean userExists = userRepository.existsByEmail(request.getEmail());
+            if (!userExists) {
+                throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIALS, "Tài khoản không tồn tại");
+            } else {
+                throw new UnauthorizedException(ErrorCode.INVALID_CREDENTIALS, "Mật khẩu không chính xác");
+            }
+        }
     }
 
     @Transactional

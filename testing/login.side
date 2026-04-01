@@ -1,0 +1,431 @@
+{
+  "id": "f5a8c2e1-9d4c-4b2a-8f1e-5c3d7e2f9a1b",
+  "version": "2.0",
+  "name": "login",
+  "url": "http://localhost:5173",
+  "tests": [{
+    "id": "t1-login-success",
+    "name": "login_01_success_correct_credentials",
+    "commands": [{
+      "id": "c1-0",
+      "comment": "Clear session and local storage",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c1-1",
+      "comment": "Open login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c1-2",
+      "comment": "Wait for login form to load",
+      "command": "waitForElementPresent",
+      "target": "xpath=//h1[contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c1-3",
+      "comment": "Enter correct email",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "tung@gmail.com"
+    }, {
+      "id": "c1-4",
+      "comment": "Enter correct password",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Mật khẩu']",
+      "targets": [],
+      "value": "Vutung123@"
+    }, {
+      "id": "3b49596a-6551-41b1-a106-af56ed3e65f4",
+      "comment": "",
+      "command": "click",
+      "target": "css=.relative:nth-child(1) > .h-11",
+      "targets": [
+        ["css=.relative:nth-child(1) > .h-11", "css:finder"],
+        ["xpath=//input[@value='']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/section/div/form/div/input", "xpath:idRelative"],
+        ["xpath=//input", "xpath:position"]
+      ],
+      "value": ""
+    }, {
+      "id": "7d9ad732-5d8f-4353-a0d7-6380a4d4410e",
+      "comment": "",
+      "command": "click",
+      "target": "css=.whitespace-nowrap",
+      "targets": [
+        ["css=.whitespace-nowrap", "css:finder"],
+        ["xpath=//button[@type='submit']", "xpath:attributes"],
+        ["xpath=//div[@id='root']/div/main/section/div/form/button", "xpath:idRelative"],
+        ["xpath=//form/button", "xpath:position"],
+        ["xpath=//button[contains(.,'Đăng nhập')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "c1-6",
+      "comment": "Verify successful login - should be redirected to home or dashboard",
+      "command": "verifyText",
+      "target": "xpath=//p[contains(.,'Lịch sử đơn hàng')]",
+      "targets": [],
+      "value": "3000"
+    }]
+  }, {
+    "id": "t2-login-empty-all",
+    "name": "login_02_empty_all_fields",
+    "commands": [{
+      "id": "c2-0",
+      "comment": "Clear session",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-1",
+      "comment": "Navigate to login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-2",
+      "comment": "Wait for form to load",
+      "command": "waitForElementPresent",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c2-3",
+      "comment": "Leave all fields empty and click login",
+      "command": "click",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-4",
+      "comment": "Verify error message about required Email",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t3-login-empty-email",
+    "name": "login_03_empty_email",
+    "commands": [{
+      "id": "c3-0",
+      "comment": "Clear session",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-1",
+      "comment": "Open login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-2",
+      "comment": "Wait for form elements",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Mật khẩu']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c3-3",
+      "comment": "Leave email empty, enter password",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Mật khẩu']",
+      "targets": [],
+      "value": "Vutung123@"
+    }, {
+      "id": "c3-4",
+      "comment": "Click login button",
+      "command": "click",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-5",
+      "comment": "Verify error: Email is required",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t4-login-empty-password",
+    "name": "login_04_empty_password",
+    "commands": [{
+      "id": "c4-0",
+      "comment": "Clear session",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-1",
+      "comment": "Navigate to login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-2",
+      "comment": "Wait for form to load",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c4-3",
+      "comment": "Enter valid email, leave password empty",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "tung@gmail.com"
+    }, {
+      "id": "c4-4",
+      "comment": "Click login button",
+      "command": "click",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-5",
+      "comment": "Verify error: Password is required",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t5-login-invalid-email-format",
+    "name": "login_05_invalid_email_format",
+    "commands": [{
+      "id": "c5-0",
+      "comment": "Clear session",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c5-1",
+      "comment": "Open login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c5-2",
+      "comment": "Wait for form elements",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c5-3",
+      "comment": "Enter invalid email format (missing @)",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "abc.com"
+    }, {
+      "id": "c5-4",
+      "comment": "Enter password",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Mật khẩu']",
+      "targets": [],
+      "value": "Vutung123@"
+    }, {
+      "id": "c5-5",
+      "comment": "Click login button",
+      "command": "click",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c5-6",
+      "comment": "Verify error: Invalid email format",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t6-login-unregistered-email",
+    "name": "login_06_unregistered_email_account_not_exist",
+    "commands": [{
+      "id": "c6-0",
+      "comment": "Clear session",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-1",
+      "comment": "Navigate to login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-2",
+      "comment": "Wait for form to load",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c6-3",
+      "comment": "Enter valid email format but not registered",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "notexist@example.com"
+    }, {
+      "id": "c6-4",
+      "comment": "Enter any password",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Mật khẩu']",
+      "targets": [],
+      "value": "Password123!"
+    }, {
+      "id": "c6-5",
+      "comment": "Click login button",
+      "command": "click",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-6",
+      "comment": "Verify error: Account does not exist",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Đăng nhập thất bại') or contains(.,'Email hoặc Mật khẩu không chính xác')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t7-login-wrong-password",
+    "name": "login_07_wrong_password",
+    "commands": [{
+      "id": "c7-0",
+      "comment": "Clear session",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-1",
+      "comment": "Open login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-2",
+      "comment": "Wait for form elements",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c7-3",
+      "comment": "Enter registered email",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "tung@gmail.com"
+    }, {
+      "id": "c7-4",
+      "comment": "Enter wrong password",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Mật khẩu']",
+      "targets": [],
+      "value": "WrongPassword123@"
+    }, {
+      "id": "c7-5",
+      "comment": "Click login button",
+      "command": "click",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-6",
+      "comment": "Verify error: Invalid credentials",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t8-login-case-sensitive-password",
+    "name": "login_08_case_sensitive_password_mismatch",
+    "commands": [{
+      "id": "c8-0",
+      "comment": "Clear session",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-1",
+      "comment": "Navigate to login page",
+      "command": "open",
+      "target": "/login",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-2",
+      "comment": "Wait for form to load",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c8-3",
+      "comment": "Enter registered email",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Email']",
+      "targets": [],
+      "value": "tung@gmail.com"
+    }, {
+      "id": "c8-4",
+      "comment": "Enter correct password but with wrong case (all lowercase)",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Mật khẩu']",
+      "targets": [],
+      "value": "vutung123@"
+    }, {
+      "id": "c8-5",
+      "comment": "Click login button",
+      "command": "click",
+      "target": "xpath=//button[@type='submit' and contains(.,'Đăng nhập')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-6",
+      "comment": "Verify error: Password case-sensitive mismatch",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Đăng nhập thất bại. Vui lòng kiểm tra lại email hoặc mật khẩu.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }],
+  "suites": [{
+    "id": "s-login-001",
+    "name": "Login Test Suite",
+    "persistSession": false,
+    "parallel": false,
+    "timeout": 300,
+    "tests": ["t2-login-empty-all", "t3-login-empty-email", "t4-login-empty-password", "t5-login-invalid-email-format", "t6-login-unregistered-email", "t7-login-wrong-password", "t8-login-case-sensitive-password", "t1-login-success"]
+  }],
+  "urls": ["http://localhost:5173/"],
+  "plugins": []
+}

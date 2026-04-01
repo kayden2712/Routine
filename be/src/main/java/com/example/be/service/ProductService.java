@@ -27,6 +27,7 @@ import com.example.be.exception.ErrorCode;
 import com.example.be.exception.ResourceNotFoundException;
 import com.example.be.repository.CategoryRepository;
 import com.example.be.repository.ProductRepository;
+import com.example.be.security.SearchInputSanitizer;
 
 import lombok.RequiredArgsConstructor;
 
@@ -56,7 +57,12 @@ public class ProductService {
     }
 
     public List<ProductResponse> searchProducts(String search) {
-        return productRepository.searchProducts(search).stream()
+        String sanitizedSearch = SearchInputSanitizer.sanitize(search);
+        if (sanitizedSearch.isBlank()) {
+            return List.of();
+        }
+
+        return productRepository.searchProducts(sanitizedSearch).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

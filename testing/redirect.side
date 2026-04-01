@@ -1,0 +1,138 @@
+{
+  "id": "5d6e7f8a-9b0c-1d2e-3f4a-5b6c7d8e9f0a",
+  "version": "2.0",
+  "name": "redirect",
+  "url": "http://localhost:5173",
+  "tests": [
+    {
+      "id": "t1-redirect-products-to-san-pham",
+      "name": "redirect_01_products_to_san_pham",
+      "commands": [
+        {
+          "id": "c1-1",
+          "comment": "",
+          "command": "open",
+          "target": "/products",
+          "targets": [],
+          "value": ""
+        },
+        {
+          "id": "c1-2",
+          "comment": "",
+          "command": "waitForElementPresent",
+          "target": "xpath=//*[contains(text(), 'Sản phẩm')] | //*[contains(text(), 'Category')]",
+          "targets": [["xpath=//*", "xpath:position"]],
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t2-redirect-cart-to-gio-hang",
+      "name": "redirect_02_cart_to_gio_hang",
+      "commands": [
+        {
+          "id": "c2-1",
+          "comment": "",
+          "command": "open",
+          "target": "/cart",
+          "targets": [],
+          "value": ""
+        },
+        {
+          "id": "c2-2",
+          "comment": "",
+          "command": "waitForElementPresent",
+          "target": "xpath=//*[contains(text(), 'Giỏ hàng')]",
+          "targets": [["xpath=//*", "xpath:position"]],
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t3-redirect-account-to-tai-khoan",
+      "name": "redirect_03_account_to_tai_khoan",
+      "commands": [
+        {
+          "id": "c3-1",
+          "comment": "",
+          "command": "open",
+          "target": "/account",
+          "targets": [],
+          "value": ""
+        },
+        {
+          "id": "c3-2",
+          "comment": "",
+          "command": "waitForElementPresent",
+          "target": "xpath=//*[contains(text(), 'Tài khoản')] | //*[contains(text(), 'Đăng nhập')]",
+          "targets": [["xpath=//*", "xpath:position"]],
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t4-redirect-login-to-dang-nhap",
+      "name": "redirect_04_login_to_dang_nhap",
+      "commands": [
+        {
+          "id": "c4-1",
+          "comment": "",
+          "command": "open",
+          "target": "/login",
+          "targets": [],
+          "value": ""
+        },
+        {
+          "id": "c4-2",
+          "comment": "",
+          "command": "waitForElementPresent",
+          "target": "xpath=//*[contains(text(), 'Đăng nhập')]",
+          "targets": [["xpath=//*", "xpath:position"]],
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t5-redirect-register-to-dang-ky",
+      "name": "redirect_05_register_to_dang_ky",
+      "commands": [
+        {
+          "id": "c5-1",
+          "comment": "",
+          "command": "open",
+          "target": "/register",
+          "targets": [],
+          "value": ""
+        },
+        {
+          "id": "c5-2",
+          "comment": "",
+          "command": "waitForElementPresent",
+          "target": "xpath=//*[contains(text(), 'Đăng ký')]",
+          "targets": [["xpath=//*", "xpath:position"]],
+          "value": "30000"
+        }
+      ]
+    }
+  ],
+  "suites": [
+    {
+      "id": "s-redirect-001",
+      "name": "Route Redirect Test Suite",
+      "persistSession": false,
+      "parallel": false,
+      "timeout": 300,
+      "tests": [
+        "t1-redirect-products-to-san-pham",
+        "t2-redirect-cart-to-gio-hang",
+        "t3-redirect-account-to-tai-khoan",
+        "t4-redirect-login-to-dang-nhap",
+        "t5-redirect-register-to-dang-ky"
+      ]
+    }
+  ],
+  "urls": [
+    "http://localhost:5173"
+  ],
+  "plugins": []
+}

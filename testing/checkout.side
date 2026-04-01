@@ -1,0 +1,633 @@
+{
+  "id": "5d6e7f8a-9b1c-2d3e-4f5a-6b7c8d9e0f1a",
+  "version": "2.0",
+  "name": "checkout",
+  "url": "http://localhost:5173",
+  "tests": [{
+    "id": "t1-checkout-empty-cart-redirect",
+    "name": "checkout_01_empty_cart_redirects",
+    "commands": [{
+      "id": "c1-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c1-2",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c1-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//h1[contains(.,'Giỏ hàng trống')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t2-checkout-page-render",
+    "name": "checkout_02_page_sections",
+    "commands": [{
+      "id": "c2-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-2",
+      "comment": "",
+      "command": "open",
+      "target": "/san-pham",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c2-4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-5",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-6",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//h1[contains(.,'Thông tin giao hàng')]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c2-7",
+      "comment": "",
+      "command": "verifyElementPresent",
+      "target": "xpath=//input[@placeholder='Nhập họ và tên']",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c2-8",
+      "comment": "",
+      "command": "verifyElementPresent",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": ""
+    }]
+  }, {
+    "id": "t3-checkout-missing-required-field",
+    "name": "checkout_03_missing_fullname",
+    "commands": [{
+      "id": "c3-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-2",
+      "comment": "",
+      "command": "open",
+      "target": "/san-pham",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c3-4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-5",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-6",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "49736f4b-b497-4cac-b60b-e843eb8d2331",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập họ và tên']",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-7",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "0987654321"
+    }, {
+      "id": "c3-8",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Số nhà, tên đường']",
+      "targets": [],
+      "value": "123 Test Street"
+    }, {
+      "id": "c3-9",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Quận / Huyện']",
+      "targets": [],
+      "value": "Quan 1"
+    }, {
+      "id": "c3-10",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Tỉnh / Thành phố']",
+      "targets": [],
+      "value": "Ho Chi Minh"
+    }, {
+      "id": "c3-11",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//button[contains(.,'Đặt hàng (')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c3-12",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Vui lòng điền đầy đủ thông tin')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t6-checkout-missing-address",
+    "name": "checkout_06_missing_address",
+    "commands": [{
+      "id": "c6-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-2",
+      "comment": "",
+      "command": "open",
+      "target": "/san-pham",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c6-4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-5",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-6",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c6-7",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập họ và tên']",
+      "targets": [],
+      "value": "a"
+    }, {
+      "id": "c6-8",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "0987654321"
+    }, {
+      "id": "c6-9",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Số nhà, tên đường']",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-10",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Quận / Huyện']",
+      "targets": [],
+      "value": "Quan 1"
+    }, {
+      "id": "c6-11",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Tỉnh / Thành phố']",
+      "targets": [],
+      "value": "Ho Chi Minh"
+    }, {
+      "id": "c6-12",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//button[contains(.,'Đặt hàng (')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c6-13",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Vui lòng điền đầy đủ thông tin giao hàng bắt buộc.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t7-checkout-missing-district",
+    "name": "checkout_07_missing_district",
+    "commands": [{
+      "id": "c7-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-2",
+      "comment": "",
+      "command": "open",
+      "target": "/san-pham",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c7-4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-5",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-6",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c7-7",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập họ và tên']",
+      "targets": [],
+      "value": "a"
+    }, {
+      "id": "c7-8",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "0987654321"
+    }, {
+      "id": "c7-9",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Số nhà, tên đường']",
+      "targets": [],
+      "value": "123 Test Street"
+    }, {
+      "id": "c7-10",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Quận / Huyện']",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-11",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Tỉnh / Thành phố']",
+      "targets": [],
+      "value": "Ho Chi Minh"
+    }, {
+      "id": "c7-12",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//button[contains(.,'Đặt hàng (')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c7-13",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Vui lòng điền đầy đủ thông tin giao hàng bắt buộc.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t8-checkout-missing-city",
+    "name": "checkout_08_missing_city",
+    "commands": [{
+      "id": "c8-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-2",
+      "comment": "",
+      "command": "open",
+      "target": "/san-pham",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c8-4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-5",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-6",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c8-7",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập họ và tên']",
+      "targets": [],
+      "value": "a"
+    }, {
+      "id": "c8-8",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Nhập số điện thoại']",
+      "targets": [],
+      "value": "0987654321"
+    }, {
+      "id": "c8-9",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Số nhà, tên đường']",
+      "targets": [],
+      "value": "123 Test Street"
+    }, {
+      "id": "c8-10",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Quận / Huyện']",
+      "targets": [],
+      "value": "Quan 1"
+    }, {
+      "id": "c8-11",
+      "comment": "",
+      "command": "type",
+      "target": "xpath=//input[@placeholder='Tỉnh / Thành phố']",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-12",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=//button[contains(.,'Đặt hàng (')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c8-13",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//p[contains(.,'Vui lòng điền đầy đủ thông tin giao hàng bắt buộc.')]",
+      "targets": [],
+      "value": "30000"
+    }]
+  }, {
+    "id": "t4-checkout-delivery-methods",
+    "name": "checkout_04_delivery_method_options",
+    "commands": [{
+      "id": "c4-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-2",
+      "comment": "",
+      "command": "open",
+      "target": "/san-pham",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c4-4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-5",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-6",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//h2[contains(.,'Phương thức giao hàng')]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "9ab4456e-7467-4d37-884f-0bdc794a4571",
+      "comment": "",
+      "command": "click",
+      "target": "css=.rounded-\\[12px\\]:nth-child(2) > .flex > .text-xs",
+      "targets": [
+        ["css=.rounded-\\[12px\\]:nth-child(2) > .flex > .text-xs", "css:finder"],
+        ["xpath=//div[@id='root']/div/main/div/section/div[2]/button/span", "xpath:idRelative"],
+        ["xpath=//div[2]/button/span", "xpath:position"],
+        ["xpath=//span[contains(.,'Thu gọn')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "c4-7",
+      "comment": "",
+      "command": "verifyElementPresent",
+      "target": "xpath=//p[contains(.,'Giao hàng tiêu chuẩn')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c4-8",
+      "comment": "",
+      "command": "verifyElementPresent",
+      "target": "xpath=//p[contains(.,'Giao hàng nhanh')]",
+      "targets": [],
+      "value": ""
+    }]
+  }, {
+    "id": "t5-checkout-payment-methods",
+    "name": "checkout_05_payment_method_options",
+    "commands": [{
+      "id": "c5-1",
+      "comment": "",
+      "command": "executeScript",
+      "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c5-2",
+      "comment": "",
+      "command": "open",
+      "target": "/san-pham",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c5-3",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c5-4",
+      "comment": "",
+      "command": "click",
+      "target": "xpath=(//button[contains(.,'Thêm vào giỏ')])[1]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c5-5",
+      "comment": "",
+      "command": "open",
+      "target": "/checkout",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "a93678d7-2a53-425d-9696-5f8545f2a751",
+      "comment": "",
+      "command": "click",
+      "target": "css=.rounded-\\[12px\\]:nth-child(3) > .flex > .text-xs",
+      "targets": [
+        ["css=.rounded-\\[12px\\]:nth-child(3) > .flex > .text-xs", "css:finder"],
+        ["xpath=//div[@id='root']/div/main/div/section/div[3]/button/span", "xpath:idRelative"],
+        ["xpath=//div[3]/button/span", "xpath:position"],
+        ["xpath=//span[contains(.,'Thu gọn')]", "xpath:innerText"]
+      ],
+      "value": ""
+    }, {
+      "id": "c5-6",
+      "comment": "",
+      "command": "waitForElementPresent",
+      "target": "xpath=//h2[contains(.,'Phương thức thanh toán')]",
+      "targets": [],
+      "value": "30000"
+    }, {
+      "id": "c5-7",
+      "comment": "",
+      "command": "verifyElementPresent",
+      "target": "xpath=//p[contains(.,'Thanh toán khi nhận hàng')]",
+      "targets": [],
+      "value": ""
+    }, {
+      "id": "c5-8",
+      "comment": "",
+      "command": "verifyElementPresent",
+      "target": "xpath=//p[contains(.,'Chuyển khoản ngân hàng')]",
+      "targets": [],
+      "value": ""
+    }]
+  }],
+  "suites": [{
+    "id": "s-checkout-001",
+    "name": "Checkout Test Suite",
+    "persistSession": false,
+    "parallel": false,
+    "timeout": 300,
+    "tests": ["t1-checkout-empty-cart-redirect", "t2-checkout-page-render", "t3-checkout-missing-required-field", "t6-checkout-missing-address", "t7-checkout-missing-district", "t8-checkout-missing-city", "t4-checkout-delivery-methods", "t5-checkout-payment-methods"]
+  }, {
+    "id": "097d2dfa-30e8-4c89-9450-6072088cf6ec",
+    "name": "checkout_mising_address",
+    "persistSession": false,
+    "parallel": false,
+    "timeout": 300,
+    "tests": []
+  }],
+  "urls": ["http://localhost:5173/"],
+  "plugins": []
+}

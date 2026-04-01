@@ -15,6 +15,7 @@ import com.example.be.exception.BadRequestException;
 import com.example.be.exception.ErrorCode;
 import com.example.be.exception.ResourceNotFoundException;
 import com.example.be.repository.CustomerRepository;
+import com.example.be.security.SearchInputSanitizer;
 
 import lombok.RequiredArgsConstructor;
 
@@ -27,7 +28,11 @@ public class AdminCustomerService {
     public List<AdminCustomerResponse> getCustomers(String search, CustomerTier tier) {
         List<Customer> customers;
         if (StringUtils.hasText(search)) {
-            customers = customerRepository.searchCustomers(search.trim());
+            String sanitizedSearch = SearchInputSanitizer.sanitize(search);
+            if (!StringUtils.hasText(sanitizedSearch)) {
+                return List.of();
+            }
+            customers = customerRepository.searchCustomers(sanitizedSearch);
         } else if (tier != null) {
             customers = customerRepository.findByTier(tier);
         } else {

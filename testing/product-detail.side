@@ -1,0 +1,140 @@
+{
+  "id": "3b4c5d6e-7f8a-9b0c-1d2e-3f4a5b6c7d8e",
+  "version": "2.0",
+  "name": "product-detail",
+  "url": "http://localhost:5173",
+  "tests": [
+    {
+      "id": "t1-product-detail-render",
+      "name": "product_detail_01_page_render",
+      "commands": [
+        {
+          "id": "c1-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c1-1",
+          "command": "open",
+          "target": "/san-pham",
+          "value": ""
+        },
+        {
+          "id": "c1-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//a[contains(@href,'/san-pham/')]",
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t2-product-detail-size-selection",
+      "name": "product_detail_02_select_size",
+      "commands": [
+        {
+          "id": "c2-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c2-1",
+          "command": "open",
+          "target": "/san-pham",
+          "value": ""
+        },
+        {
+          "id": "c2-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//a[contains(@href,'/san-pham/')]",
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t3-product-detail-color-selection",
+      "name": "product_detail_03_select_color",
+      "commands": [
+        {
+          "id": "c3-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c3-1",
+          "command": "open",
+          "target": "/san-pham",
+          "value": ""
+        },
+        {
+          "id": "c3-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//a[contains(@href,'/san-pham/')]",
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t4-product-detail-quantity-controls",
+      "name": "product_detail_04_adjust_quantity",
+      "commands": [
+        {
+          "id": "c4-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c4-1",
+          "command": "open",
+          "target": "/san-pham",
+          "value": ""
+        },
+        {
+          "id": "c4-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//input[@type='number']",
+          "value": "30000"
+        }
+      ]
+    },
+    {
+      "id": "t5-product-detail-add-to-cart",
+      "name": "product_detail_05_add_to_cart",
+      "commands": [
+        {
+          "id": "c5-0",
+          "command": "executeScript",
+          "target": "window.localStorage.clear(); window.sessionStorage.clear();",
+          "value": ""
+        },
+        {
+          "id": "c5-1",
+          "command": "open",
+          "target": "/san-pham",
+          "value": ""
+        },
+        {
+          "id": "c5-2",
+          "command": "waitForElementPresent",
+          "target": "xpath=//button[contains(.,'Thêm')]",
+          "value": "30000"
+        }
+      ]
+    }
+  ],
+  "suites": [
+    {
+      "id": "s-product-detail-001",
+      "name": "Product Detail Test Suite",
+      "persistSession": false,
+      "parallel": false,
+      "timeout": 300,
+      "tests": ["t1-product-detail-render", "t2-product-detail-size-selection", "t3-product-detail-color-selection", "t4-product-detail-quantity-controls", "t5-product-detail-add-to-cart"]
+    }
+  ],
+  "urls": ["http://localhost:5173"],
+  "plugins": []
+}

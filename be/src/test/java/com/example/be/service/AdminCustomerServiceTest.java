@@ -10,6 +10,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -46,13 +47,25 @@ class AdminCustomerServiceTest {
     }
 
     @Test
+    void getCustomersEncodesSuspiciousSearchBeforeRepositoryCall() {
+        when(customerRepository.searchCustomers("&lt;script&gt;alert(1)&lt;/script&gt;"))
+                .thenReturn(List.of());
+
+        adminCustomerService.getCustomers("<script>alert(1)</script>", null);
+
+        verify(customerRepository).searchCustomers("&lt;script&gt;alert(1)&lt;/script&gt;");
+    }
+
+    @Test
     void createCustomerRejectsDuplicatePhone() {
         AdminCustomerRequest request = new AdminCustomerRequest("A", "0909999999", "a@mail.vn", "Q1",
                 CustomerTier.REGULAR);
         when(customerRepository.existsByEmail("a@mail.vn")).thenReturn(false);
         when(customerRepository.existsByPhone("0909999999")).thenReturn(true);
 
-        assertThrows(BadRequestException.class, () -> adminCustomerService.createCustomer(request));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> adminCustomerService.createCustomer(request));
+        assertEquals("Phone number is already registered", exception.getMessage());
     }
 
     @Test
