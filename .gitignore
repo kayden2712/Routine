@@ -59,6 +59,7 @@
 
 # ignore toàn bộ vscode
 .vscode/
+.docs/
 
 # ========================
 # TEST / GENERATED FILES
