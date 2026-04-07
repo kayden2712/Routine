@@ -19,6 +19,7 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class CartServiceTest {
 
     @Mock
@@ -44,8 +46,9 @@ class CartServiceTest {
     void updateQuantityRejectsCartItemOwnedByAnotherCustomer() {
         when(cartItemRepository.findByIdAndCustomerEmail(9L, "customer@example.com")).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class,
+        ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class,
                 () -> cartService.updateQuantity(9L, 2, "customer@example.com"));
+        assertNotNull(exception.getMessage());
     }
 
     @Test
@@ -65,8 +68,9 @@ class CartServiceTest {
         when(customerRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(customer));
         when(productRepository.findById(5L)).thenReturn(Optional.of(product));
 
-        assertThrows(BadRequestException.class,
+        BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> cartService.addToCart("customer@example.com", request));
+        assertNotNull(exception.getMessage());
         verify(cartItemRepository, never()).save(any(CartItem.class));
     }
 

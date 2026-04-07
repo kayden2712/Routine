@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Facebook, Lock, Mail, User } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Lock, Mail, User } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import routineLogo from '@/assets/routine-logo-word.png'
 import { Button } from '@/components/ui/button'
@@ -14,6 +14,7 @@ export const CustomerRegisterPage = () => {
   const [password, setPassword] = useState('')
   const [acceptTerms, setAcceptTerms] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
   const isValidPhone = (value: string) => /^0\d{9,10}$/.test(value)
@@ -57,28 +58,9 @@ export const CustomerRegisterPage = () => {
         <h1 className="mt-5 text-center text-[22px] font-semibold text-white">Đăng ký</h1>
         <p className="mb-7 mt-2 text-center text-[14px] text-white/50">Tạo tài khoản khách hàng mới</p>
 
-        <div className="space-y-2.5">
-          <button
-            type="button"
-            className="inline-flex h-[42px] w-full items-center justify-center rounded-lg bg-[#1877F2] text-[13px] font-medium text-white transition-opacity hover:opacity-90"
-          >
-            <Facebook size={16} className="mr-2" />
-            Đăng ký với Facebook
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-[42px] w-full items-center justify-center rounded-lg border border-white/12 bg-white/6 text-[13px] font-medium text-white transition-colors hover:bg-white/10"
-          >
-            <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#EA4335]">
-              G
-            </span>
-            Đăng ký với Google
-          </button>
-        </div>
-
         <div className="my-4 flex items-center gap-3">
           <span className="h-px flex-1 bg-white/10" />
-          <span className="text-[12px] text-white/35">hoặc đăng ký bằng email</span>
+          <span className="text-[12px] text-white/35">Đăng ký bằng email</span>
           <span className="h-px flex-1 bg-white/10" />
         </div>
 
@@ -163,15 +145,54 @@ export const CustomerRegisterPage = () => {
             <input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Mật khẩu"
-              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-3 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
+              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-10 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition-colors hover:text-white"
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
 
           <p className="text-[12px] text-white/45">
             Mật khẩu phải gồm ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
           </p>
+
+          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-[12px] text-white/70">
+            <p className="text-[13px] font-medium text-white">Điều khoản và bảo mật</p>
+            <p className="mt-1 leading-5 text-white/55">
+              Khi tạo tài khoản, bạn đồng ý sử dụng dịch vụ theo các nguyên tắc an toàn và minh bạch của Routine.
+            </p>
+
+            <div className="mt-3 space-y-2">
+              <details className="rounded-lg border border-white/10 bg-black/10 px-3 py-2">
+                <summary className="cursor-pointer list-none font-medium text-white/80">
+                  Điều khoản sử dụng
+                </summary>
+                <ul className="mt-2 space-y-1 leading-5 text-white/55">
+                  <li>• Bạn chịu trách nhiệm bảo mật thông tin đăng nhập của mình.</li>
+                  <li>• Không sử dụng tài khoản cho mục đích gian lận hoặc gây ảnh hưởng hệ thống.</li>
+                  <li>• Routine có thể cập nhật điều khoản khi cần để cải thiện dịch vụ.</li>
+                </ul>
+              </details>
+
+              <details className="rounded-lg border border-white/10 bg-black/10 px-3 py-2">
+                <summary className="cursor-pointer list-none font-medium text-white/80">
+                  Chính sách bảo mật
+                </summary>
+                <ul className="mt-2 space-y-1 leading-5 text-white/55">
+                  <li>• Chúng tôi chỉ thu thập thông tin cần thiết để tạo và vận hành tài khoản.</li>
+                  <li>• Thông tin cá nhân được sử dụng cho đơn hàng, chăm sóc và hỗ trợ khách hàng.</li>
+                  <li>• Dữ liệu của bạn được bảo vệ theo các biện pháp kỹ thuật và kiểm soát truy cập phù hợp.</li>
+                </ul>
+              </details>
+            </div>
+          </div>
 
           <label className="mt-1 flex items-start gap-2 text-[12px] text-white/50">
             <input
@@ -181,15 +202,7 @@ export const CustomerRegisterPage = () => {
               className="mt-0.5 h-4 w-4 rounded border border-white/30 bg-transparent accent-white"
             />
             <span>
-              Tôi đồng ý với{' '}
-              <a href="#" className="text-white/80 underline underline-offset-2">
-                Điều khoản sử dụng
-              </a>{' '}
-              và{' '}
-              <a href="#" className="text-white/80 underline underline-offset-2">
-                Chính sách bảo mật
-              </a>
-              .
+              Tôi đã đọc, hiểu và đồng ý với Điều khoản sử dụng và Chính sách bảo mật của Routine.
             </span>
           </label>
 

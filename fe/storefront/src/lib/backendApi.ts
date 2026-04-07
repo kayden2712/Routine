@@ -60,6 +60,33 @@ interface BackendOrder {
   }>;
 }
 
+export type StorefrontPromotionType = 'GIAM_PHAN_TRAM' | 'GIAM_TIEN' | 'TANG_QUA';
+
+export interface StorefrontPromotion {
+  id: number;
+  code: string;
+  name: string;
+  type: StorefrontPromotionType;
+  typeDisplayName: string;
+}
+
+export interface ApplyStorefrontPromotionPayload {
+  promotionCode: string;
+  orderAmount: number;
+  productIds?: number[];
+}
+
+export interface ApplyStorefrontPromotionResult {
+  applicable: boolean;
+  message: string;
+  promotionId?: number;
+  promotionCode?: string;
+  promotionName?: string;
+  discountAmount?: number;
+  originalAmount?: number;
+  finalAmount?: number;
+}
+
 export interface StorefrontOrder {
   id: string;
   orderNumber: string;
@@ -250,6 +277,18 @@ function mapAuthUser(data: BackendAuthResponse): CustomerUser {
 export async function fetchProductsApi(): Promise<Product[]> {
   const response = await apiClient.get<BackendProduct[]>('/products');
   return (response.data ?? []).map(mapBackendProduct);
+}
+
+export async function fetchPromotionByCodeApi(code: string): Promise<StorefrontPromotion> {
+  const response = await apiClient.get<StorefrontPromotion>(`/promotions/code/${encodeURIComponent(code)}`);
+  return response.data;
+}
+
+export async function applyPromotionCodeApi(
+  payload: ApplyStorefrontPromotionPayload,
+): Promise<ApplyStorefrontPromotionResult> {
+  const response = await apiClient.post<ApplyStorefrontPromotionResult>('/promotions/apply', payload);
+  return response.data;
 }
 
 export async function customerLoginApi(email: string, password: string): Promise<CustomerUser> {

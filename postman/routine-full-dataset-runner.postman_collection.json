@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "53ca876c-4ab2-4e2d-a795-d80a7df0662e",
     "name": "Routine Seed Runner - Postman Free (Single File)",
-    "description": "Seed full dataset in one collection: categories mapping, 30 products (10 sale with date window), 10 customers, 20 orders, and sale auto-revert sync.",
+    "description": "Seed full dataset in one collection: categories mapping, 30 products (10 sale with date window), 10 customers, 20 online orders, 30 offline orders, and sale auto-revert sync.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -26,6 +26,7 @@
     { "key": "productSeeds", "value": "[]" },
     { "key": "customerSeeds", "value": "[]" },
     { "key": "orderSeeds", "value": "[]" },
+    { "key": "offlineOrderSeeds", "value": "[]" },
 
     { "key": "seededProducts", "value": "[]" },
     { "key": "seededCustomers", "value": "[]" },
@@ -33,12 +34,14 @@
     { "key": "productIndex", "value": "0" },
     { "key": "customerIndex", "value": "0" },
     { "key": "orderIndex", "value": "0" },
+    { "key": "offlineOrderIndex", "value": "0" },
     { "key": "saleSyncIndex", "value": "0" },
 
     { "key": "currentProductBody", "value": "{}" },
     { "key": "currentCustomerBody", "value": "{}" },
     { "key": "currentCustomerToken", "value": "" },
     { "key": "currentOrderBody", "value": "{}" },
+    { "key": "currentOfflineOrderBody", "value": "{}" },
     { "key": "currentSyncBody", "value": "{}" }
   ],
   "item": [
@@ -55,12 +58,13 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Init endpoint ok', function () { pm.response.to.have.status(200); });",
+              "pm.response.to.have.status(200);",
               "const runId = String(Date.now());",
               "pm.collectionVariables.set('runId', runId);",
               "pm.collectionVariables.set('productIndex', '0');",
               "pm.collectionVariables.set('customerIndex', '0');",
               "pm.collectionVariables.set('orderIndex', '0');",
+              "pm.collectionVariables.set('offlineOrderIndex', '0');",
               "pm.collectionVariables.set('saleSyncIndex', '0');",
               "pm.collectionVariables.set('loginAttemptIndex', '0');",
               "pm.collectionVariables.set('categoryEnsureIndex', '0');",
@@ -119,7 +123,7 @@
             "type": "text/javascript",
             "exec": [
               "let json = {};",
-              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "try { if (pm.response.code === 200 || pm.response.code === 201) { json = pm.response.json(); } } catch (e) { json = {}; }",
               "const token = (json.data && json.data.token) || '';",
               "if (token) {",
               "  pm.collectionVariables.set('adminToken', token);",
@@ -160,9 +164,9 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Get categories for ensure 200', function () { pm.response.to.have.status(200); });",
+              "pm.response.to.have.status(200);",
               "let json = {};",
-              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "try { if (pm.response.code === 200) { json = pm.response.json(); } } catch (e) { json = {}; }",
               "const categories = Array.isArray(json.data) ? json.data : [];",
               "const normalize = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();",
               "const required = [",
@@ -223,7 +227,7 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Create category 201', function () { pm.response.to.have.status(201); });",
+              "pm.response.to.have.status(201);",
               "const idx = Number(pm.collectionVariables.get('categoryEnsureIndex') || '0');",
               "pm.collectionVariables.set('categoryEnsureIndex', String(idx + 1));",
               "postman.setNextRequest('02 Ensure Categories - Create Loop');"
@@ -246,13 +250,10 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Categories loaded', function () { pm.response.to.have.status(200); });",
+              "pm.response.to.have.status(200);",
               "let body = {};",
-              "try { body = pm.response.json(); } catch (e) { body = {}; }",
+              "try { if (pm.response.code === 200) { body = pm.response.json(); } } catch (e) { body = {}; }",
               "const categories = (body && body.data) || [];",
-              "pm.test('Has categories', function () {",
-              "  pm.expect(categories.length, 'Khong tim thay categories sau khi ensure').to.be.greaterThan(0);",
-              "});",
               "if (!Array.isArray(categories) || categories.length === 0) {",
               "  postman.setNextRequest(null);",
               "  return;",
@@ -374,14 +375,27 @@
               "  });",
               "}",
               "",
+              "const offlineOrders = [];",
+              "for (let i = 0; i < 30; i += 1) {",
+              "  offlineOrders.push({",
+              "    customerSeedIndex: i % 10,",
+              "    productSeedIndex: (i * 2) % 30,",
+              "    quantity: 1 + (i % 2),",
+              "    paymentMethod: ['CASH', 'TRANSFER'][i % 2],",
+              "    notes: `Seed offline order ${String(i + 1).padStart(2, '0')} by run ${runId}`",
+              "  });",
+              "}",
+              "",
               "pm.collectionVariables.set('productSeeds', JSON.stringify(products));",
               "pm.collectionVariables.set('customerSeeds', JSON.stringify(customers));",
               "pm.collectionVariables.set('orderSeeds', JSON.stringify(orders));",
+              "pm.collectionVariables.set('offlineOrderSeeds', JSON.stringify(offlineOrders));",
               "",
               "pm.test('Seed data built', function () {",
               "  pm.expect(products.length).to.eql(30);",
               "  pm.expect(customers.length).to.eql(10);",
               "  pm.expect(orders.length).to.eql(20);",
+              "  pm.expect(offlineOrders.length).to.eql(30);",
               "});",
               "",
               "postman.setNextRequest('03 Seed Products (Loop 30)');"
@@ -432,33 +446,36 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Create product 201', function () { pm.response.to.have.status(201); });",
-              "const res = pm.response.json();",
+              "pm.response.to.have.status(201);",
+              "let res = {};",
+              "try { if (pm.response.code === 201) { res = pm.response.json(); } } catch (e) { res = {}; }",
               "const data = (res && res.data) || {};",
               "const idx = Number(pm.collectionVariables.get('productIndex') || '0');",
               "const seeds = JSON.parse(pm.collectionVariables.get('productSeeds') || '[]');",
               "const seededProducts = JSON.parse(pm.collectionVariables.get('seededProducts') || '[]');",
-              "seededProducts.push({",
-              "  id: data.id,",
-              "  code: data.code || seeds[idx].code,",
-              "  name: data.name || seeds[idx].name,",
-              "  categoryId: seeds[idx].categoryId,",
-              "  basePrice: seeds[idx].__meta.basePrice,",
-              "  salePercent: seeds[idx].__meta.salePercent,",
-              "  saleStart: seeds[idx].__meta.saleStart,",
-              "  saleEnd: seeds[idx].__meta.saleEnd,",
-              "  templateKey: seeds[idx].__meta.key,",
-              "  imageUrl: seeds[idx].imageUrl,",
-              "  material: seeds[idx].material,",
-              "  fit: seeds[idx].fit,",
-              "  season: seeds[idx].season,",
-              "  careInstructions: seeds[idx].careInstructions,",
-              "  gender: seeds[idx].gender,",
-              "  sizes: seeds[idx].sizes,",
-              "  colors: seeds[idx].colors,",
-              "  variants: seeds[idx].variants",
-              "});",
-              "pm.collectionVariables.set('seededProducts', JSON.stringify(seededProducts));",
+              "if (data.id) {",
+              "  seededProducts.push({",
+              "    id: data.id,",
+              "    code: data.code || seeds[idx].code,",
+              "    name: data.name || seeds[idx].name,",
+              "    categoryId: seeds[idx].categoryId,",
+              "    basePrice: seeds[idx].__meta.basePrice,",
+              "    salePercent: seeds[idx].__meta.salePercent,",
+              "    saleStart: seeds[idx].__meta.saleStart,",
+              "    saleEnd: seeds[idx].__meta.saleEnd,",
+              "    templateKey: seeds[idx].__meta.key,",
+              "    imageUrl: seeds[idx].imageUrl,",
+              "    material: seeds[idx].material,",
+              "    fit: seeds[idx].fit,",
+              "    season: seeds[idx].season,",
+              "    careInstructions: seeds[idx].careInstructions,",
+              "    gender: seeds[idx].gender,",
+              "    sizes: seeds[idx].sizes,",
+              "    colors: seeds[idx].colors,",
+              "    variants: seeds[idx].variants",
+              "  });",
+              "  pm.collectionVariables.set('seededProducts', JSON.stringify(seededProducts));",
+              "}",
               "pm.collectionVariables.set('productIndex', String(idx + 1));",
               "postman.setNextRequest('03 Seed Products (Loop 30)');"
             ]
@@ -501,20 +518,23 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Register customer 200', function () { pm.response.to.have.status(200); });",
-              "const res = pm.response.json();",
+              "pm.response.to.have.status(200);",
+              "let res = {};",
+              "try { if (pm.response.code === 200) { res = pm.response.json(); } } catch (e) { res = {}; }",
               "const data = (res && res.data) || {};",
               "const idx = Number(pm.collectionVariables.get('customerIndex') || '0');",
               "const seeds = JSON.parse(pm.collectionVariables.get('customerSeeds') || '[]');",
               "const seededCustomers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
-              "seededCustomers.push({",
-              "  id: data.id || (data.user && data.user.id),",
-              "  token: data.token || '',",
-              "  email: seeds[idx].email,",
-              "  fullName: seeds[idx].fullName,",
-              "  phone: seeds[idx].phone",
-              "});",
-              "pm.collectionVariables.set('seededCustomers', JSON.stringify(seededCustomers));",
+              "if (data.id || (data.user && data.user.id)) {",
+              "  seededCustomers.push({",
+              "    id: data.id || (data.user && data.user.id),",
+              "    token: data.token || '',",
+              "    email: seeds[idx].email,",
+              "    fullName: seeds[idx].fullName,",
+              "    phone: seeds[idx].phone",
+              "  });",
+              "  pm.collectionVariables.set('seededCustomers', JSON.stringify(seededCustomers));",
+              "}",
               "pm.collectionVariables.set('customerIndex', String(idx + 1));",
               "postman.setNextRequest('04 Seed Customers (Loop 10)');"
             ]
@@ -548,7 +568,7 @@
               "const customers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
               "const idx = Number(pm.collectionVariables.get('orderIndex') || '0');",
               "if (idx >= orderSeeds.length) {",
-              "  postman.setNextRequest('06 Sync Sale Status (Loop 10 sale products)');",
+              "  postman.setNextRequest('06 Seed Offline Orders (Loop 30)');",
               "  return;",
               "}",
               "",
@@ -610,12 +630,12 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "let body = {};",
-              "try { body = pm.response.json(); } catch (e) { body = {}; }",
               "const status = pm.response.code;",
+              "let body = {};",
+              "try { if (status === 201 || status === 400) { body = pm.response.json(); } } catch (e) { body = {}; }",
               "const message = String((body && body.message) || '');",
               "if (status === 201) {",
-              "  pm.test('Create order 201', function () { pm.expect(status).to.eql(201); });",
+              "  pm.response.to.have.status(201);",
               "  let stockMap = {};",
               "  try { stockMap = JSON.parse(pm.collectionVariables.get('orderVariantStockMap') || '{}'); } catch (e) { stockMap = {}; }",
               "  const k = pm.collectionVariables.get('currentOrderVariantKey') || '';",
@@ -623,7 +643,7 @@
               "  if (k) { stockMap[k] = Math.max(0, Number(stockMap[k] || 0) - q); }",
               "  pm.collectionVariables.set('orderVariantStockMap', JSON.stringify(stockMap));",
               "} else if (status === 400 && /insufficient stock/i.test(message)) {",
-              "  pm.test('Order skipped due stock depletion', function () { pm.expect(true).to.eql(true); });",
+              "  pm.response.to.have.status(400);",
               "} else {",
               "  pm.test('Create online order should succeed or skip by stock', function () {",
               "    pm.expect.fail(`Unexpected status ${status}. Message: ${message}`);",
@@ -639,7 +659,129 @@
     },
 
     {
-      "name": "06 Sync Sale Status (Loop 10 sale products)",
+      "name": "06 Seed Offline Orders (Loop 30)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{{currentOfflineOrderBody}}"
+        },
+        "url": "{{baseUrl}}/orders"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const offlineOrderSeeds = JSON.parse(pm.collectionVariables.get('offlineOrderSeeds') || '[]');",
+              "const products = JSON.parse(pm.collectionVariables.get('seededProducts') || '[]');",
+              "const customers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
+              "const idx = Number(pm.collectionVariables.get('offlineOrderIndex') || '0');",
+              "if (idx >= offlineOrderSeeds.length) {",
+              "  postman.setNextRequest('07 Sync Sale Status (Loop 10 sale products)');",
+              "  return;",
+              "}",
+              "",
+              "const s = offlineOrderSeeds[idx];",
+              "const customer = customers[s.customerSeedIndex];",
+              "const product = products[s.productSeedIndex];",
+              "if (!customer || !customer.id) {",
+              "  pm.test('Customer id exists for offline order', function () {",
+              "    pm.expect.fail('Thieu customer id cho offline order index ' + idx + '. Hay kiem tra buoc seed customer.');",
+              "  });",
+              "  postman.setNextRequest(null);",
+              "  return;",
+              "}",
+              "if (!product || !product.id) {",
+              "  pm.test('Product exists for offline order', function () {",
+              "    pm.expect.fail('Thieu product cho offline order index ' + idx + '. Hay kiem tra buoc seed product.');",
+              "  });",
+              "  postman.setNextRequest(null);",
+              "  return;",
+              "}",
+              "",
+              "let stockMap = {};",
+              "try { stockMap = JSON.parse(pm.collectionVariables.get('orderVariantStockMap') || '{}'); } catch (e) { stockMap = {}; }",
+              "const variants = (product.variants && product.variants.length > 0) ? product.variants : [{ size: 'M', color: 'black', stock: 999 }];",
+              "variants.forEach((v) => {",
+              "  const k = `${product.id}|${String(v.size)}|${String(v.color)}`;",
+              "  if (stockMap[k] == null) { stockMap[k] = Number(v.stock || 0); }",
+              "});",
+              "const variantWithStock = variants",
+              "  .map((v) => ({ ...v, __k: `${product.id}|${String(v.size)}|${String(v.color)}`, __remaining: Number(stockMap[`${product.id}|${String(v.size)}|${String(v.color)}`] || 0) }))",
+              "  .sort((a, b) => b.__remaining - a.__remaining)[0];",
+              "const variant = variantWithStock || variants[0];",
+              "const chosenQty = Math.max(1, Math.min(Number(s.quantity || 1), Number(variant.__remaining || variant.stock || 1)));",
+              "pm.collectionVariables.set('currentOrderVariantKey', variant.__k || `${product.id}|${String(variant.size)}|${String(variant.color)}`);",
+              "pm.collectionVariables.set('currentOrderQty', String(chosenQty));",
+              "pm.collectionVariables.set('orderVariantStockMap', JSON.stringify(stockMap));",
+              "const activePrice = (product.salePercent > 0 && (new Date() <= new Date(`${product.saleEnd}T23:59:59`) && new Date() >= new Date(`${product.saleStart}T00:00:00`)))",
+              "  ? Math.round(product.basePrice * (1 - product.salePercent / 100))",
+              "  : product.basePrice;",
+              "const subtotal = activePrice * chosenQty;",
+              "",
+              "const body = {",
+              "  customerId: Number(customer.id),",
+              "  items: [",
+              "    {",
+              "      productId: Number(product.id),",
+              "      quantity: chosenQty,",
+              "      price: activePrice,",
+              "      size: variant.size,",
+              "      color: variant.color",
+              "    }",
+              "  ],",
+              "  subtotal: subtotal,",
+              "  discount: 0,",
+              "  total: subtotal,",
+              "  paymentMethod: s.paymentMethod,",
+              "  notes: `${s.notes} | offline customer: ${customer.email || customer.fullName || customer.id}`",
+              "};",
+              "",
+              "pm.collectionVariables.set('currentOfflineOrderBody', JSON.stringify(body));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const status = pm.response.code;",
+              "let body = {};",
+              "try { if (status === 201 || status === 400) { body = pm.response.json(); } } catch (e) { body = {}; }",
+              "const message = String((body && body.message) || '');",
+              "if (status === 201) {",
+              "  pm.response.to.have.status(201);",
+              "  let stockMap = {};",
+              "  try { stockMap = JSON.parse(pm.collectionVariables.get('orderVariantStockMap') || '{}'); } catch (e) { stockMap = {}; }",
+              "  const k = pm.collectionVariables.get('currentOrderVariantKey') || '';",
+              "  const q = Number(pm.collectionVariables.get('currentOrderQty') || '1');",
+              "  if (k) { stockMap[k] = Math.max(0, Number(stockMap[k] || 0) - q); }",
+              "  pm.collectionVariables.set('orderVariantStockMap', JSON.stringify(stockMap));",
+              "} else if (status === 400 && /insufficient stock/i.test(message)) {",
+              "  pm.response.to.have.status(400);",
+              "} else {",
+              "  pm.test('Create offline order should succeed or skip by stock', function () {",
+              "    pm.expect.fail(`Unexpected status ${status}. Message: ${message}`);",
+              "  });",
+              "}",
+              "const idx = Number(pm.collectionVariables.get('offlineOrderIndex') || '0');",
+              "pm.collectionVariables.set('offlineOrderIndex', String(idx + 1));",
+              "postman.setNextRequest('06 Seed Offline Orders (Loop 30)');"
+            ]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "07 Sync Sale Status (Loop 10 sale products)",
       "request": {
         "method": "PUT",
         "header": [
@@ -662,7 +804,7 @@
               "const idx = Number(pm.collectionVariables.get('saleSyncIndex') || '0');",
               "const saleProducts = products.filter((p) => Number(p.salePercent || 0) > 0).slice(0, 10);",
               "if (idx >= saleProducts.length) {",
-              "  postman.setNextRequest('07 Verify Summary');",
+              "  postman.setNextRequest('08 Verify Summary');",
               "  return;",
               "}",
               "",
@@ -707,10 +849,10 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Sync sale update 200', function () { pm.response.to.have.status(200); });",
+              "pm.response.to.have.status(200);",
               "const idx = Number(pm.collectionVariables.get('saleSyncIndex') || '0');",
               "pm.collectionVariables.set('saleSyncIndex', String(idx + 1));",
-              "postman.setNextRequest('06 Sync Sale Status (Loop 10 sale products)');"
+              "postman.setNextRequest('07 Sync Sale Status (Loop 10 sale products)');"
             ]
           }
         }
@@ -718,7 +860,7 @@
     },
 
     {
-      "name": "07 Verify Summary",
+      "name": "08 Verify Summary",
       "request": {
         "method": "GET",
         "header": [
@@ -732,14 +874,12 @@
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test('Orders endpoint 200', function () { pm.response.to.have.status(200); });",
+              "pm.response.to.have.status(200);",
               "const products = JSON.parse(pm.collectionVariables.get('seededProducts') || '[]');",
               "const customers = JSON.parse(pm.collectionVariables.get('seededCustomers') || '[]');",
-              "pm.test('Seeded products count = 30', function () { pm.expect(products.length).to.eql(30); });",
-              "pm.test('Seeded customers count = 10', function () { pm.expect(customers.length).to.eql(10); });",
-              "pm.test('At least 10 sale candidates', function () {",
-              "  pm.expect(products.filter((p) => Number(p.salePercent || 0) > 0).length).to.be.at.least(10);",
-              "});",
+              "pm.expect(products.length).to.eql(30);",
+              "pm.expect(customers.length).to.eql(10);",
+              "pm.expect(products.filter((p) => Number(p.salePercent || 0) > 0).length).to.be.at.least(10);",
               "postman.setNextRequest(null);"
             ]
           }

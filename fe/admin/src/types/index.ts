@@ -114,3 +114,291 @@ export interface RevenuePoint {
   revenue: number;
   orders: number;
 }
+
+export type PromotionType = 'GIAM_PHAN_TRAM' | 'GIAM_TIEN' | 'TANG_QUA';
+export type PromotionStatus = 'DRAFT' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED';
+
+export interface Promotion {
+  id: number;
+  code: string;
+  name: string;
+  description?: string;
+  type: PromotionType;
+  typeDisplayName: string;
+  discountValue: number;
+  maxDiscountAmount?: number;
+  startDate: string;
+  endDate: string;
+  minOrderAmount: number;
+  applyToAllProducts: boolean;
+  usageLimit?: number;
+  usageCount: number;
+  status: PromotionStatus;
+  statusDisplayName: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy?: number;
+  productCount?: number;
+  isActive: boolean;
+}
+
+export interface PromotionDetail extends Promotion {
+  applicableProducts: ProductSummary[];
+  hasReachedLimit: boolean;
+}
+
+export interface ProductSummary {
+  id: number;
+  code: string;
+  name: string;
+  price: number;
+  imageUrl?: string;
+}
+
+export interface CreatePromotionRequest {
+  code: string;
+  name: string;
+  description?: string;
+  type: PromotionType;
+  discountValue: number;
+  maxDiscountAmount?: number;
+  startDate: string;
+  endDate: string;
+  minOrderAmount?: number;
+  applyToAllProducts?: boolean;
+  usageLimit?: number;
+  productIds?: number[];
+}
+
+export interface UpdatePromotionRequest {
+  name: string;
+  description?: string;
+  type: PromotionType;
+  discountValue: number;
+  maxDiscountAmount?: number;
+  startDate: string;
+  endDate: string;
+  minOrderAmount?: number;
+  applyToAllProducts?: boolean;
+  usageLimit?: number;
+  productIds?: number[];
+}
+
+export interface ApplyPromotionRequest {
+  promotionCode: string;
+  orderAmount: number;
+  productIds?: number[];
+  customerId?: number;
+}
+
+export interface ApplyPromotionResponse {
+  applicable: boolean;
+  message: string;
+  promotionId?: number;
+  promotionCode?: string;
+  promotionName?: string;
+  discountAmount?: number;
+  originalAmount?: number;
+  finalAmount?: number;
+}
+
+export interface CheckPromotionRequest {
+  orderAmount: number;
+  productIds: number[];
+  customerId?: number;
+}
+
+export interface CheckPromotionResponse {
+  hasApplicablePromotions: boolean;
+  applicablePromotions: Promotion[];
+  message: string;
+}
+
+// ===================== SUPPLIER TYPES =====================
+
+export type SupplierStatus = 'ACTIVE' | 'INACTIVE';
+
+export interface Supplier {
+  id: number;
+  maNcc: string;
+  tenNcc: string;
+  diaChi?: string;
+  soDienThoai?: string;
+  email?: string;
+  nguoiLienHe?: string;
+  ghiChu?: string;
+  trangThai: SupplierStatus;
+  soPhieuNhap?: number;
+  tongGiaTriNhap?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupplierListResponse {
+  id: number;
+  maNcc: string;
+  tenNcc: string;
+  diaChi?: string;
+  soDienThoai?: string;
+  email?: string;
+  nguoiLienHe?: string;
+  trangThai: SupplierStatus;
+  soPhieuNhap?: number;
+  tongGiaTriNhap?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SupplierRequest {
+  maNcc?: string; // Optional, auto-gen nếu null
+  tenNcc: string;
+  diaChi?: string;
+  soDienThoai?: string;
+  email?: string;
+  nguoiLienHe?: string;
+  ghiChu?: string;
+  trangThai?: SupplierStatus;
+}
+
+export interface SupplierSearchRequest {
+  keyword?: string;
+  trangThai?: SupplierStatus | null;
+  page?: number;
+  size?: number;
+  sortBy?: string;
+  sortDirection?: 'ASC' | 'DESC';
+}
+
+export interface PagedResponse<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  size: number;
+  number: number;
+  first: boolean;
+  last: boolean;
+  empty: boolean;
+}
+
+// ===================== INVENTORY TYPES =====================
+
+export interface InventoryReportItem {
+  productId: number;
+  productCode: string;
+  productName: string;
+  currentStock: number;
+  minStock: number;
+  isLowStock: boolean;
+  lastUpdate?: string;
+  totalNhap: number;
+  totalXuat: number;
+}
+
+export interface InventoryHistoryItem {
+  id: number;
+  product: {
+    id: number;
+    code: string;
+    name: string;
+    stock: number;
+  };
+  loaiThayDoi: 'NHAP_KHO' | 'XUAT_KHO' | 'DIEU_CHINH_KIEM_KE';
+  soLuongTruoc: number;
+  soLuongThayDoi: number;
+  soLuongSau: number;
+  maChungTu?: string;
+  chungTuType?: 'PHIEU_NHAP' | 'PHIEU_XUAT' | 'KIEM_KE';
+  nguoiThucHien: {
+    id: number;
+    username: string;
+    fullName: string;
+  };
+  ghiChu?: string;
+  thoiGian: string;
+}
+
+export interface InventoryAdjustRequest {
+  productId: number;
+  mode: 'IN' | 'OUT' | 'SET';
+  quantity: number;
+  note?: string;
+}
+
+export type ReceiptStatus = 'DRAFT' | 'CONFIRMED' | 'CANCELLED';
+export type ExportReason = 'BAN_HANG' | 'CHUYEN_KHO' | 'HONG_THAT_THOAT' | 'KHAC';
+
+export interface ReceiptProduct {
+  id: number;
+  code: string;
+  name: string;
+  stock: number;
+}
+
+export interface ImportReceiptLine {
+  id: number;
+  product: ReceiptProduct;
+  soLuongNhap: number;
+  giaNhap: number;
+  thanhTien: number;
+  soLuongTonTruocNhap: number;
+  ghiChu?: string;
+}
+
+export interface ExportReceiptLine {
+  id: number;
+  product: ReceiptProduct;
+  soLuongXuat: number;
+  soLuongTonTruocXuat: number;
+  ghiChu?: string;
+}
+
+export interface ImportReceipt {
+  id: number;
+  maPhieuNhap: string;
+  ngayNhap: string;
+  trangThai: ReceiptStatus;
+  tongSoLuong: number;
+  tongTien: number;
+  ghiChu?: string;
+  nhaCungCap?: {
+    id: number;
+    maNcc: string;
+    tenNcc: string;
+  };
+  chiTietList: ImportReceiptLine[];
+}
+
+export interface ExportReceipt {
+  id: number;
+  maPhieuXuat: string;
+  ngayXuat: string;
+  lyDoXuat: ExportReason;
+  trangThai: ReceiptStatus;
+  tongSoLuong: number;
+  ghiChu?: string;
+  chiTietList: ExportReceiptLine[];
+}
+
+export interface CreateImportReceiptRequest {
+  ngayNhap: string;
+  supplierId: number;
+  ghiChu?: string;
+  chiTietList: Array<{
+    productId: number;
+    soLuongNhap: number;
+    giaNhap: number;
+    ghiChu?: string;
+  }>;
+}
+
+export interface CreateExportReceiptRequest {
+  ngayXuat: string;
+  lyDoXuat: ExportReason;
+  orderId?: number;
+  ghiChu?: string;
+  chiTietList: Array<{
+    productId: number;
+    soLuongXuat: number;
+    ghiChu?: string;
+  }>;
+}

@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class ProductService {
 
     private final ProductRepository productRepository;
@@ -96,8 +97,8 @@ public class ProductService {
         product.setOldPrice(request.getOldPrice());
         Integer defaultStock = request.getStock();
         Integer defaultMinStock = request.getMinStock();
-        product.setStock(defaultStock != null ? defaultStock.intValue() : 0);
-        product.setMinStock(defaultMinStock != null ? defaultMinStock.intValue() : 10);
+        product.setStock(defaultStock != null ? defaultStock : 0);
+        product.setMinStock(defaultMinStock != null ? defaultMinStock : 10);
         product.setStatus(ProductStatus.ACTIVE);
         product.setSku(request.getSku());
         product.setMaterial(request.getMaterial());
@@ -138,8 +139,8 @@ public class ProductService {
         product.setOldPrice(request.getOldPrice());
         Integer updateStock = request.getStock();
         Integer updateMinStock = request.getMinStock();
-        product.setStock(updateStock != null ? updateStock.intValue() : 0);
-        product.setMinStock(updateMinStock != null ? updateMinStock.intValue() : 10);
+        product.setStock(updateStock != null ? updateStock : 0);
+        product.setMinStock(updateMinStock != null ? updateMinStock : 10);
         product.setSku(request.getSku());
         product.setMaterial(request.getMaterial());
         product.setFit(request.getFit());
@@ -295,7 +296,7 @@ public class ProductService {
                 variant.setSize(normalizedSize);
                 variant.setColor(normalizedColor);
                 Integer manualStock = manualVariant.getStock();
-                variant.setStock(Math.max(0, manualStock != null ? manualStock.intValue() : 0));
+                variant.setStock(Math.max(0, manualStock != null ? manualStock : 0));
                 product.getVariants().add(variant);
             }
 
@@ -312,7 +313,7 @@ public class ProductService {
                         : "black";
 
         Integer requestedBaseStock = request.getStock();
-        int baseStock = requestedBaseStock != null ? requestedBaseStock.intValue() : 0;
+        int baseStock = requestedBaseStock != null ? requestedBaseStock : 0;
 
         for (int i = 0; i < sizes.size(); i++) {
             String size = sizes.get(i);

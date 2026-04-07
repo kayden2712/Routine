@@ -3,6 +3,7 @@ package com.example.be.service;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +22,7 @@ import com.example.be.exception.BadRequestException;
 import com.example.be.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class AdminStaffServiceTest {
 
     @Mock
@@ -38,7 +40,9 @@ class AdminStaffServiceTest {
                 UserRole.SALES, true, null);
         when(userRepository.existsByEmail("staff@routine.vn")).thenReturn(true);
 
-        assertThrows(BadRequestException.class, () -> adminStaffService.createStaff(request));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> adminStaffService.createStaff(request));
+        assertNotNull(exception.getMessage());
     }
 
     @Test
@@ -48,7 +52,9 @@ class AdminStaffServiceTest {
         when(userRepository.existsByEmail("staff@routine.vn")).thenReturn(false);
         when(userRepository.existsByPhone("0901111222")).thenReturn(false);
 
-        assertThrows(BadRequestException.class, () -> adminStaffService.createStaff(request));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> adminStaffService.createStaff(request));
+        assertNotNull(exception.getMessage());
     }
 
     @Test

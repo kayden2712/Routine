@@ -3,6 +3,7 @@ package com.example.be.service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -48,6 +49,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class OrderService {
 
     private static final Logger logger = LoggerFactory.getLogger(OrderService.class);
@@ -91,7 +93,22 @@ public class OrderService {
     public List<OrderResponse> getOrdersByCustomerEmail(String customerEmail) {
         Customer customer = customerRepository.findByEmail(customerEmail)
                 .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
-        return getOrdersByCustomer(customer.getId());
+
+        Map<Long, Order> mergedOrders = new HashMap<>();
+
+        orderRepository.findByCustomerId(customer.getId())
+                .forEach(order -> mergedOrders.put(order.getId(), order));
+
+        if (customer.getPhone() != null && !customer.getPhone().isBlank()) {
+            orderRepository.findByCustomerPhone(customer.getPhone())
+                    .forEach(order -> mergedOrders.put(order.getId(), order));
+        }
+
+        return mergedOrders.values().stream()
+                .sorted(Comparator.comparing(Order::getCreatedAt).reversed())
+                .peek(this::checkAndAutoCompleteDelivery)
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
     }
 
     public List<OrderResponse> getOrdersByStatus(OrderStatus status) {
@@ -173,7 +190,7 @@ public class OrderService {
                             "Product not found with id: " + itemReq.getProductId()));
 
             Integer requestedQuantity = itemReq.getQuantity();
-            int requiredQty = requestedQuantity != null ? requestedQuantity.intValue() : 0;
+            int requiredQty = requestedQuantity != null ? requestedQuantity : 0;
             int reservedProduct = getReservedWithCurrentRequest(
                     reservedStockMap,
                     currentRequestReserved,
@@ -740,7 +757,7 @@ public class OrderService {
                             "Product not found with id: " + item.getProduct().getId()));
 
             Integer quantityValue = item.getQuantity();
-            int quantity = quantityValue != null ? quantityValue.intValue() : 0;
+            int quantity = quantityValue != null ? quantityValue : 0;
             if (quantity <= 0) {
                 throw new BadRequestException(ErrorCode.ORDER_ITEM_QUANTITY_INVALID,
                         "Order item quantity must be greater than 0");

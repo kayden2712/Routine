@@ -53,6 +53,8 @@ type TierFilter = 'all' | 'regular' | 'vip';
 type SortMode = 'newest' | 'spent' | 'orders';
 type HistoryFilter = 'all' | 'paid' | 'cancelled';
 
+const PHONE_REGEX = /^0[0-9]{9}$/;
+
 const tierFilterLabelMap: Record<TierFilter, string> = {
   all: 'Tất cả hạng',
   regular: 'Khách thường',
@@ -100,6 +102,10 @@ function createDefaultForm(): CustomerFormState {
   };
 }
 
+function sanitizePhoneInput(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 10);
+}
+
 export function CustomersPage() {
   useEffect(() => {
     document.title = 'Khach hang | Routine';
@@ -117,6 +123,7 @@ export function CustomersPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [savingForm, setSavingForm] = useState(false);
   const [formState, setFormState] = useState<CustomerFormState>(createDefaultForm());
+  const isFormPhoneInvalid = formState.phone.length > 0 && !PHONE_REGEX.test(formState.phone);
 
   useEffect(() => {
     const loadData = async () => {
@@ -196,8 +203,8 @@ export function CustomersPage() {
       return;
     }
 
-    if (!/^0[0-9]{9}$/.test(formState.phone.trim())) {
-      toast.error('Số điện thoại không hợp lệ', 'Định dạng đúng: 0xxxxxxxxx');
+    if (!PHONE_REGEX.test(formState.phone.trim())) {
+      toast.error('So dien thoai phai dung 10 so', 'Dinh dang dung: 0xxxxxxxxx');
       return;
     }
 
@@ -622,10 +629,17 @@ export function CustomersPage() {
               <Input
                 type="tel"
                 pattern="0[0-9]{9}"
+                inputMode="numeric"
+                maxLength={10}
                 className="mt-1 h-9"
                 value={formState.phone}
-                onChange={(event) => setFormState((prev) => ({ ...prev, phone: event.target.value }))}
+                onChange={(event) =>
+                  setFormState((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))
+                }
               />
+              {isFormPhoneInvalid ? (
+                <p className="mt-1 text-xs text-[var(--color-danger,#dc2626)]">So dien thoai phai dung 10 so, bat dau bang 0.</p>
+              ) : null}
             </div>
             <div>
               <Label>Email</Label>
@@ -672,7 +686,7 @@ export function CustomersPage() {
             <Button variant="outline" onClick={() => setFormOpen(false)} disabled={savingForm}>
               Hủy
             </Button>
-            <Button onClick={saveCustomer} disabled={savingForm}>
+            <Button onClick={saveCustomer} disabled={savingForm || isFormPhoneInvalid}>
               {savingForm ? 'Đang lưu...' : 'Lưu'}
             </Button>
           </DialogFooter>

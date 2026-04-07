@@ -1,6 +1,7 @@
 package com.example.be.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,6 +16,7 @@ public class UpdateCustomerProfileRequest {
     private String fullName;
 
     @NotBlank(message = "Phone is required")
+    @Pattern(regexp = "^0\\d{9}$", message = "Phone must be exactly 10 digits and start with 0")
     private String phone;
 
     @Size(max = 500, message = "Address is too long")

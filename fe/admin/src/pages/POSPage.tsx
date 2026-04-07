@@ -26,12 +26,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { createCustomerApi, createOrderApi, fetchCustomersApi } from '@/lib/backendApi';
+import { promotionApi } from '@/lib/promotionApi';
 import { cn, formatVND } from '@/lib/utils';
 import { toast } from '@/lib/toast';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useProductStore } from '@/store/productStore';
-import type { Customer, Order, Product } from '@/types';
+import type { Customer, Order, Product, PromotionType } from '@/types';
 
 type CategoryKey = 'all' | 'ao' | 'quan' | 'vay' | 'ao-khoac' | 'phu-kien';
 type PaymentMethod = 'cash' | 'transfer';
@@ -63,6 +64,16 @@ interface InvoiceExportSnapshot {
   subtotal: number;
   discount: number;
   total: number;
+}
+
+const PHONE_REGEX = /^0\d{9}$/;
+
+function sanitizePhoneInput(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 10);
+}
+
+function isValidPhone(phone: string): boolean {
+  return PHONE_REGEX.test(phone);
 }
 
 const CATEGORY_TABS: CategoryTab[] = [
@@ -214,11 +225,13 @@ export function POSPage() {
   const {
     items,
     customer,
+    discountCode,
     discountAmount,
     addItem,
     removeItem,
     updateQuantity,
     setCustomer,
+    applyManualDiscount,
     applyDiscount,
     clearCart,
   } = useCartStore();
@@ -232,11 +245,15 @@ export function POSPage() {
   useEffect(() => {
     document.title = 'POS | Routine';
     const loadInitialData = async () => {
-      const [customerList] = await Promise.all([
-        fetchCustomersApi(),
-        fetchProducts(),
-      ]);
-      setCustomerDirectory(customerList);
+      try {
+        const [customerList] = await Promise.all([
+          fetchCustomersApi(),
+          fetchProducts(),
+        ]);
+        setCustomerDirectory(customerList);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Khong the tai du lieu ban hang');
+      }
     };
 
     void loadInitialData();
@@ -253,6 +270,8 @@ export function POSPage() {
   const [savingCustomer, setSavingCustomer] = useState(false);
   const [discountInput, setDiscountInput] = useState('');
   const [discountInvalid, setDiscountInvalid] = useState(false);
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [appliedPromotionType, setAppliedPromotionType] = useState<PromotionType | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [cashReceivedInput, setCashReceivedInput] = useState('');
@@ -330,7 +349,7 @@ export function POSPage() {
       .slice(0, 6);
   }, [customerDirectory, customerSearch]);
 
-  const extractPhone = (value: string): string => value.replace(/\D/g, '');
+  const extractPhone = (value: string): string => sanitizePhoneInput(value);
 
   const findCustomerByPhone = (phoneInput: string): Customer | undefined => {
     const phone = extractPhone(phoneInput);
@@ -339,7 +358,7 @@ export function POSPage() {
 
   const customerResolvedFromSearch = useMemo(() => {
     const phone = extractPhone(customerSearch);
-    if (!/^0\d{9}$/.test(phone)) {
+    if (!isValidPhone(phone)) {
       return null;
     }
 
@@ -351,10 +370,12 @@ export function POSPage() {
   const openAddCustomerDialog = () => {
     setCustomerForm({
       name: '',
-      phone: extractPhone(customerSearch),
+      phone: sanitizePhoneInput(customerSearch),
     });
     setAddCustomerOpen(true);
   };
+
+  const isCustomerFormPhoneInvalid = customerForm.phone.length > 0 && !isValidPhone(customerForm.phone);
 
   const handleCreateCustomer = async () => {
     const name = customerForm.name.trim();
@@ -365,8 +386,8 @@ export function POSPage() {
       return;
     }
 
-    if (!/^0\d{9}$/.test(phone)) {
-      toast.error('Số điện thoại không hợp lệ', 'Định dạng đúng: 0xxxxxxxxx');
+    if (!isValidPhone(phone)) {
+      toast.error('So dien thoai phai dung 10 so', 'Dinh dang dung: 0xxxxxxxxx');
       return;
     }
 
@@ -387,6 +408,8 @@ export function POSPage() {
       setCustomerSearch(created.phone);
       setAddCustomerOpen(false);
       toast.success('Đã thêm khách hàng mới', `${created.name} - ${created.phone}`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Them khach hang that bai');
     } finally {
       setSavingCustomer(false);
     }
@@ -426,26 +449,67 @@ export function POSPage() {
     }
   };
 
-  const handleApplyDiscount = () => {
+  const handleApplyDiscount = async () => {
     const code = discountInput.trim().toUpperCase();
 
     if (!code) {
       applyDiscount('');
+      setAppliedPromotionType(null);
       setDiscountInvalid(false);
       return;
     }
 
-    if (code === 'ROUTINE10' || code === 'SALE50K') {
-      applyDiscount(code);
-      setDiscountInvalid(false);
-      toast.success('Áp dụng mã thành công', `Mã ${code} đã được sử dụng.`);
-      return;
-    }
+    const orderAmount = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+    const productIds = Array.from(
+      new Set(
+        items
+          .map((item) => Number.parseInt(item.product.id, 10))
+          .filter((id) => Number.isFinite(id)),
+      ),
+    );
 
-    setDiscountInvalid(true);
-    applyDiscount('');
-    toast.error('Mã giảm giá không hợp lệ', 'Chỉ hỗ trợ ROUTINE10 hoặc SALE50K.');
-    window.setTimeout(() => setDiscountInvalid(false), 380);
+    setIsApplyingDiscount(true);
+    try {
+      const promotion = await promotionApi.getByCode(code);
+      const result = await promotionApi.apply({
+        promotionCode: code,
+        orderAmount,
+        productIds,
+        customerId: customer ? Number.parseInt(customer.id, 10) : undefined,
+      });
+
+      if (!result.applicable) {
+        applyDiscount('');
+        setAppliedPromotionType(null);
+        setDiscountInvalid(true);
+        toast.error('Mã giảm giá không hợp lệ', result.message || 'Không thể áp dụng mã này cho đơn hiện tại.');
+        window.setTimeout(() => setDiscountInvalid(false), 380);
+        return;
+      }
+
+      const discountValue = Number(result.discountAmount ?? 0);
+      applyManualDiscount(code, discountValue);
+      setAppliedPromotionType(promotion.type);
+      setDiscountInvalid(false);
+
+      if (promotion.type === 'TANG_QUA') {
+        toast.success('Áp dụng ưu đãi thành công', `Mã ${code} đã kích hoạt quà tặng/ưu đãi kèm theo.`);
+      } else {
+        toast.success('Áp dụng mã thành công', `Mã ${code} đã giảm ${formatVND(discountValue)}.`);
+      }
+      return;
+    } catch (error) {
+      setAppliedPromotionType(null);
+      setDiscountInvalid(true);
+      applyDiscount('');
+      toast.error(
+        'Mã giảm giá không hợp lệ',
+        error instanceof Error ? error.message : 'Không thể áp dụng mã này.',
+      );
+      window.setTimeout(() => setDiscountInvalid(false), 380);
+    } finally {
+      setIsApplyingDiscount(false);
+    }
   };
 
   const handleCheckoutClick = () => {
@@ -496,7 +560,7 @@ export function POSPage() {
     if (!invoiceCustomer) {
       if (customerSearch.trim()) {
         const phone = extractPhone(customerSearch);
-        if (!/^0\d{9}$/.test(phone)) {
+        if (!isValidPhone(phone)) {
           toast.error('Số điện thoại khách hàng không hợp lệ', 'Vui lòng nhập đúng định dạng 0xxxxxxxxx.');
           return;
         }
@@ -571,6 +635,7 @@ export function POSPage() {
   const closeSuccessModal = () => {
     clearCart();
     setDiscountInput('');
+    setAppliedPromotionType(null);
     setPaymentOpen(false);
     setPaymentSuccess(false);
     setCreatedInvoice(null);
@@ -902,10 +967,21 @@ export function POSPage() {
                       'border-[var(--color-error)] ring-2 ring-[var(--color-error-bg)] animate-[shake_0.35s_ease]',
                   )}
                 />
-                <Button variant="outline" className="h-9" onClick={handleApplyDiscount}>
-                  Áp dụng
+                <Button
+                  variant="outline"
+                  className="h-9"
+                  onClick={() => void handleApplyDiscount()}
+                  disabled={isApplyingDiscount || items.length === 0}
+                >
+                  {isApplyingDiscount ? 'Đang áp dụng...' : 'Áp dụng'}
                 </Button>
               </div>
+
+              {discountCode && appliedPromotionType === 'TANG_QUA' ? (
+                <p className="mb-2 text-xs text-[var(--color-success)]">
+                  Mã {discountCode} đã áp dụng ưu đãi quà tặng kèm theo chương trình.
+                </p>
+              ) : null}
 
               <Button
                 className="h-[52px] w-full justify-between rounded-[8px] bg-[#1A1A18] px-4 text-base font-semibold text-white hover:bg-[#2D2D2A]"
@@ -953,10 +1029,18 @@ export function POSPage() {
               <Input
                 id="new-customer-phone"
                 value={customerForm.phone}
-                onChange={(event) => setCustomerForm((prev) => ({ ...prev, phone: event.target.value }))}
+                onChange={(event) =>
+                  setCustomerForm((prev) => ({ ...prev, phone: sanitizePhoneInput(event.target.value) }))
+                }
                 placeholder="0xxxxxxxxx"
+                type="tel"
+                inputMode="numeric"
+                maxLength={10}
                 className="h-9"
               />
+              {isCustomerFormPhoneInvalid ? (
+                <p className="mt-1 text-xs text-[var(--color-danger,#dc2626)]">So dien thoai phai dung 10 so, bat dau bang 0.</p>
+              ) : null}
             </div>
           </div>
 
@@ -964,7 +1048,7 @@ export function POSPage() {
             <Button variant="outline" onClick={() => setAddCustomerOpen(false)} disabled={savingCustomer}>
               Hủy
             </Button>
-            <Button onClick={handleCreateCustomer} disabled={savingCustomer}>
+            <Button onClick={handleCreateCustomer} disabled={savingCustomer || isCustomerFormPhoneInvalid}>
               {savingCustomer ? 'Đang lưu...' : 'Thêm khách hàng'}
             </Button>
           </DialogFooter>

@@ -24,11 +24,13 @@ interface CartState {
   customer: Customer | null;
   discountCode: string;
   discountAmount: number;
+  isManualDiscount: boolean;
   addItem: (product: Product, selectedSize?: string, selectedColor?: string) => void;
   removeItem: (productId: string, selectedSize?: string, selectedColor?: string) => void;
   updateQuantity: (productId: string, qty: number, selectedSize?: string, selectedColor?: string) => void;
   setCustomer: (customer: Customer | null) => void;
   applyDiscount: (code: string) => void;
+  applyManualDiscount: (code: string, amount: number) => void;
   clearCart: () => void;
   get subtotal(): number;
   get total(): number;
@@ -39,6 +41,7 @@ export const useCartStore = create<CartState>((set, get) => ({
   customer: null,
   discountCode: '',
   discountAmount: 0,
+  isManualDiscount: false,
   addItem: (product, selectedSize, selectedColor) => {
     set((state) => {
       // Create a key that includes product id and selected variants
@@ -60,7 +63,9 @@ export const useCartStore = create<CartState>((set, get) => ({
       const nextSubtotal = calculateSubtotal(nextItems);
       return {
         items: nextItems,
-        discountAmount: calculateDiscountAmount(state.discountCode, nextSubtotal),
+        discountCode: state.isManualDiscount ? '' : state.discountCode,
+        discountAmount: state.isManualDiscount ? 0 : calculateDiscountAmount(state.discountCode, nextSubtotal),
+        isManualDiscount: false,
       };
     });
   },
@@ -75,7 +80,9 @@ export const useCartStore = create<CartState>((set, get) => ({
 
       return {
         items: nextItems,
-        discountAmount: calculateDiscountAmount(state.discountCode, nextSubtotal),
+        discountCode: state.isManualDiscount ? '' : state.discountCode,
+        discountAmount: state.isManualDiscount ? 0 : calculateDiscountAmount(state.discountCode, nextSubtotal),
+        isManualDiscount: false,
       };
     });
   },
@@ -97,7 +104,9 @@ export const useCartStore = create<CartState>((set, get) => ({
 
       return {
         items: nextItems,
-        discountAmount: calculateDiscountAmount(state.discountCode, nextSubtotal),
+        discountCode: state.isManualDiscount ? '' : state.discountCode,
+        discountAmount: state.isManualDiscount ? 0 : calculateDiscountAmount(state.discountCode, nextSubtotal),
+        isManualDiscount: false,
       };
     });
   },
@@ -109,7 +118,12 @@ export const useCartStore = create<CartState>((set, get) => ({
     const normalized = code.trim().toUpperCase();
     const discountAmount = calculateDiscountAmount(normalized, subtotal);
 
-    set({ discountCode: normalized, discountAmount });
+    set({ discountCode: normalized, discountAmount, isManualDiscount: false });
+  },
+  applyManualDiscount: (code, amount) => {
+    const normalizedCode = code.trim().toUpperCase();
+    const safeAmount = Number.isFinite(amount) ? Math.max(0, amount) : 0;
+    set({ discountCode: normalizedCode, discountAmount: safeAmount, isManualDiscount: true });
   },
   clearCart: () => {
     set({
@@ -117,6 +131,7 @@ export const useCartStore = create<CartState>((set, get) => ({
       customer: null,
       discountCode: '',
       discountAmount: 0,
+      isManualDiscount: false,
     });
   },
   get subtotal() {

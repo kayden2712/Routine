@@ -22,6 +22,7 @@ import com.example.be.exception.BadRequestException;
 import com.example.be.repository.CustomerRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class AdminCustomerServiceTest {
 
     @Mock

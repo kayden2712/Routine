@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +13,6 @@ import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.be.dto.request.CreateOrderRequest;
@@ -23,15 +23,12 @@ import com.example.be.entity.Product;
 import com.example.be.entity.ProductStatus;
 import com.example.be.entity.User;
 import com.example.be.exception.BadRequestException;
-import com.example.be.money.MonetaryService;
-import com.example.be.repository.CustomerRepository;
 import com.example.be.repository.OrderRepository;
-import com.example.be.repository.OrderStatusHistoryRepository;
 import com.example.be.repository.ProductRepository;
-import com.example.be.repository.ShipmentRepository;
 import com.example.be.repository.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class OrderServiceTest {
 
     @Mock
@@ -41,22 +38,7 @@ class OrderServiceTest {
     private ProductRepository productRepository;
 
     @Mock
-    private CustomerRepository customerRepository;
-
-    @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private OrderStatusHistoryRepository orderStatusHistoryRepository;
-
-    @Mock
-    private ShipmentRepository shipmentRepository;
-
-    @Mock
-    private OrderRealtimePublisher orderRealtimePublisher;
-
-    @Spy
-    private MonetaryService monetaryService = new MonetaryService();
 
     @InjectMocks
     private OrderService orderService;
@@ -130,7 +112,8 @@ class OrderServiceTest {
         when(productRepository.findById(7L)).thenReturn(Optional.of(product));
         when(productRepository.save(product)).thenReturn(product);
 
-        assertThrows(BadRequestException.class,
+        BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> orderService.createOrder(request, "manager@example.com"));
+        assertNotNull(exception.getMessage());
     }
 }

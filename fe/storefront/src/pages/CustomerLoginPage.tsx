@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowRight, Facebook, Lock, Mail } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import routineLogo from '@/assets/routine-logo-word.png'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ export const CustomerLoginPage = () => {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   return (
     <section className="flex min-h-[calc(100vh-170px)] items-center justify-center py-10">
@@ -21,28 +22,9 @@ export const CustomerLoginPage = () => {
         <h1 className="mt-5 text-center text-[22px] font-semibold text-white">Đăng nhập</h1>
         <p className="mb-7 mt-2 text-center text-[14px] text-white/50">Chào mừng trở lại</p>
 
-        <div className="space-y-2.5">
-          <button
-            type="button"
-            className="inline-flex h-[42px] w-full items-center justify-center rounded-lg bg-[#1877F2] text-[13px] font-medium text-white transition-opacity hover:opacity-90"
-          >
-            <Facebook size={16} className="mr-2" />
-            Tiếp tục với Facebook
-          </button>
-          <button
-            type="button"
-            className="inline-flex h-[42px] w-full items-center justify-center rounded-lg border border-white/12 bg-white/6 text-[13px] font-medium text-white transition-colors hover:bg-white/10"
-          >
-            <span className="mr-2 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[10px] font-bold text-[#EA4335]">
-              G
-            </span>
-            Tiếp tục với Google
-          </button>
-        </div>
-
         <div className="my-4 flex items-center gap-3">
           <span className="h-px flex-1 bg-white/10" />
-          <span className="text-[12px] text-white/35">hoặc đăng nhập bằng email</span>
+          <span className="text-[12px] text-white/35">Đăng nhập bằng email</span>
           <span className="h-px flex-1 bg-white/10" />
         </div>
 
@@ -77,10 +59,18 @@ export const CustomerLoginPage = () => {
             <input
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="Mật khẩu"
-              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-3 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
+              className="h-11 w-full rounded-lg border border-white/30 bg-white/12 pl-10 pr-10 text-sm text-white placeholder:text-white/70 outline-none transition-colors focus:border-white/60"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/60 transition-colors hover:text-white"
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
 
           <div className="text-right">

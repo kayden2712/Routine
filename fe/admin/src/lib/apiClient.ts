@@ -12,6 +12,32 @@ export const apiClient = axios.create({
   timeout: 10000, // 10 seconds
 });
 
+function isAuthEndpoint(url?: string): boolean {
+  if (!url) return false;
+  return url.includes('/auth/admin/login')
+    || url.includes('/auth/customer/login')
+    || url.includes('/auth/refresh');
+}
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return true;
+    }
+
+    const payload = JSON.parse(atob(parts[1])) as { exp?: number };
+    if (!payload.exp) {
+      return true;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    return payload.exp <= now;
+  } catch {
+    return true;
+  }
+}
+
 function extractErrorMessage(data: unknown): string | null {
   if (!data || typeof data !== 'object') {
     return null;
@@ -39,12 +65,24 @@ function extractErrorMessage(data: unknown): string | null {
 // Request interceptor - Add JWT token to headers
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    if (isAuthEndpoint(config.url)) {
+      return config;
+    }
+
     const authData = localStorage.getItem('routine-auth');
-    
+
     if (authData) {
       try {
         const parsed = JSON.parse(authData);
+        const isAuthenticated = Boolean(parsed?.state?.isAuthenticated ?? parsed?.isAuthenticated);
         const token = parsed?.state?.user?.token ?? parsed?.user?.token;
+
+        if (isAuthenticated && (!token || isTokenExpired(token))) {
+          localStorage.removeItem('routine-auth');
+          window.location.href = '/login';
+          return Promise.reject(new Error('Session expired. Please login again.'));
+        }
+
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }

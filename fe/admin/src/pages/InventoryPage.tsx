@@ -1,17 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
 import { AlertTriangle, Boxes, Download, Filter, PackagePlus, PackageMinus, RotateCcw, Search } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -25,14 +18,13 @@ import { toast } from '@/lib/toast';
 import { exportRowsToExcel } from '@/lib/excel';
 import { useAuthStore } from '@/store/authStore';
 import { useProductStore } from '@/store/productStore';
-import type { Product } from '@/types';
+import { inventoryApi } from '@/lib/inventoryApi';
+import type { InventoryHistoryItem, InventoryReportItem, Product } from '@/types';
 
 type StockFilter = 'all' | 'healthy' | 'low' | 'out';
 type SortMode = 'name-asc' | 'stock-asc' | 'stock-desc' | 'value-desc';
-type AdjustMode = 'in' | 'out' | 'set';
-
 interface InventoryRow {
-  id: string;
+  id: number;
   code: string;
   name: string;
   category: string;
@@ -40,13 +32,10 @@ interface InventoryRow {
   minStock: number;
   value: number;
   status: Product['status'];
+  totalNhap: number;
+  totalXuat: number;
+  lastUpdate?: string;
   imageUrl?: string;
-  source: Product;
-}
-
-interface AdjustState {
-  product: Product;
-  mode: AdjustMode;
 }
 
 const STOCK_FILTER_LABELS: Record<StockFilter, string> = {
@@ -70,15 +59,9 @@ function normalize(value: string): string {
     .toLowerCase();
 }
 
-function computeStatus(product: Product): Product['status'] {
-  if (product.stock <= 0) return 'out_of_stock';
-  if (product.stock <= product.minStock) return 'inactive';
-  return 'active';
-}
-
 export function InventoryPage() {
+  const navigate = useNavigate();
   const products = useProductStore((state) => state.products);
-  const updateProduct = useProductStore((state) => state.updateProduct);
   const fetchProducts = useProductStore((state) => state.fetchProducts);
   const user = useAuthStore((state) => state.user);
   const isReadOnly = user?.role === 'sales';
@@ -87,34 +70,87 @@ export function InventoryPage() {
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState<SortMode>('stock-asc');
-  const [adjustState, setAdjustState] = useState<AdjustState | null>(null);
-  const [quantityInput, setQuantityInput] = useState('1');
+  const [inventoryReport, setInventoryReport] = useState<InventoryReportItem[]>([]);
+  const [inventoryHistory, setInventoryHistory] = useState<InventoryHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     document.title = 'Kho hang | Routine';
-    void fetchProducts();
+    void loadInitialData();
   }, []);
 
-  const categories = useMemo(() => {
-    return Array.from(new Set(products.map((item) => item.category))).sort((a, b) => a.localeCompare(b, 'vi'));
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      await fetchProducts();
+
+      const [report, history] = await Promise.all([
+        inventoryApi.getReport(),
+        inventoryApi.getHistory({ page: 0, size: 10 }),
+      ]);
+
+      setInventoryReport(report);
+      setInventoryHistory(history.content ?? []);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Khong the tai du lieu kho');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const productMap = useMemo(() => {
+    const map = new Map<number, Product>();
+    products.forEach((item) => {
+      const id = Number(item.id);
+      if (!Number.isNaN(id)) {
+        map.set(id, item);
+      }
+    });
+    return map;
   }, [products]);
+
+  const categories = useMemo(() => {
+    return Array.from(
+      new Set(
+        inventoryReport
+          .map((item) => productMap.get(item.productId)?.category)
+          .filter((item): item is string => Boolean(item)),
+      ),
+    ).sort((a, b) => a.localeCompare(b, 'vi'));
+  }, [inventoryReport, productMap]);
 
   const inventoryRows = useMemo<InventoryRow[]>(() => {
     const q = normalize(searchTerm.trim());
 
-    const rows = products
-      .map((product) => ({
-        id: product.id,
-        code: product.code,
-        name: product.name,
-        category: product.category,
-        stock: product.stock,
-        minStock: product.minStock,
-        value: product.stock * product.costPrice,
-        status: computeStatus(product),
-        imageUrl: product.imageUrl,
-        source: product,
-      }))
+    const rows = inventoryReport
+      .map((reportItem) => {
+        const product = productMap.get(reportItem.productId);
+        const category = product?.category ?? 'Khac';
+        const costPrice = product?.costPrice ?? 0;
+        const stock = reportItem.currentStock;
+        const minStock = reportItem.minStock;
+
+        const status: Product['status'] = stock <= 0
+          ? 'out_of_stock'
+          : stock <= minStock
+            ? 'inactive'
+            : 'active';
+
+        return {
+          id: reportItem.productId,
+          code: reportItem.productCode,
+          name: reportItem.productName,
+          category,
+          stock,
+          minStock,
+          value: stock * costPrice,
+          status,
+          totalNhap: reportItem.totalNhap,
+          totalXuat: reportItem.totalXuat,
+          lastUpdate: reportItem.lastUpdate,
+          imageUrl: product?.imageUrl,
+        };
+      })
       .filter((row) => {
         const matchSearch =
           q.length === 0 || normalize(row.name).includes(q) || normalize(row.code).includes(q);
@@ -141,15 +177,15 @@ export function InventoryPage() {
     });
 
     return sorted;
-  }, [categoryFilter, products, searchTerm, sortBy, stockFilter]);
+  }, [categoryFilter, inventoryReport, productMap, searchTerm, sortBy, stockFilter]);
 
   const summary = useMemo(() => {
-    const totalSkus = products.length;
-    const outCount = products.filter((item) => item.stock <= 0).length;
-    const lowCount = products.filter((item) => item.stock > 0 && item.stock <= item.minStock).length;
-    const totalValue = products.reduce((sum, item) => sum + item.stock * item.costPrice, 0);
+    const totalSkus = inventoryReport.length;
+    const outCount = inventoryReport.filter((item) => item.currentStock <= 0).length;
+    const lowCount = inventoryReport.filter((item) => item.currentStock > 0 && item.currentStock <= item.minStock).length;
+    const totalValue = inventoryRows.reduce((sum, item) => sum + item.value, 0);
     return { totalSkus, outCount, lowCount, totalValue };
-  }, [products]);
+  }, [inventoryReport, inventoryRows]);
 
   const hasActiveFilters =
     searchTerm.trim().length > 0 || stockFilter !== 'all' || categoryFilter !== 'all' || sortBy !== 'stock-asc';
@@ -161,72 +197,15 @@ export function InventoryPage() {
     setSortBy('stock-asc');
   };
 
-  const openAdjustDialog = (product: Product, mode: AdjustMode) => {
+  const goToCreateReceipt = (mode: 'import' | 'export', row?: InventoryRow) => {
     if (isReadOnly) {
       toast.error('Vai trò Sales chỉ có quyền xem tồn kho');
       return;
     }
 
-    setQuantityInput(mode === 'set' ? String(product.stock) : '1');
-    setAdjustState({ product, mode });
-  };
-
-  const applyAdjust = async () => {
-    if (!adjustState) return;
-
-    const parsed = Number(quantityInput);
-    if (!Number.isFinite(parsed) || parsed < 0) {
-      toast.error('Vui lòng nhập số lượng hợp lệ');
-      return;
-    }
-
-    const amount = Math.floor(parsed);
-    const current = adjustState.product.stock;
-    const nextStock =
-      adjustState.mode === 'in' ? current + amount : adjustState.mode === 'out' ? current - amount : amount;
-
-    if (nextStock < 0) {
-      toast.error('So luong xuat vuot qua ton kho hien tai');
-      return;
-    }
-
-    const nextProduct: Product = {
-      ...adjustState.product,
-      stock: nextStock,
-      status:
-        nextStock <= 0
-          ? 'out_of_stock'
-          : nextStock <= adjustState.product.minStock
-            ? 'inactive'
-            : 'active',
-    };
-
-    await updateProduct(nextProduct);
-    setAdjustState(null);
-    toast.success('Cap nhat ton kho thanh cong');
-  };
-
-  const restockSelected = (rows: InventoryRow[]) => {
-    if (isReadOnly) {
-      toast.error('Vai trò Sales chỉ có quyền xem tồn kho');
-      return;
-    }
-
-    if (rows.length === 0) {
-      toast.error('Chưa có sản phẩm được chọn');
-      return;
-    }
-
-    rows.forEach((row) => {
-      const nextStock = row.stock + 5;
-      void updateProduct({
-        ...row.source,
-        stock: nextStock,
-        status: nextStock <= row.minStock ? 'inactive' : 'active',
-      });
-    });
-
-    toast.success(`Da nhap them cho ${rows.length} san pham (+5/sp)`);
+    const basePath = mode === 'import' ? '/inventory/import-receipts' : '/inventory/export-receipts';
+    const params = row ? `?create=1&productId=${row.id}` : '?create=1';
+    navigate(`${basePath}${params}`);
   };
 
   const handleExportExcel = () => {
@@ -329,6 +308,19 @@ export function InventoryPage() {
         ),
       },
       {
+        id: 'flow',
+        header: 'Nhap/Xuat',
+        enableSorting: false,
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <span className="text-xs text-[var(--color-text-muted)]">
+              +{item.totalNhap} / -{item.totalXuat}
+            </span>
+          );
+        },
+      },
+      {
         id: 'actions',
         header: 'Thao tac',
         enableSorting: false,
@@ -336,21 +328,18 @@ export function InventoryPage() {
           const item = row.original;
           return (
             <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
-              <Button size="sm" variant="outline" onClick={() => openAdjustDialog(item.source, 'in')}>
+              <Button size="sm" variant="outline" onClick={() => goToCreateReceipt('import', item)}>
                 <PackagePlus size={14} />
                 Nhap
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => openAdjustDialog(item.source, 'out')}
+                onClick={() => goToCreateReceipt('export', item)}
                 disabled={item.stock <= 0}
               >
                 <PackageMinus size={14} />
                 Xuat
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => openAdjustDialog(item.source, 'set')}>
-                Dat muc
               </Button>
             </div>
           );
@@ -364,10 +353,20 @@ export function InventoryPage() {
     <div className="space-y-5">
       <section className="flex items-center justify-between gap-3">
         <h1 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">Kho hàng</h1>
-        <Button variant="outline" className="h-9 gap-2" onClick={handleExportExcel}>
-          <Download size={16} />
-          Xuất Excel
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="h-9 gap-2" onClick={() => goToCreateReceipt('import')}>
+            <PackagePlus size={16} />
+            Tao phieu nhap
+          </Button>
+          <Button variant="outline" className="h-9 gap-2" onClick={() => goToCreateReceipt('export')}>
+            <PackageMinus size={16} />
+            Tao phieu xuat
+          </Button>
+          <Button variant="outline" className="h-9 gap-2" onClick={handleExportExcel}>
+            <Download size={16} />
+            Xuất Excel
+          </Button>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -404,23 +403,13 @@ export function InventoryPage() {
       <DataTable
         data={inventoryRows}
         columns={columns}
+        isLoading={loading}
         enableSelection
-        onRowClick={(row) => openAdjustDialog(row.source, 'set')}
         pageSize={8}
         emptyState={{
           icon: Boxes,
           title: 'Không có sản phẩm phù hợp',
           description: 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm để xem dữ liệu kho.',
-        }}
-        bulkActions={(rows) => {
-          return (
-            <>
-              <Button size="sm" variant="outline" onClick={() => restockSelected(rows)}>
-                <PackagePlus size={14} />
-                Nhap nhanh +5
-              </Button>
-            </>
-          );
         }}
         filterBar={
           <div className="flex flex-1 flex-wrap items-center gap-2">
@@ -496,86 +485,60 @@ export function InventoryPage() {
         }
       />
 
-      <Dialog open={!!adjustState} onOpenChange={(open) => !open && setAdjustState(null)}>
-        <DialogContent className="max-w-[420px]">
-          {adjustState ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>
-                  {adjustState.mode === 'in'
-                    ? 'Nhap kho'
-                    : adjustState.mode === 'out'
-                      ? 'Xuat kho'
-                      : 'Cap nhat ton kho'}
-                </DialogTitle>
-                <DialogDescription>
-                  {adjustState.product.name} ({adjustState.product.code}) - Ton hien tai: {adjustState.product.stock}
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-3">
-                <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)] p-3 text-sm">
-                  <div className="mb-2 flex items-center justify-between">
-                    <span className="text-[var(--color-text-secondary)]">Ton kho</span>
-                    <span
-                      className="inline-flex items-center rounded-full px-[10px] py-[2px] text-xs font-medium"
-                      style={{
-                        backgroundColor:
-                          adjustState.product.stock <= 0
-                            ? 'var(--color-error-bg)'
-                            : adjustState.product.stock <= adjustState.product.minStock
-                              ? 'var(--color-warning-bg)'
-                              : 'var(--color-success-bg)',
-                        color:
-                          adjustState.product.stock <= 0
-                            ? 'var(--color-error)'
-                            : adjustState.product.stock <= adjustState.product.minStock
-                              ? 'var(--color-warning)'
-                              : 'var(--color-success)',
-                      }}
-                    >
-                      {adjustState.product.stock <= 0
-                        ? 'Het hang'
-                        : adjustState.product.stock <= adjustState.product.minStock
-                          ? 'Sap het'
-                          : 'Con hang'}
-                    </span>
-                  </div>
-                  <p className="text-[var(--color-text-primary)]">
-                    Muc canh bao: <span className="font-medium">{adjustState.product.minStock}</span>
-                  </p>
-                </div>
-
-                <div>
-                  <label htmlFor="inventory-quantity" className="mb-1 block text-sm text-[var(--color-text-secondary)]">
-                    {adjustState.mode === 'set' ? 'Tồn kho mới' : 'Số lượng'}
-                  </label>
-                  <Input
-                    id="inventory-quantity"
-                    type="text"
-                    inputMode="numeric"
-                    value={quantityInput}
-                    onChange={(event) => {
-                      const value = event.target.value;
-                      if (value === '' || /^\d+$/.test(value)) {
-                        setQuantityInput(value);
-                      }
-                    }}
-                    className="h-10"
-                  />
-                </div>
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setAdjustState(null)}>
-                  Huy
-                </Button>
-                <Button onClick={applyAdjust}>Xac nhan</Button>
-              </DialogFooter>
-            </>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="border-b border-[var(--color-border)] px-4 py-3">
+          <h2 className="font-[var(--font-display)] text-[18px] font-semibold text-[var(--color-text-primary)]">
+            Lich su ton kho gan day
+          </h2>
+        </div>
+        <div className="max-h-[320px] overflow-auto">
+          {inventoryHistory.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-[var(--color-text-muted)]">Chua co lich su ton kho.</p>
+          ) : (
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-[var(--color-border)] bg-[#F7F6F4] text-xs uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
+                  <th className="px-4 py-3">Thoi gian</th>
+                  <th className="px-4 py-3">San pham</th>
+                  <th className="px-4 py-3">Bien dong</th>
+                  <th className="px-4 py-3">Nguoi thuc hien</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inventoryHistory.map((item) => {
+                  const positive = item.soLuongThayDoi > 0;
+                  return (
+                    <tr key={item.id} className="border-b border-[var(--color-border)]">
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">
+                        {new Date(item.thoiGian).toLocaleString('vi-VN')}
+                      </td>
+                      <td className="px-4 py-3">
+                        <p className="font-medium text-[var(--color-text-primary)]">{item.product.name}</p>
+                        <p className="text-xs text-[var(--color-text-muted)]">{item.product.code}</p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className="inline-flex items-center rounded-full px-[10px] py-[2px] text-xs font-medium"
+                          style={{
+                            backgroundColor: positive ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
+                            color: positive ? 'var(--color-success)' : 'var(--color-error)',
+                          }}
+                        >
+                          {positive ? '+' : ''}{item.soLuongThayDoi} ({item.soLuongTruoc} → {item.soLuongSau})
+                        </span>
+                        {item.ghiChu ? (
+                          <p className="mt-1 text-xs text-[var(--color-text-muted)]">{item.ghiChu}</p>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--color-text-secondary)]">{item.nguoiThucHien.fullName}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

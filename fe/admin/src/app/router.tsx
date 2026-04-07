@@ -5,6 +5,8 @@ import { AppShell } from '@/components/layout/AppShell';
 import { RouteErrorBoundary } from '@/components/shared/RouteErrorBoundary';
 import { CustomersPage } from '../pages/CustomersPage';
 import { DashboardPage } from '../pages/DashboardPage';
+import { InventoryExportPage } from '../pages/InventoryExportPage';
+import { InventoryImportPage } from '../pages/InventoryImportPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { InvoicesPage } from '../pages/InvoicesPage';
 import { OnlineOrdersPage } from '../pages/OnlineOrdersPage';
@@ -14,6 +16,9 @@ import { ProductsPage } from '../pages/ProductsPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { StaffPage } from '../pages/StaffPage';
+import PromotionsPage from '../pages/PromotionsPage';
+import { SupplierDetailPage } from '../pages/SupplierDetailPage';
+import SuppliersPage from '../pages/SuppliersPage';
 import { useAuthStore } from '@/store/authStore';
 import type { UserRole } from '@/types';
 
@@ -131,6 +136,24 @@ export const router = createBrowserRouter([
         errorElement: <RouteErrorBoundary />,
       },
       {
+        path: '/inventory/import-receipts',
+        element: (
+          <ProtectedRoute roles={['manager', 'warehouse']}>
+            <InventoryImportPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/inventory/export-receipts',
+        element: (
+          <ProtectedRoute roles={['manager', 'warehouse']}>
+            <InventoryExportPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
         path: '/staff',
         element: (
           <ProtectedRoute roles={['manager']}>
@@ -158,6 +181,33 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['manager', 'accountant']}>
             <OnlineOrdersPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/promotions',
+        element: (
+          <ProtectedRoute roles={['sales', 'manager']}>
+            <PromotionsPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/suppliers',
+        element: (
+          <ProtectedRoute roles={['manager']}>
+            <SuppliersPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/suppliers/:id',
+        element: (
+          <ProtectedRoute roles={['manager']}>
+            <SupplierDetailPage />
           </ProtectedRoute>
         ),
         errorElement: <RouteErrorBoundary />,

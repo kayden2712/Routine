@@ -1,6 +1,7 @@
 package com.example.be.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +18,7 @@ import com.example.be.exception.BadRequestException;
 import com.example.be.repository.CategoryRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class CategoryServiceTest {
 
     @Mock
@@ -29,7 +31,9 @@ class CategoryServiceTest {
     void createCategoryRejectsBlankName() {
         CreateCategoryRequest request = new CreateCategoryRequest("   ", "desc", "icon", 1);
 
-        assertThrows(BadRequestException.class, () -> categoryService.createCategory(request));
+        BadRequestException exception = assertThrows(BadRequestException.class,
+                () -> categoryService.createCategory(request));
+        assertNotNull(exception.getMessage());
     }
 
     @Test

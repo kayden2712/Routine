@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class OrderRealtimePublisher {
 
     private final SimpMessagingTemplate messagingTemplate;

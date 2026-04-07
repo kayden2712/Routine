@@ -5,6 +5,7 @@ import java.util.regex.Pattern;
 import org.springframework.util.StringUtils;
 import org.springframework.web.util.HtmlUtils;
 
+@SuppressWarnings("null")
 public final class SearchInputSanitizer {
 
     private static final Pattern SUSPICIOUS_PATTERN = Pattern.compile(

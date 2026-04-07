@@ -1,20 +1,19 @@
 package com.example.be.service;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.example.be.dto.request.SubmitProductReviewRequest;
@@ -31,6 +30,7 @@ import com.example.be.repository.ProductRepository;
 import com.example.be.repository.ProductReviewRepository;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class OrderReviewServiceTest {
 
     @Mock
@@ -117,8 +117,9 @@ class OrderReviewServiceTest {
         when(customerRepository.findByEmail("customer@routine.vn")).thenReturn(Optional.of(customer));
         when(orderRepository.findById(20L)).thenReturn(Optional.of(order));
 
-        assertThrows(BadRequestException.class,
+        BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> orderReviewService.submitProductReview(20L, request, "customer@routine.vn"));
+        assertNotNull(exception.getMessage());
     }
 
     @Test
@@ -143,7 +144,8 @@ class OrderReviewServiceTest {
         when(orderRepository.findById(20L)).thenReturn(Optional.of(order));
         when(productReviewRepository.existsByProductIdAndCustomerId(7L, 2L)).thenReturn(false);
 
-        assertThrows(BadRequestException.class,
+        BadRequestException exception = assertThrows(BadRequestException.class,
                 () -> orderReviewService.submitProductReview(20L, request, "customer@routine.vn"));
+        assertNotNull(exception.getMessage());
     }
 }

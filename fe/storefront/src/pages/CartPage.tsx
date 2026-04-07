@@ -2,9 +2,20 @@ import { Heart, Lock, Minus, Plus, Trash2, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { applyPromotionCodeApi, fetchPromotionByCodeApi } from '@/lib/backendApi'
 import { formatVnd } from '@/lib/utils'
 import { useCartStore } from '@/store/cartStore'
 import { useWishlistStore } from '@/store/wishlistStore'
+
+type CartPromotionType = 'GIAM_PHAN_TRAM' | 'GIAM_TIEN' | 'TANG_QUA'
+
+interface AppliedPromotionState {
+  code: string
+  name: string
+  type: CartPromotionType
+  discountAmount: number
+  message: string
+}
 
 export const CartPage = () => {
   const navigate = useNavigate()
@@ -15,16 +26,67 @@ export const CartPage = () => {
   const getSubtotal = useCartStore((state) => state.getSubtotal)
 
   const [promoCode, setPromoCode] = useState('')
-  const [appliedPromoCode, setAppliedPromoCode] = useState('')
+  const [appliedPromotion, setAppliedPromotion] = useState<AppliedPromotionState | null>(null)
+  const [promoError, setPromoError] = useState('')
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false)
 
   const subtotal = getSubtotal()
   const totalProducts = useMemo(() => items.reduce((total, item) => total + item.quantity, 0), [items])
-  const promoDiscount = appliedPromoCode ? Math.round(subtotal * 0.1) : 0
+  const promoDiscount = appliedPromotion?.discountAmount ?? 0
   const total = Math.max(0, subtotal - promoDiscount)
 
   const freeShippingTarget = 1000000
   const remainingForFreeShipping = Math.max(0, freeShippingTarget - subtotal)
   const shippingProgress = Math.min(100, (subtotal / freeShippingTarget) * 100)
+
+  const handleApplyPromotion = async () => {
+    const code = promoCode.trim().toUpperCase()
+
+    if (!code) {
+      setAppliedPromotion(null)
+      setPromoError('')
+      return
+    }
+
+    const productIds = Array.from(
+      new Set(
+        items
+          .map((item) => Number.parseInt(item.productId, 10))
+          .filter((id) => Number.isFinite(id)),
+      ),
+    )
+
+    setIsApplyingPromo(true)
+    setPromoError('')
+
+    try {
+      const promotion = await fetchPromotionByCodeApi(code)
+      const result = await applyPromotionCodeApi({
+        promotionCode: code,
+        orderAmount: subtotal,
+        productIds,
+      })
+
+      if (!result.applicable) {
+        setAppliedPromotion(null)
+        setPromoError(result.message || 'Mã giảm giá chưa áp dụng được cho giỏ hàng hiện tại.')
+        return
+      }
+
+      setAppliedPromotion({
+        code,
+        name: promotion.name,
+        type: promotion.type,
+        discountAmount: Number(result.discountAmount ?? 0),
+        message: result.message || 'Áp dụng ưu đãi thành công.',
+      })
+    } catch (error) {
+      setAppliedPromotion(null)
+      setPromoError(error instanceof Error ? error.message : 'Không thể áp dụng mã giảm giá lúc này.')
+    } finally {
+      setIsApplyingPromo(false)
+    }
+  }
 
   if (!items.length) {
     return (
@@ -196,12 +258,25 @@ export const CartPage = () => {
             />
             <button
               type="button"
-              onClick={() => setAppliedPromoCode(promoCode.trim() ? promoCode : '')}
+              onClick={() => void handleApplyPromotion()}
+              disabled={isApplyingPromo || items.length === 0}
               className="inline-flex h-10 items-center justify-center rounded-lg border border-[var(--line)] px-4 text-[13px] text-[var(--text-primary)] transition-colors hover:bg-[var(--line-soft)]"
             >
-              Áp dụng
+              {isApplyingPromo ? 'Đang áp dụng...' : 'Áp dụng'}
             </button>
           </div>
+
+          {promoError ? (
+            <p className="mt-2 text-[12px] text-[#DC2626]">{promoError}</p>
+          ) : null}
+
+          {appliedPromotion ? (
+            <p className="mt-2 text-[12px] text-[#16A34A]">
+              {appliedPromotion.type === 'TANG_QUA'
+                ? `Mã ${appliedPromotion.code} đã áp dụng ưu đãi quà tặng: ${appliedPromotion.name}.`
+                : `Mã ${appliedPromotion.code} đã áp dụng, giảm ${formatVnd(appliedPromotion.discountAmount)}.`}
+            </p>
+          ) : null}
 
           <Button onClick={() => navigate('/checkout')} className="mt-4 h-12 w-full rounded-lg text-[14px] font-semibold">
             Tiến hành thanh toán

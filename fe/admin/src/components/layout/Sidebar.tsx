@@ -10,6 +10,8 @@ import {
   UserCog,
   Users,
   Warehouse,
+  Gift,
+  Truck,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -44,8 +46,12 @@ const roleSections: Record<UserRole, NavSection[]> = {
       items: [
         { label: 'San pham', to: '/products', icon: Package },
         { label: 'Khach hang', to: '/customers', icon: Users },
+        { label: 'Khuyen mai', to: '/promotions', icon: Gift },
+        { label: 'Nha cung cap', to: '/suppliers', icon: Truck },
         { label: 'Don hang online', to: '/online-orders', icon: Receipt },
         { label: 'Kho hang', to: '/inventory', icon: Warehouse },
+        { label: 'Phieu nhap kho', to: '/inventory/import-receipts', icon: Receipt },
+        { label: 'Phieu xuat kho', to: '/inventory/export-receipts', icon: Receipt },
         { label: 'Nhan vien', to: '/staff', icon: UserCog },
       ],
     },
@@ -64,6 +70,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
         { label: 'Tao hoa don', to: '/pos', icon: ShoppingCart },
         { label: 'San pham', to: '/products', icon: Package },
         { label: 'Khach hang', to: '/customers', icon: Users },
+        { label: 'Khuyen mai', to: '/promotions', icon: Gift },
         { label: 'Cai dat', to: '/settings', icon: Settings },
       ],
     },
@@ -73,6 +80,8 @@ const roleSections: Record<UserRole, NavSection[]> = {
       label: 'Kho',
       items: [
         { label: 'Kho hang', to: '/inventory', icon: Warehouse },
+        { label: 'Phieu nhap kho', to: '/inventory/import-receipts', icon: Receipt },
+        { label: 'Phieu xuat kho', to: '/inventory/export-receipts', icon: Receipt },
         { label: 'San pham', to: '/products', icon: Package },
         { label: 'Cai dat', to: '/settings', icon: Settings },
       ],

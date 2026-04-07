@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { AccountOrderCard } from '@/components/account/AccountOrderCard'
 import { AccountSidebar } from '@/components/account/AccountSidebar'
 import { Button } from '@/components/ui/button'
-import { fetchMyOrdersApi, fetchProductsApi } from '@/lib/backendApi'
+import { fetchMyOrdersApi, fetchProductsApi, updateCustomerProfileApi } from '@/lib/backendApi'
 import { buildAccountTracking, orderStatusLabelMap } from '@/lib/orderStatus'
 import { ORDER_STATUS_CHANGED_TOPIC, resolveWebSocketUrl } from '@/lib/websocket'
 import { useCartStore } from '@/store/cartStore'
@@ -48,16 +48,42 @@ export const AccountPage = () => {
   const user = useCustomerAuthStore((state) => state.user)
   const isAuthenticated = useCustomerAuthStore((state) => state.isAuthenticated)
   const logout = useCustomerAuthStore((state) => state.logout)
+  const setUser = useCustomerAuthStore((state) => state.setUser)
   const addToCart = useCartStore((state) => state.addToCart)
   const [activeTab, setActiveTab] = useState<AccountTab>('orders')
   const [searchQuery, setSearchQuery] = useState('')
   const [orders, setOrders] = useState<AccountOrder[]>([])
   const [products, setProducts] = useState<Product[]>([])
+  const [profileForm, setProfileForm] = useState({
+    fullName: '',
+    phone: '',
+    address: '',
+    district: '',
+    city: '',
+  })
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMessage, setProfileMessage] = useState('')
   const productsRef = useRef<Product[]>([])
+
+  const isValidPhone = (value: string) => /^0\d{9}$/.test(value)
 
   useEffect(() => {
     productsRef.current = products
   }, [products])
+
+  useEffect(() => {
+    if (!user) {
+      return
+    }
+
+    setProfileForm({
+      fullName: user.fullName ?? '',
+      phone: user.phone ?? '',
+      address: user.address ?? '',
+      district: user.district ?? '',
+      city: user.city ?? '',
+    })
+  }, [user])
 
   useEffect(() => {
     let isCancelled = false
@@ -145,6 +171,21 @@ export const AccountPage = () => {
     }
   }, [activeTab, isAuthenticated])
 
+  const filteredOrders = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase()
+    if (!normalizedQuery) return orders
+
+    return orders.filter((order) => {
+      const itemNames = order.items.map((item) => item.name).join(' ').toLowerCase()
+      return (
+        order.id.toLowerCase().includes(normalizedQuery) ||
+        order.date.toLowerCase().includes(normalizedQuery) ||
+        orderStatusLabelMap[order.status].toLowerCase().includes(normalizedQuery) ||
+        itemNames.includes(normalizedQuery)
+      )
+    })
+  }, [orders, searchQuery])
+
   if (!isAuthenticated || !user) {
     return (
       <section className="mx-auto max-w-xl rounded-2xl border border-[var(--line)] bg-[var(--surface-elevated)] p-8 text-center">
@@ -170,21 +211,6 @@ export const AccountPage = () => {
     { id: 'security', label: 'Bảo mật', icon: Lock },
   ] as const
 
-  const filteredOrders = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase()
-    if (!normalizedQuery) return orders
-
-    return orders.filter((order) => {
-      const itemNames = order.items.map((item) => item.name).join(' ').toLowerCase()
-      return (
-        order.id.toLowerCase().includes(normalizedQuery) ||
-        order.date.toLowerCase().includes(normalizedQuery) ||
-        orderStatusLabelMap[order.status].toLowerCase().includes(normalizedQuery) ||
-        itemNames.includes(normalizedQuery)
-      )
-    })
-  }, [orders, searchQuery])
-
   const handleBuyAgain = (order: AccountOrder) => {
     order.items.forEach((item) => {
       const product = products.find((p) => p.id === item.id)
@@ -197,6 +223,53 @@ export const AccountPage = () => {
         quantity: 1,
       })
     })
+  }
+
+  const handleSaveProfile = async () => {
+    const fullName = profileForm.fullName.trim()
+    const phone = profileForm.phone.trim()
+
+    if (!fullName) {
+      setProfileMessage('Vui lòng nhập họ và tên.')
+      return
+    }
+
+    if (!isValidPhone(phone)) {
+      setProfileMessage('Số điện thoại phải đúng 10 số và bắt đầu bằng 0.')
+      return
+    }
+
+    setProfileSaving(true)
+    setProfileMessage('')
+
+    try {
+      const updatedProfile = await updateCustomerProfileApi({
+        fullName,
+        phone,
+        address: profileForm.address.trim() || undefined,
+        district: profileForm.district.trim() || undefined,
+        city: profileForm.city.trim() || undefined,
+      })
+
+      setUser({
+        ...updatedProfile,
+        token: user.token,
+        refreshToken: user.refreshToken,
+      })
+
+      setProfileForm({
+        fullName: updatedProfile.fullName ?? '',
+        phone: updatedProfile.phone ?? '',
+        address: updatedProfile.address ?? '',
+        district: updatedProfile.district ?? '',
+        city: updatedProfile.city ?? '',
+      })
+      setProfileMessage('Đã cập nhật thông tin cá nhân.')
+    } catch (error) {
+      setProfileMessage(error instanceof Error ? error.message : 'Không thể cập nhật thông tin cá nhân.')
+    } finally {
+      setProfileSaving(false)
+    }
   }
 
   // TODO: Re-enable cancel order UI when ready
@@ -247,9 +320,89 @@ export const AccountPage = () => {
         {activeTab === 'profile' ? (
           <div className="rounded-xl border border-[var(--line)] bg-[var(--surface-elevated)] p-5">
             <h2 className="font-display text-xl text-[var(--text-primary)]">Thông tin tài khoản</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <input value={user.fullName} readOnly className="rf-input rounded-lg px-3 py-2 text-sm" />
-              <input value={user.email} readOnly className="rf-input rounded-lg px-3 py-2 text-sm" />
+            <p className="mt-2 text-sm text-[var(--text-secondary)]">Bạn có thể tự cập nhật thông tin cá nhân tại đây.</p>
+
+            <div className="mt-4 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-secondary)]">Họ và tên</label>
+                  <input
+                    value={profileForm.fullName}
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, fullName: event.target.value }))}
+                    className="rf-input rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-secondary)]">Email</label>
+                  <input value={user.email} readOnly className="rf-input rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-secondary)]">Số điện thoại</label>
+                  <input
+                    value={profileForm.phone}
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, phone: event.target.value.replace(/\D/g, '').slice(0, 10) }))}
+                    inputMode="numeric"
+                    maxLength={10}
+                    className="rf-input rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-secondary)]">Thành phố</label>
+                  <input
+                    value={profileForm.city}
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, city: event.target.value }))}
+                    className="rf-input rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-secondary)]">Quận / Huyện</label>
+                  <input
+                    value={profileForm.district}
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, district: event.target.value }))}
+                    className="rf-input rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--text-secondary)]">Địa chỉ</label>
+                  <input
+                    value={profileForm.address}
+                    onChange={(event) => setProfileForm((prev) => ({ ...prev, address: event.target.value }))}
+                    className="rf-input rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              {profileMessage ? <p className="text-sm text-[var(--text-secondary)]">{profileMessage}</p> : null}
+
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={handleSaveProfile} disabled={profileSaving} className="h-10 rounded-lg px-5">
+                  {profileSaving ? 'Đang lưu...' : 'Lưu thay đổi'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (!user) return
+                    setProfileForm({
+                      fullName: user.fullName ?? '',
+                      phone: user.phone ?? '',
+                      address: user.address ?? '',
+                      district: user.district ?? '',
+                      city: user.city ?? '',
+                    })
+                    setProfileMessage('')
+                  }}
+                  className="h-10 rounded-lg px-5"
+                >
+                  Khôi phục
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}

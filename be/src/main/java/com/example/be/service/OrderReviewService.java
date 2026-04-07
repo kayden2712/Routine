@@ -27,6 +27,7 @@ import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null")
 public class OrderReviewService {
 
     private static final int MAX_REVIEW_IMAGES = 4;

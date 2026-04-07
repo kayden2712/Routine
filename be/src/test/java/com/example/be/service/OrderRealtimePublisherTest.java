@@ -17,6 +17,7 @@ import com.example.be.entity.Order;
 import com.example.be.entity.OrderStatus;
 
 @ExtendWith(MockitoExtension.class)
+@SuppressWarnings("null")
 class OrderRealtimePublisherTest {
 
     @Mock
@@ -47,7 +48,7 @@ class OrderRealtimePublisherTest {
         ArgumentCaptor<OrderStatusChangedEvent> eventCaptor = ArgumentCaptor.forClass(OrderStatusChangedEvent.class);
         verify(messagingTemplate).convertAndSend(eq("/topic/orders/status-changed"), eventCaptor.capture());
         OrderStatusChangedEvent event = eventCaptor.getValue();
-        org.junit.jupiter.api.Assertions.assertEquals(11L, event.getOrderId());
+        org.junit.jupiter.api.Assertions.assertEquals(Long.valueOf(11L), event.getOrderId());
         org.junit.jupiter.api.Assertions.assertEquals("ORD-11", event.getOrderNumber());
         org.junit.jupiter.api.Assertions.assertEquals("CONFIRMED", event.getStatus());
     }
