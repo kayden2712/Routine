@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "53ca876c-4ab2-4e2d-a795-d80a7df0662e",
     "name": "Routine Seed Runner - Postman Free (Single File)",
-    "description": "Seed full dataset in one collection: categories mapping, 30 products (10 sale with date window), 10 customers, 20 online orders, 30 offline orders, and sale auto-revert sync.",
+    "description": "Seed a full end-to-end dataset with run-specific values on every execution: categories mapping, 30 products (10 sale with an auto-generated date window), 10 customers, 20 online orders, 30 offline orders, and sale auto-revert sync.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -59,8 +59,21 @@
             "type": "text/javascript",
             "exec": [
               "pm.response.to.have.status(200);",
-              "const runId = String(Date.now());",
+              "const runId = `${Date.now()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;",
               "pm.collectionVariables.set('runId', runId);",
+              "const formatDate = (date) => {",
+              "  const year = date.getFullYear();",
+              "  const month = String(date.getMonth() + 1).padStart(2, '0');",
+              "  const day = String(date.getDate()).padStart(2, '0');",
+              "  return `${year}-${month}-${day}`;",
+              "};",
+              "const today = new Date();",
+              "const saleStart = new Date(today);",
+              "saleStart.setDate(saleStart.getDate() - 3);",
+              "const saleEnd = new Date(today);",
+              "saleEnd.setDate(saleEnd.getDate() + 14);",
+              "pm.collectionVariables.set('saleStartDate', formatDate(saleStart));",
+              "pm.collectionVariables.set('saleEndDate', formatDate(saleEnd));",
               "pm.collectionVariables.set('productIndex', '0');",
               "pm.collectionVariables.set('customerIndex', '0');",
               "pm.collectionVariables.set('orderIndex', '0');",

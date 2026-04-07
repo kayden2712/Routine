@@ -1,54 +1,87 @@
-# Routine Backend (`be`)
+# Routine Backend
 
-Backend API cho hệ thống Routine, phục vụ đồng thời:
+Backend API của Routine phục vụ đồng thời cho admin app và storefront app.
 
-- Admin app (nội bộ).
-- Storefront app (khách hàng).
-
-## Công nghệ
+## Công nghệ chính
 
 - Java 21
-- Spring Boot 3.5.x
+- Spring Boot 3.5.13
 - Spring Web, Spring Data JPA, Spring Security
-- JWT (admin và customer)
+- JWT cho luồng admin và customer
+- Spring WebSocket với STOMP
 - MySQL 8+
-- Spring WebSocket (STOMP broker nội bộ)
-- Maven Wrapper (`mvnw.cmd`)
+- Maven Wrapper
 
 ## Cấu trúc code
 
 ```text
 src/main/java/com/example/be/
-	controller/     REST controllers
-	service/        business logic
-	repository/     JPA repositories
-	entity/         domain entities
-	dto/            request/response models
-	security/       JWT filter + auth components
-	config/         security, CORS, websocket, init data
-	exception/      custom exceptions
+    controller/   REST controllers
+    service/      business logic
+    repository/   JPA repositories
+    entity/       domain entities
+    dto/          request/response models
+    security/     JWT filter and auth components
+    config/       security, CORS, websocket, init data
+    exception/    custom exceptions
 ```
 
-## Thiết lập và chạy
-
-### 1. Cấu hình database
-
-File cấu hình: `src/main/resources/application.properties`
-
-Các thuộc tính quan trọng:
-
-- `spring.datasource.url`
-- `spring.datasource.username`
-- `spring.datasource.password`
-
-### 2. Chạy local
+## Chạy local
 
 ```bat
 cd be
 mvnw.cmd spring-boot:run
 ```
 
-Base URL mặc định: `http://localhost:8080/api`
+Mặc định backend chạy tại `http://localhost:8080/api` và dùng database `routine_db`.
+
+### Chạy với profile dev/test
+
+```bat
+set SPRING_PROFILES_ACTIVE=dev
+mvnw.cmd spring-boot:run
+```
+
+Profile `dev` dùng `routine_test_db` và phù hợp cho môi trường phát triển.
+
+## Database
+
+File cấu hình mặc định: `src/main/resources/application.properties`
+
+Giá trị quan trọng:
+
+- `spring.datasource.url`
+- `spring.datasource.username`
+- `spring.datasource.password`
+- `spring.jpa.hibernate.ddl-auto`
+
+Script khởi tạo database nằm ở:
+
+- `setup-database.sql`
+- `setup-test-database.sql`
+
+Chi tiết setup test database: [TEST-DATABASE-SETUP.md](TEST-DATABASE-SETUP.md)
+
+## API docs
+
+- Swagger UI: `http://localhost:8080/api/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/api/api-docs`
+
+## WebSocket realtime
+
+- Handshake endpoint: `/ws`
+- Topic cập nhật trạng thái đơn: `/topic/orders/status-changed`
+
+Admin và storefront có thể subscribe topic này để nhận cập nhật realtime.
+
+## CORS local
+
+Backend cho phép gọi từ:
+
+- `http://localhost:5173`
+- `http://localhost:5174`
+
+Danh sách origin nằm tại `cors.allowed-origins` trong `application.properties`.
 
 ## Build và test
 
@@ -58,37 +91,17 @@ mvnw.cmd clean test
 mvnw.cmd clean package
 ```
 
-## API docs
-
-- Swagger UI: `http://localhost:8080/api/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8080/api/api-docs`
-
 ## Nghiệp vụ nổi bật
 
-- Luồng đơn hàng online/offline.
-- Kiểm tra tồn kho khi xác nhận đơn.
-- Quản lý trạng thái đơn, lịch sử trạng thái và timeline tracking.
-- Realtime thông báo đổi trạng thái đơn qua WebSocket topic.
-- Khách hàng gửi đánh giá sản phẩm sau đơn thành công.
-- Đánh giá hỗ trợ đính kèm ảnh (`imageUrls`).
+- Quản lý đơn hàng online và offline.
+- Kiểm tra tồn kho trước khi xác nhận đơn.
+- Theo dõi trạng thái đơn và lịch sử thay đổi.
+- Realtime cập nhật trạng thái đơn qua WebSocket.
+- Đánh giá sản phẩm sau khi hoàn tất đơn.
+- Hỗ trợ đính kèm ảnh trong đánh giá.
 
-## Realtime (WebSocket)
+## Lưu ý kỹ thuật
 
-- Endpoint handshake: `/ws`
-- Broker topic: `/topic/orders/status-changed`
-
-Storefront và admin có thể subscribe topic để cập nhật trạng thái đơn theo thời gian thực.
-
-## CORS local
-
-Mặc định cho phép:
-
-- `http://localhost:5173` (storefront)
-- `http://localhost:5174` (admin)
-
-Giá trị cấu hình tại `cors.allowed-origins` trong `application.properties`.
-
-## Lưu ý
-
-- Dự án đang dùng `spring.jpa.hibernate.ddl-auto=update`, schema sẽ tự cập nhật khi thêm trường mới.
-- Khi thay đổi entity, nên chạy lại backend để Hibernate cập nhật bảng.
+- Dự án đang dùng `spring.jpa.hibernate.ddl-auto=update`.
+- Khi thay đổi entity, nên restart backend để Hibernate cập nhật schema.
+- Nếu frontend không kết nối được, kiểm tra port 8080, MySQL và biến môi trường JWT.
