@@ -171,7 +171,7 @@ export function LoginPage() {
               <div className="animate-[slideFadeIn_0.2s_ease] rounded-[8px] border border-[#FECACA] bg-[var(--color-error-bg)] px-[14px] py-[10px] text-[14px] text-[var(--color-error)]">
                 <div className="flex items-center gap-2">
                   <AlertCircle size={16} />
-                  <span>{authError || 'Email hoặc mật khẩu không đúng'}</span>
+                  <span>{authError || 'Email hoặc mật khẩu đang để trống'}</span>
                 </div>
               </div>
             ) : null}
