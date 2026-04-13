@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'
 import { AccountOrderCard } from '@/components/account/AccountOrderCard'
 import { AccountSidebar } from '@/components/account/AccountSidebar'
 import { Button } from '@/components/ui/button'
-import { fetchMyOrdersApi, fetchProductsApi, updateCustomerProfileApi } from '@/lib/backendApi'
+import { changeCustomerPasswordApi, fetchMyOrdersApi, fetchProductsApi, updateCustomerProfileApi } from '@/lib/backendApi'
 import { buildAccountTracking, orderStatusLabelMap } from '@/lib/orderStatus'
 import { ORDER_STATUS_CHANGED_TOPIC, resolveWebSocketUrl } from '@/lib/websocket'
 import { useCartStore } from '@/store/cartStore'
@@ -63,9 +63,22 @@ export const AccountPage = () => {
   })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
+  const [securityForm, setSecurityForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  })
+  const [securitySaving, setSecuritySaving] = useState(false)
+  const [securityMessage, setSecurityMessage] = useState('')
   const productsRef = useRef<Product[]>([])
 
   const isValidPhone = (value: string) => /^0\d{9}$/.test(value)
+  const isStrongPassword = (value: string) =>
+    value.length >= 8 &&
+    /[A-Z]/.test(value) &&
+    /[a-z]/.test(value) &&
+    /\d/.test(value) &&
+    /[^A-Za-z0-9]/.test(value)
 
   useEffect(() => {
     productsRef.current = products
@@ -272,6 +285,53 @@ export const AccountPage = () => {
     }
   }
 
+  const handleChangePassword = async () => {
+    const currentPassword = securityForm.currentPassword.trim()
+    const newPassword = securityForm.newPassword.trim()
+    const confirmPassword = securityForm.confirmPassword.trim()
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setSecurityMessage('Vui lòng nhập đầy đủ thông tin mật khẩu.')
+      return
+    }
+
+    if (!isStrongPassword(newPassword)) {
+      setSecurityMessage('Mật khẩu mới phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.')
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      setSecurityMessage('Xác nhận mật khẩu mới không khớp.')
+      return
+    }
+
+    if (newPassword === currentPassword) {
+      setSecurityMessage('Mật khẩu mới phải khác mật khẩu hiện tại.')
+      return
+    }
+
+    setSecuritySaving(true)
+    setSecurityMessage('')
+
+    try {
+      await changeCustomerPasswordApi({
+        currentPassword,
+        newPassword,
+      })
+
+      setSecurityForm({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      })
+      setSecurityMessage('Đổi mật khẩu thành công.')
+    } catch (error) {
+      setSecurityMessage(error instanceof Error ? error.message : 'Không thể đổi mật khẩu.')
+    } finally {
+      setSecuritySaving(false)
+    }
+  }
+
   // TODO: Re-enable cancel order UI when ready
 
   return (
@@ -412,9 +472,43 @@ export const AccountPage = () => {
             <h2 className="font-display text-xl text-[var(--text-primary)]">Bảo mật</h2>
             <p className="mt-2 text-sm text-[var(--text-secondary)]">Đổi mật khẩu để bảo vệ tài khoản của bạn.</p>
             <div className="mt-4 max-w-[420px] space-y-2.5">
-              <input type="password" placeholder="Mật khẩu hiện tại" className="rf-input w-full rounded-lg px-3 py-2 text-sm" />
-              <input type="password" placeholder="Mật khẩu mới" className="rf-input w-full rounded-lg px-3 py-2 text-sm" />
-              <Button className="h-10 rounded-lg px-5">Cập nhật mật khẩu</Button>
+              <input
+                type="password"
+                placeholder="Mật khẩu hiện tại"
+                value={securityForm.currentPassword}
+                onChange={(event) => {
+                  setSecurityForm((prev) => ({ ...prev, currentPassword: event.target.value }))
+                  setSecurityMessage('')
+                }}
+                className="rf-input w-full rounded-lg px-3 py-2 text-sm"
+              />
+              <input
+                type="password"
+                placeholder="Mật khẩu mới"
+                value={securityForm.newPassword}
+                onChange={(event) => {
+                  setSecurityForm((prev) => ({ ...prev, newPassword: event.target.value }))
+                  setSecurityMessage('')
+                }}
+                className="rf-input w-full rounded-lg px-3 py-2 text-sm"
+              />
+              <input
+                type="password"
+                placeholder="Xác nhận mật khẩu mới"
+                value={securityForm.confirmPassword}
+                onChange={(event) => {
+                  setSecurityForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
+                  setSecurityMessage('')
+                }}
+                className="rf-input w-full rounded-lg px-3 py-2 text-sm"
+              />
+              <p className="text-xs text-[var(--text-secondary)]">
+                Mật khẩu mới phải gồm ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt.
+              </p>
+              {securityMessage ? <p className="text-sm text-[var(--text-secondary)]">{securityMessage}</p> : null}
+              <Button className="h-10 rounded-lg px-5" onClick={handleChangePassword} disabled={securitySaving}>
+                {securitySaving ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+              </Button>
             </div>
           </div>
         ) : null}

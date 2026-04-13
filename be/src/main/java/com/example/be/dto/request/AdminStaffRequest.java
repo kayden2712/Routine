@@ -1,8 +1,10 @@
 package com.example.be.dto.request;
 
+import com.example.be.entity.EmployeeType;
 import com.example.be.entity.UserRole;
 
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -30,6 +32,11 @@ public class AdminStaffRequest {
 
     @NotNull(message = "Role is required")
     private UserRole role;
+
+    private EmployeeType employeeType;
+
+    @Min(value = 0, message = "Base salary must be >= 0")
+    private Long baseSalary;
 
     private Boolean isActive;
 

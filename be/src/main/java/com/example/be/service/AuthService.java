@@ -50,7 +50,7 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
-        user.setRole(request.getRole());
+        user.setRole(normalizeStaffRole(request.getRole()));
         user.setIsActive(true);
 
         userRepository.save(user);
@@ -209,7 +209,7 @@ public class AuthService {
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
-                .role(user.getRole().name())
+                .role(normalizeStaffRole(user.getRole()).name())
                 .phone(user.getPhone())
                 .branch(user.getBranch())
                 .build();
@@ -229,5 +229,12 @@ public class AuthService {
                 .district(customer.getDistrict())
                 .city(customer.getCity())
                 .build();
+    }
+
+    private com.example.be.entity.UserRole normalizeStaffRole(com.example.be.entity.UserRole role) {
+        if (role == null) {
+            return null;
+        }
+        return role == com.example.be.entity.UserRole.MANAGER ? com.example.be.entity.UserRole.MANAGER : role;
     }
 }

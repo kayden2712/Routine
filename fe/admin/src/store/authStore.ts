@@ -20,12 +20,13 @@ export const useAuthStore = create<AuthState>()(
       login: async (email, password, role) => {
         try {
           const user = await adminLogin(email, password);
-          if (user.role !== role) {
+          const normalizedUser = user.role === 'admin' ? { ...user, role: 'manager' as const } : user;
+          if (normalizedUser.role !== role) {
             const roleError = 'Vai tro khong khop voi tai khoan dang nhap';
             set({ authError: roleError });
             throw new Error(roleError);
           }
-          set({ user, isAuthenticated: true, authError: '' });
+          set({ user: normalizedUser, isAuthenticated: true, authError: '' });
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Dang nhap that bai';
           set({ authError: message });

@@ -5,6 +5,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import com.example.be.entity.Category;
+import com.example.be.entity.EmployeeType;
 import com.example.be.entity.User;
 import com.example.be.entity.UserRole;
 import com.example.be.repository.CategoryRepository;
@@ -33,6 +34,8 @@ public class DefaultDataInitializer implements ApplicationRunner {
             User admin = existing.get();
             admin.setPasswordHash(passwordEncoder.encode("admin123"));
             admin.setRole(UserRole.MANAGER);
+            admin.setEmployeeType(EmployeeType.FULLTIME);
+            admin.setBaseSalary(java.math.BigDecimal.valueOf(15000000));
             admin.setIsActive(true);
             if (admin.getFullName() == null || admin.getFullName().isBlank()) {
                 admin.setFullName("System Admin");
@@ -49,6 +52,8 @@ public class DefaultDataInitializer implements ApplicationRunner {
         admin.setPasswordHash(passwordEncoder.encode("admin123"));
         admin.setFullName("System Admin");
         admin.setRole(UserRole.MANAGER);
+        admin.setEmployeeType(EmployeeType.FULLTIME);
+        admin.setBaseSalary(java.math.BigDecimal.valueOf(15000000));
         admin.setIsActive(true);
         admin.setBranch("HCM");
         userRepository.save(admin);

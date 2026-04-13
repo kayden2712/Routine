@@ -128,6 +128,7 @@ npm run build
 
 - Backend dùng `be/src/main/resources/application.properties` cho môi trường mặc định.
 - Backend dev/test dùng `be/src/main/resources/application-dev.properties`.
+- Có thể override kết nối database bằng biến môi trường `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`.
 - Frontend gọi API qua biến `VITE_API_URL`.
 - Backend cho phép CORS với `http://localhost:5173` và `http://localhost:5174`.
 

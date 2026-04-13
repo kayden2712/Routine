@@ -1,5 +1,6 @@
 package com.example.be.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -10,6 +11,7 @@ import org.springframework.util.StringUtils;
 
 import com.example.be.dto.request.AdminStaffRequest;
 import com.example.be.dto.response.AdminStaffResponse;
+import com.example.be.entity.EmployeeType;
 import com.example.be.entity.User;
 import com.example.be.exception.BadRequestException;
 import com.example.be.exception.ErrorCode;
@@ -98,7 +100,17 @@ public class AdminStaffService {
 
     private void applyRequest(User user, AdminStaffRequest request) {
         user.setFullName(request.getFullName());
-        user.setRole(request.getRole());
+        user.setRole(normalizeStaffRole(request.getRole()));
+        if (request.getEmployeeType() != null) {
+            user.setEmployeeType(request.getEmployeeType());
+        } else if (user.getEmployeeType() == null) {
+            user.setEmployeeType(EmployeeType.FULLTIME);
+        }
+        if (request.getBaseSalary() != null) {
+            user.setBaseSalary(BigDecimal.valueOf(Math.max(0L, request.getBaseSalary())));
+        } else if (user.getBaseSalary() == null) {
+            user.setBaseSalary(BigDecimal.ZERO);
+        }
         user.setPhone(StringUtils.hasText(request.getPhone()) ? request.getPhone().trim() : null);
         user.setBranch(request.getBranch());
         if (request.getIsActive() != null) {
@@ -114,9 +126,18 @@ public class AdminStaffService {
                 .phone(user.getPhone())
                 .branch(user.getBranch())
                 .role(user.getRole() != null ? user.getRole().name() : null)
+                .employeeType(user.getEmployeeType() != null ? user.getEmployeeType().name() : null)
+                .baseSalary(user.getBaseSalary() != null ? user.getBaseSalary().longValue() : 0L)
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
                 .build();
+    }
+
+    private com.example.be.entity.UserRole normalizeStaffRole(com.example.be.entity.UserRole role) {
+        if (role == null) {
+            return null;
+        }
+        return role == com.example.be.entity.UserRole.MANAGER ? com.example.be.entity.UserRole.MANAGER : role;
     }
 }

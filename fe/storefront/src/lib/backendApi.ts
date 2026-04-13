@@ -143,6 +143,11 @@ export interface UpdateCustomerProfilePayload {
   city?: string;
 }
 
+export interface ChangeCustomerPasswordPayload {
+  currentPassword: string;
+  newPassword: string;
+}
+
 const APPAREL_SIZES: Product['sizes'] = ['S', 'M', 'L', 'XL'];
 const PANTS_SIZES: Product['sizes'] = ['28', '29', '30', '31', '32'];
 const ACCESSORY_SIZES: Product['sizes'] = ['M'];
@@ -314,6 +319,10 @@ export async function fetchMyProfileApi(): Promise<CustomerUser> {
 export async function updateCustomerProfileApi(payload: UpdateCustomerProfilePayload): Promise<CustomerUser> {
   const response = await apiClient.patch<BackendAuthResponse>('/auth/customer/profile', payload);
   return mapAuthUser(response.data);
+}
+
+export async function changeCustomerPasswordApi(payload: ChangeCustomerPasswordPayload): Promise<void> {
+  await apiClient.patch('/auth/change-password', payload);
 }
 
 export async function fetchMyOrdersApi(): Promise<StorefrontOrder[]> {

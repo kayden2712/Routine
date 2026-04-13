@@ -1,5 +1,23 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Percent, TicketPercent } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { promotionApi } from '../../lib/promotionApi';
 import type { Promotion, PromotionType, CreatePromotionRequest, UpdatePromotionRequest } from '../../types';
 import { showToast } from '../../lib/toast';
@@ -47,7 +65,7 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (new Date(formData.endDate) <= new Date(formData.startDate)) {
       showToast.error('Thời gian kết thúc phải sau thời gian bắt đầu');
       return;
@@ -92,204 +110,174 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
-            {isEdit ? 'Chỉnh Sửa Khuyến Mãi' : 'Tạo Khuyến Mãi Mới'}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={24} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[92vh] max-w-[760px] overflow-y-auto p-0" showCloseButton={false}>
+        <DialogHeader className="border-b border-[var(--color-border)] px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[var(--color-accent-light)] text-[var(--color-accent)]">
+              <TicketPercent size={18} />
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Mã khuyến mãi <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
+              <DialogTitle className="font-[var(--font-display)] text-[20px] text-[var(--color-text-primary)]">
+                {isEdit ? 'Chỉnh sửa khuyến mãi' : 'Tạo khuyến mãi mới'}
+              </DialogTitle>
+              <DialogDescription className="text-[var(--color-text-secondary)]">
+                Điền đầy đủ thông tin trước khi lưu chương trình ưu đãi.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Mã khuyến mãi</Label>
+              <Input
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                 disabled={isEdit}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                 placeholder="VD: SUMMER2026"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Loại khuyến mãi <span className="text-red-500">*</span>
-              </label>
-              <select
+            <div className="grid gap-1.5">
+              <Label>Loại khuyến mãi</Label>
+              <Select
                 value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value as PromotionType })}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onValueChange={(value) => setFormData({ ...formData, type: value as PromotionType })}
               >
-                <option value="GIAM_PHAN_TRAM">Giảm phần trăm</option>
-                <option value="GIAM_TIEN">Giảm tiền</option>
-                <option value="TANG_QUA">Tặng quà</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GIAM_PHAN_TRAM">Giảm phần trăm</SelectItem>
+                  <SelectItem value="GIAM_TIEN">Giảm tiền</SelectItem>
+                  <SelectItem value="TANG_QUA">Tặng quà</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tên chương trình <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+          <div className="grid gap-1.5">
+            <Label>Tên chương trình</Label>
+            <Input
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="VD: Khuyến mãi mùa hè 2026"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mô tả</label>
+          <div className="grid gap-1.5">
+            <Label>Mô tả</Label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="min-h-[88px] w-full rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-accent)]"
               placeholder="Mô tả chi tiết về chương trình..."
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Giá trị ưu đãi <span className="text-red-500">*</span>
-              </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Giá trị ưu đãi</Label>
               <div className="relative">
-                <input
+                <Input
                   type="number"
                   value={formData.discountValue}
                   onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
                   required
                   min="0"
                   step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder={formData.type === 'GIAM_PHAN_TRAM' ? '10' : '50000'}
+                  className="pr-10"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500">
-                  {formData.type === 'GIAM_PHAN_TRAM' ? '%' : 'đ'}
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[var(--color-text-muted)]">
+                  {formData.type === 'GIAM_PHAN_TRAM' ? <Percent size={14} /> : 'đ'}
                 </span>
               </div>
             </div>
 
-            {formData.type === 'GIAM_PHAN_TRAM' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Giảm tối đa
-                </label>
-                <input
+            {formData.type === 'GIAM_PHAN_TRAM' ? (
+              <div className="grid gap-1.5">
+                <Label>Giảm tối đa</Label>
+                <Input
                   type="number"
                   value={formData.maxDiscountAmount}
                   onChange={(e) => setFormData({ ...formData, maxDiscountAmount: e.target.value })}
                   min="0"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="500000"
                 />
               </div>
-            )}
+            ) : null}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Thời gian bắt đầu <span className="text-red-500">*</span>
-              </label>
-              <input
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Thời gian bắt đầu</Label>
+              <Input
                 type="datetime-local"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Thời gian kết thúc <span className="text-red-500">*</span>
-              </label>
-              <input
+            <div className="grid gap-1.5">
+              <Label>Thời gian kết thúc</Label>
+              <Input
                 type="datetime-local"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Giá trị đơn hàng tối thiểu
-              </label>
-              <input
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Giá trị đơn tối thiểu</Label>
+              <Input
                 type="number"
                 value={formData.minOrderAmount}
                 onChange={(e) => setFormData({ ...formData, minOrderAmount: e.target.value })}
                 min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Giới hạn số lần sử dụng
-              </label>
-              <input
+            <div className="grid gap-1.5">
+              <Label>Giới hạn số lần sử dụng</Label>
+              <Input
                 type="number"
                 value={formData.usageLimit}
                 onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
                 min="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Không giới hạn"
+                placeholder="Để trống nếu không giới hạn"
               />
             </div>
           </div>
 
-          <div>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={formData.applyToAllProducts}
-                onChange={(e) => setFormData({ ...formData, applyToAllProducts: e.target.checked })}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Áp dụng cho tất cả sản phẩm</span>
-            </label>
-          </div>
+          <label className="flex items-center gap-2 rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]">
+            <input
+              type="checkbox"
+              checked={formData.applyToAllProducts}
+              onChange={(e) => setFormData({ ...formData, applyToAllProducts: e.target.checked })}
+            />
+            Áp dụng cho tất cả sản phẩm
+          </label>
 
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              disabled={loading}
-            >
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Hủy
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-              disabled={loading}
-            >
+            </Button>
+            <Button type="submit" disabled={loading}>
               {loading ? 'Đang lưu...' : isEdit ? 'Cập nhật' : 'Tạo mới'}
-            </button>
-          </div>
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

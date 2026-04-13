@@ -9,9 +9,11 @@ COLLATE utf8mb4_unicode_ci;
 
 -- Create dedicated user for the application
 CREATE USER IF NOT EXISTS 'routine_user'@'localhost' IDENTIFIED BY 'Routine@2026!';
+CREATE USER IF NOT EXISTS 'routine_user'@'%' IDENTIFIED BY 'Routine@2026!';
 
 -- Grant all privileges on routine_db to the user
 GRANT ALL PRIVILEGES ON routine_db.* TO 'routine_user'@'localhost';
+GRANT ALL PRIVILEGES ON routine_db.* TO 'routine_user'@'%';
 
 -- Apply privilege changes
 FLUSH PRIVILEGES;

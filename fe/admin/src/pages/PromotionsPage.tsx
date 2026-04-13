@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Plus,
   Edit2,
@@ -12,21 +12,41 @@ import {
   Tag,
   TrendingUp,
 } from 'lucide-react';
+import { KPICard } from '@/components/shared/KPICard';
+import { Pagination } from '@/components/shared/Pagination';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { promotionApi } from '../lib/promotionApi';
-import type { Promotion, PromotionStatus, PromotionType } from '../types';
 import { showToast } from '../lib/toast';
-import PromotionFormModal from '../components/promotions/PromotionFormModal';
 import { useAuthStore } from '../store/authStore';
+import type { Promotion, PromotionStatus, PromotionType } from '../types';
+import PromotionFormModal from '../components/promotions/PromotionFormModal';
 
 export default function PromotionsPage() {
   const user = useAuthStore((state) => state.user);
   const isSalesReadOnly = user?.role === 'sales';
 
   const [promotions, setPromotions] = useState<Promotion[]>([]);
-  const [filteredPromotions, setFilteredPromotions] = useState<Promotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<PromotionStatus | 'ALL'>('ALL');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const [showFormModal, setShowFormModal] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<Promotion | null>(null);
 
@@ -35,8 +55,8 @@ export default function PromotionsPage() {
   }, []);
 
   useEffect(() => {
-    filterPromotions();
-  }, [promotions, searchTerm, statusFilter]);
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const loadPromotions = async () => {
     try {
@@ -51,7 +71,7 @@ export default function PromotionsPage() {
     }
   };
 
-  const filterPromotions = () => {
+  const filteredPromotions = useMemo(() => {
     let filtered = [...promotions];
 
     if (searchTerm) {
@@ -68,8 +88,13 @@ export default function PromotionsPage() {
       filtered = filtered.filter((p) => p.status === statusFilter);
     }
 
-    setFilteredPromotions(filtered);
-  };
+    return filtered;
+  }, [promotions, searchTerm, statusFilter]);
+
+  const paginatedPromotions = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredPromotions.slice(start, start + pageSize);
+  }, [filteredPromotions, currentPage]);
 
   const handleCreate = () => {
     if (isSalesReadOnly) {
@@ -142,22 +167,40 @@ export default function PromotionsPage() {
   };
 
   const getStatusBadge = (status: PromotionStatus) => {
-    const badges = {
-      DRAFT: 'bg-gray-100 text-gray-800',
-      ACTIVE: 'bg-green-100 text-green-800',
-      EXPIRED: 'bg-red-100 text-red-800',
-      CANCELLED: 'bg-orange-100 text-orange-800',
+    const badges: Record<PromotionStatus, { bg: string; color: string }> = {
+      DRAFT: { bg: '#F3F2F0', color: 'var(--color-text-secondary)' },
+      ACTIVE: { bg: 'var(--color-success-bg)', color: 'var(--color-success)' },
+      EXPIRED: { bg: 'var(--color-error-bg)', color: 'var(--color-error)' },
+      CANCELLED: { bg: 'var(--color-warning-bg)', color: 'var(--color-warning)' },
     };
-    return badges[status] || 'bg-gray-100 text-gray-800';
+
+    const config = badges[status];
+    return (
+      <span
+        className="inline-flex items-center rounded-full px-[10px] py-[2px] text-xs font-medium"
+        style={{ backgroundColor: config.bg, color: config.color }}
+      >
+        {status === 'DRAFT' ? 'Nháp' : status === 'ACTIVE' ? 'Đang hoạt động' : status === 'EXPIRED' ? 'Hết hạn' : 'Đã hủy'}
+      </span>
+    );
   };
 
   const getTypeBadge = (type: PromotionType) => {
-    const badges = {
-      GIAM_PHAN_TRAM: 'bg-blue-100 text-blue-800',
-      GIAM_TIEN: 'bg-purple-100 text-purple-800',
-      TANG_QUA: 'bg-pink-100 text-pink-800',
+    const badges: Record<PromotionType, { bg: string; color: string }> = {
+      GIAM_PHAN_TRAM: { bg: 'var(--color-accent-light)', color: 'var(--color-accent)' },
+      GIAM_TIEN: { bg: '#EEF2FF', color: '#4F46E5' },
+      TANG_QUA: { bg: '#FFF1F2', color: '#BE123C' },
     };
-    return badges[type] || 'bg-gray-100 text-gray-800';
+
+    const config = badges[type];
+    return (
+      <span
+        className="inline-flex items-center rounded-full px-[10px] py-[2px] text-xs font-medium"
+        style={{ backgroundColor: config.bg, color: config.color }}
+      >
+        {type === 'GIAM_PHAN_TRAM' ? 'Giảm phần trăm' : type === 'GIAM_TIEN' ? 'Giảm tiền' : 'Tặng quà'}
+      </span>
+    );
   };
 
   const formatCurrency = (value: number) => {
@@ -180,206 +223,178 @@ export default function PromotionsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Đang tải...</div>
+      <div className="flex min-h-[320px] items-center justify-center rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="text-[var(--color-text-secondary)]">Đang tải danh sách khuyến mãi...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản Lý Khuyến Mãi</h1>
-          <p className="text-gray-600 mt-1">Tạo và quản lý chương trình khuyến mãi</p>
+          <h1 className="font-[var(--font-display)] text-[26px] font-semibold text-[var(--color-text-primary)]">
+            Quản lý khuyến mãi
+          </h1>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">Tạo và theo dõi các chương trình ưu đãi theo từng trạng thái.</p>
         </div>
         {!isSalesReadOnly ? (
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-          >
-            <Plus size={20} />
+          <Button className="gap-2" onClick={handleCreate}>
+            <Plus size={16} />
             Tạo Khuyến Mãi
-          </button>
+          </Button>
         ) : null}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Tổng số</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-            <Gift className="text-gray-400" size={32} />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Đang hoạt động</p>
-              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
-            </div>
-            <TrendingUp className="text-green-400" size={32} />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Nháp</p>
-              <p className="text-2xl font-bold text-gray-600">{stats.draft}</p>
-            </div>
-            <Tag className="text-gray-400" size={32} />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-gray-600 text-sm">Hết hạn</p>
-              <p className="text-2xl font-bold text-red-600">{stats.expired}</p>
-            </div>
-            <Calendar className="text-red-400" size={32} />
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+        <KPICard label="Tổng chương trình" value={String(stats.total)} icon={Gift} iconBg="var(--color-accent-light)" iconColor="var(--color-accent)" />
+        <KPICard label="Đang hoạt động" value={String(stats.active)} icon={TrendingUp} iconBg="var(--color-success-bg)" iconColor="var(--color-success)" />
+        <KPICard label="Nháp" value={String(stats.draft)} icon={Tag} iconBg="#F3F2F0" iconColor="var(--color-text-secondary)" />
+        <KPICard label="Hết hạn" value={String(stats.expired)} icon={Calendar} iconBg="var(--color-error-bg)" iconColor="var(--color-error)" />
       </div>
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Tìm kiếm theo mã, tên, mô tả..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Filter className="text-gray-400" size={20} />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as PromotionStatus | 'ALL')}
-                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="ALL">Tất cả trạng thái</option>
-                <option value="DRAFT">Nháp</option>
-                <option value="ACTIVE">Đang hoạt động</option>
-                <option value="EXPIRED">Hết hạn</option>
-                <option value="CANCELLED">Đã hủy</option>
-              </select>
-            </div>
+      <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-3">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Tìm theo mã, tên hoặc mô tả"
+              className="pl-9"
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-[var(--color-text-muted)]" />
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as PromotionStatus | 'ALL')}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
+                <SelectItem value="DRAFT">Nháp</SelectItem>
+                <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                <SelectItem value="EXPIRED">Hết hạn</SelectItem>
+                <SelectItem value="CANCELLED">Đã hủy</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mã KM</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tên chương trình</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loại</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Giá trị</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sử dụng</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái</th>
-                {!isSalesReadOnly ? (
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
-                ) : null}
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPromotions.length === 0 ? (
-                <tr>
-                  <td colSpan={isSalesReadOnly ? 7 : 8} className="px-6 py-12 text-center text-gray-500">
-                    Không tìm thấy khuyến mãi nào
-                  </td>
-                </tr>
-              ) : (
-                filteredPromotions.map((promotion) => (
-                  <tr key={promotion.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="font-medium text-gray-900">{promotion.code}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{promotion.name}</div>
-                      {promotion.description && (
-                        <div className="text-sm text-gray-500 truncate max-w-xs">{promotion.description}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getTypeBadge(promotion.type)}`}>
-                        {promotion.typeDisplayName}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {promotion.type === 'GIAM_PHAN_TRAM'
-                        ? `${promotion.discountValue}%`
-                        : formatCurrency(promotion.discountValue)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>{formatDate(promotion.startDate)}</div>
-                      <div>{formatDate(promotion.endDate)}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {promotion.usageCount}
-                      {promotion.usageLimit && ` / ${promotion.usageLimit}`}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusBadge(promotion.status)}`}>
-                        {promotion.statusDisplayName}
-                      </span>
-                    </td>
-                    {!isSalesReadOnly ? (
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end gap-2">
-                          {promotion.status === 'DRAFT' && (
-                            <button
-                              onClick={() => handleActivate(promotion.id)}
-                              className="text-green-600 hover:text-green-900"
-                              title="Kích hoạt"
+        <Table>
+          <TableHeader className="bg-[#F7F6F4]">
+            <TableRow className="border-b-2 border-[var(--color-border)] hover:bg-transparent">
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Mã KM</TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Tên chương trình</TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Loại</TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Giá trị</TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Thời gian</TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Sử dụng</TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Trạng thái</TableHead>
+              {!isSalesReadOnly ? (
+                <TableHead className="px-3 text-right text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Thao tác</TableHead>
+              ) : null}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedPromotions.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={isSalesReadOnly ? 7 : 8}
+                  className="h-[180px] text-center text-sm text-[var(--color-text-secondary)]"
+                >
+                  Không tìm thấy khuyến mãi nào phù hợp.
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedPromotions.map((promotion) => (
+                <TableRow key={promotion.id} className="h-[56px] border-b border-[var(--color-border)] hover:bg-[#FAFAF9]">
+                  <TableCell className="px-3 text-sm font-semibold text-[var(--color-text-primary)]">{promotion.code}</TableCell>
+                  <TableCell className="px-3 py-2">
+                    <div className="max-w-[280px]">
+                      <p className="truncate text-sm font-medium text-[var(--color-text-primary)]">{promotion.name}</p>
+                      {promotion.description ? (
+                        <p className="truncate text-xs text-[var(--color-text-secondary)]">{promotion.description}</p>
+                      ) : null}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-3">{getTypeBadge(promotion.type)}</TableCell>
+                  <TableCell className="px-3 text-sm text-[var(--color-text-primary)]">
+                    {promotion.type === 'GIAM_PHAN_TRAM' ? `${promotion.discountValue}%` : formatCurrency(promotion.discountValue)}
+                  </TableCell>
+                  <TableCell className="px-3 text-sm text-[var(--color-text-secondary)]">
+                    <div>{formatDate(promotion.startDate)}</div>
+                    <div>{formatDate(promotion.endDate)}</div>
+                  </TableCell>
+                  <TableCell className="px-3 text-sm text-[var(--color-text-secondary)]">
+                    {promotion.usageCount}
+                    {promotion.usageLimit && ` / ${promotion.usageLimit}`}
+                  </TableCell>
+                  <TableCell className="px-3">{getStatusBadge(promotion.status)}</TableCell>
+                  {!isSalesReadOnly ? (
+                    <TableCell className="px-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {promotion.status === 'DRAFT' && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleActivate(promotion.id)}
+                            title="Kích hoạt"
+                            className="text-[var(--color-success)] hover:bg-[var(--color-success-bg)]"
+                          >
+                            <Play size={14} />
+                          </Button>
+                        )}
+                        {(promotion.status === 'DRAFT' || promotion.status === 'ACTIVE') && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => handleEdit(promotion)}
+                              title="Chỉnh sửa"
+                              className="text-[var(--color-accent)] hover:bg-[var(--color-accent-light)]"
                             >
-                              <Play size={16} />
-                            </button>
-                          )}
-                          {(promotion.status === 'DRAFT' || promotion.status === 'ACTIVE') && (
-                            <>
-                              <button
-                                onClick={() => handleEdit(promotion)}
-                                className="text-blue-600 hover:text-blue-900"
-                                title="Chỉnh sửa"
-                              >
-                                <Edit2 size={16} />
-                              </button>
-                              <button
-                                onClick={() => handleCancel(promotion.id)}
-                                className="text-orange-600 hover:text-orange-900"
-                                title="Hủy"
-                              >
-                                <XCircle size={16} />
-                              </button>
-                            </>
-                          )}
-                          {promotion.status !== 'ACTIVE' && (
-                            <button
-                              onClick={() => handleDelete(promotion.id)}
-                              className="text-red-600 hover:text-red-900"
-                              title="Xóa"
+                              <Edit2 size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => handleCancel(promotion.id)}
+                              title="Hủy"
+                              className="text-[var(--color-warning)] hover:bg-[var(--color-warning-bg)]"
                             >
-                              <Trash2 size={16} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                              <XCircle size={14} />
+                            </Button>
+                          </>
+                        )}
+                        {promotion.status !== 'ACTIVE' && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            onClick={() => handleDelete(promotion.id)}
+                            title="Xóa"
+                            className="text-[var(--color-error)] hover:bg-[var(--color-error-bg)]"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+
+        <Pagination
+          page={currentPage}
+          pageSize={pageSize}
+          total={filteredPromotions.length}
+          onChange={(page) => setCurrentPage(page)}
+        />
+      </section>
 
       {!isSalesReadOnly && showFormModal && (
         <PromotionFormModal

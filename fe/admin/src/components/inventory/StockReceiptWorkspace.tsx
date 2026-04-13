@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, CheckCircle2, ClipboardList } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ClipboardList, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/lib/toast';
+import { exportRowsToExcel } from '@/lib/excel';
 import { formatVND } from '@/lib/utils';
 import { inventoryApi } from '@/lib/inventoryApi';
 import { supplierApi } from '@/lib/supplierApi';
@@ -46,6 +47,12 @@ const EXPORT_REASON_LABELS: Record<ExportReason, string> = {
   CHUYEN_KHO: 'Chuyen kho',
   HONG_THAT_THOAT: 'Hong that thoat',
   KHAC: 'Khac',
+};
+
+const RECEIPT_STATUS_LABELS: Record<StockReceipt['status'], string> = {
+  DRAFT: 'Dang nhap',
+  CONFIRMED: 'Da xac nhan',
+  CANCELLED: 'Da huy',
 };
 
 function mapImportReceipt(receipt: ImportReceipt): StockReceipt {
@@ -310,6 +317,46 @@ export function StockReceiptWorkspace({ mode }: StockReceiptWorkspaceProps) {
     }
   };
 
+  const exportReceiptExcel = (receipt: StockReceipt) => {
+    const totalQty = receipt.lines.reduce((sum, line) => sum + line.quantity, 0);
+    const createdAtLabel = new Date(receipt.createdAt).toLocaleString('vi-VN');
+    const titleLabel = mode === 'import' ? 'Phieu nhap kho' : 'Phieu xuat kho';
+    const supplierOrReasonLabel = mode === 'import'
+      ? (receipt.supplierName ?? '')
+      : (receipt.exportReason ? EXPORT_REASON_LABELS[receipt.exportReason] : '');
+
+    exportRowsToExcel({
+      fileName: `${receipt.code.toLowerCase()}-${mode === 'import' ? 'phieu-nhap' : 'phieu-xuat'}`,
+      sheetName: mode === 'import' ? 'PhieuNhap' : 'PhieuXuat',
+      headers: [
+        'Loai phieu',
+        'Ma phieu',
+        'Ngay tao',
+        mode === 'import' ? 'Nha cung cap' : 'Ly do xuat',
+        'Trang thai',
+        'Tong so luong',
+        'Ghi chu',
+        'Ma san pham',
+        'Ten san pham',
+        'So luong',
+      ],
+      rows: receipt.lines.map((line) => [
+        titleLabel,
+        receipt.code,
+        createdAtLabel,
+        supplierOrReasonLabel,
+        RECEIPT_STATUS_LABELS[receipt.status],
+        totalQty,
+        receipt.note ?? '',
+        line.productCode,
+        line.productName,
+        line.quantity,
+      ]),
+    });
+
+    toast.success(mode === 'import' ? 'Da xuat Excel phieu nhap' : 'Da xuat Excel phieu xuat');
+  };
+
   const title = mode === 'import' ? 'Phieu Nhap Kho' : 'Phieu Xuat Kho';
 
   return (
@@ -388,6 +435,10 @@ export function StockReceiptWorkspace({ mode }: StockReceiptWorkspaceProps) {
                       <div className="flex items-center justify-end gap-2">
                         {receipt.status === 'DRAFT' ? (
                           <>
+                            <Button size="sm" variant="outline" onClick={() => exportReceiptExcel(receipt)}>
+                              <Download size={14} />
+                              Excel
+                            </Button>
                             <Button size="sm" variant="outline" onClick={() => void confirmReceipt(receipt)}>
                               <CheckCircle2 size={14} />
                               Xac nhan
@@ -398,7 +449,13 @@ export function StockReceiptWorkspace({ mode }: StockReceiptWorkspaceProps) {
                             </Button>
                           </>
                         ) : (
-                          <span className="text-xs text-[var(--color-text-muted)]">Hoan tat</span>
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => exportReceiptExcel(receipt)}>
+                              <Download size={14} />
+                              Excel
+                            </Button>
+                            <span className="text-xs text-[var(--color-text-muted)]">Hoan tat</span>
+                          </>
                         )}
                       </div>
                     </td>

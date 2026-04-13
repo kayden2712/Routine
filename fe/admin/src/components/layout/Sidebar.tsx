@@ -1,6 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import {
   BarChart3,
+  BadgeDollarSign,
   LayoutDashboard,
   LogOut,
   Package,
@@ -12,6 +13,7 @@ import {
   Warehouse,
   Gift,
   Truck,
+  ClipboardCheck,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -33,6 +35,16 @@ interface NavSection {
 }
 
 const roleSections: Record<UserRole, NavSection[]> = {
+  admin: [
+    {
+      label: 'Quan tri',
+      items: [
+        { label: 'Bang luong', to: '/payroll', icon: BadgeDollarSign },
+        { label: 'Bao cao', to: '/reports', icon: BarChart3 },
+        { label: 'Cai dat', to: '/settings', icon: Settings },
+      ],
+    },
+  ],
   manager: [
     {
       label: 'Tong quan',
@@ -50,6 +62,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
         { label: 'Nha cung cap', to: '/suppliers', icon: Truck },
         { label: 'Don hang online', to: '/online-orders', icon: Receipt },
         { label: 'Kho hang', to: '/inventory', icon: Warehouse },
+        { label: 'Kiem ke kho', to: '/inventory/check', icon: ClipboardCheck },
         { label: 'Phieu nhap kho', to: '/inventory/import-receipts', icon: Receipt },
         { label: 'Phieu xuat kho', to: '/inventory/export-receipts', icon: Receipt },
         { label: 'Nhan vien', to: '/staff', icon: UserCog },
@@ -58,6 +71,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
     {
       label: 'He thong',
       items: [
+        { label: 'Bang luong', to: '/payroll', icon: BadgeDollarSign },
         { label: 'Bao cao', to: '/reports', icon: BarChart3 },
         { label: 'Cai dat', to: '/settings', icon: Settings },
       ],
@@ -80,6 +94,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
       label: 'Kho',
       items: [
         { label: 'Kho hang', to: '/inventory', icon: Warehouse },
+        { label: 'Kiem ke kho', to: '/inventory/check', icon: ClipboardCheck },
         { label: 'Phieu nhap kho', to: '/inventory/import-receipts', icon: Receipt },
         { label: 'Phieu xuat kho', to: '/inventory/export-receipts', icon: Receipt },
         { label: 'San pham', to: '/products', icon: Package },
@@ -91,6 +106,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
     {
       label: 'Tai chinh',
       items: [
+        { label: 'Bang luong', to: '/payroll', icon: BadgeDollarSign },
         { label: 'Bao cao', to: '/reports', icon: BarChart3 },
         { label: 'Hoa don', to: '/invoices', icon: Receipt },
         { label: 'Don hang online', to: '/online-orders', icon: Receipt },
@@ -102,6 +118,7 @@ const roleSections: Record<UserRole, NavSection[]> = {
 
 const roleLabelMap: Record<UserRole, string> = {
   manager: 'Quan ly',
+  admin: 'Quan ly',
   sales: 'Ban hang',
   warehouse: 'Kho',
   accountant: 'Ke toan',

@@ -4,6 +4,11 @@ import type {
   CreateImportReceiptRequest,
   ExportReceipt,
   ImportReceipt,
+  InventoryCheckConfirmRequest,
+  InventoryCheckItem,
+  InventoryCheckListData,
+  InventoryCheckSubmitRequest,
+  InventoryDiscrepancyReport,
   InventoryAdjustRequest,
   InventoryHistoryItem,
   InventoryReportItem,
@@ -99,6 +104,32 @@ export const inventoryApi = {
 
   cancelExportReceipt: async (id: number): Promise<ExportReceipt> => {
     const response = await apiClient.post<ExportReceipt>(`/inventory/export-receipts/${id}/cancel`);
+    return response.data;
+  },
+
+  getInventoryCheckItems: async (checkDate?: string): Promise<InventoryCheckListData> => {
+    const response = await apiClient.get<InventoryCheckListData>('/inventory/items', {
+      params: {
+        checkDate,
+      },
+    });
+    return response.data;
+  },
+
+  submitInventoryCheck: async (payload: InventoryCheckSubmitRequest): Promise<InventoryCheckItem> => {
+    const response = await apiClient.post<InventoryCheckItem>('/inventory/check', payload);
+    return response.data;
+  },
+
+  getInventoryDiscrepancyReport: async (stocktakeId: number): Promise<InventoryDiscrepancyReport> => {
+    const response = await apiClient.get<InventoryDiscrepancyReport>('/inventory/report', {
+      params: { stocktakeId },
+    });
+    return response.data;
+  },
+
+  confirmInventoryCheck: async (payload: InventoryCheckConfirmRequest): Promise<InventoryCheckItem> => {
+    const response = await apiClient.post<InventoryCheckItem>('/inventory/confirm', payload);
     return response.data;
   },
 };

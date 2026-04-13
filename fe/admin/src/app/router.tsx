@@ -7,11 +7,14 @@ import { CustomersPage } from '../pages/CustomersPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { InventoryExportPage } from '../pages/InventoryExportPage';
 import { InventoryImportPage } from '../pages/InventoryImportPage';
+import { InventoryCheckPage } from '../pages/InventoryCheckPage';
+import { InventoryCheckReportPage } from '../pages/InventoryCheckReportPage';
 import { InventoryPage } from '../pages/InventoryPage';
 import { InvoicesPage } from '../pages/InvoicesPage';
 import { OnlineOrdersPage } from '../pages/OnlineOrdersPage';
 import { LoginPage } from '../pages/LoginPage';
 import { POSPage } from '../pages/POSPage';
+import { PayrollPage } from '../pages/PayrollPage';
 import { ProductsPage } from '../pages/ProductsPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { SettingsPage } from '../pages/SettingsPage';
@@ -24,6 +27,7 @@ import type { UserRole } from '@/types';
 
 function getRoleHome(role: UserRole) {
   if (role === 'manager') return '/dashboard';
+  if (role === 'admin') return '/dashboard';
   if (role === 'sales') return '/pos';
   if (role === 'accountant') return '/reports';
   return '/products';
@@ -118,9 +122,18 @@ export const router = createBrowserRouter([
         errorElement: <RouteErrorBoundary />,
       },
       {
+        path: '/payroll',
+        element: (
+          <ProtectedRoute roles={['accountant', 'manager', 'admin']}>
+            <PayrollPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
         path: '/reports',
         element: (
-          <ProtectedRoute roles={['manager', 'accountant']}>
+          <ProtectedRoute roles={['manager', 'accountant', 'admin']}>
             <ReportsPage />
           </ProtectedRoute>
         ),
@@ -149,6 +162,24 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['manager', 'warehouse']}>
             <InventoryExportPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/inventory/check',
+        element: (
+          <ProtectedRoute roles={['manager', 'warehouse']}>
+            <InventoryCheckPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/inventory/check/report',
+        element: (
+          <ProtectedRoute roles={['manager', 'warehouse']}>
+            <InventoryCheckReportPage />
           </ProtectedRoute>
         ),
         errorElement: <RouteErrorBoundary />,

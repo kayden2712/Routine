@@ -18,6 +18,8 @@ public class AdminStaffResponse {
     private String phone;
     private String branch;
     private String role;
+    private String employeeType;
+    private Long baseSalary;
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -1,4 +1,13 @@
 import { AlertTriangle, Package, TrendingUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import type { SupplierListResponse } from '../../types';
 
 interface Props {
@@ -19,127 +28,113 @@ export default function SupplierDeleteModal({ supplier, onClose, onConfirm }: Pr
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
-        {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className={`p-2 rounded-lg ${hasRelatedData ? 'bg-yellow-100' : 'bg-red-100'}`}>
-              <AlertTriangle className={`w-6 h-6 ${hasRelatedData ? 'text-yellow-600' : 'text-red-600'}`} />
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-[540px] p-0" showCloseButton={false}>
+        <DialogHeader className="border-b border-[var(--color-border)] px-6 py-4">
+          <div className="flex items-start gap-3">
+            <div
+              className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-[10px]"
+              style={{
+                backgroundColor: hasRelatedData ? 'var(--color-warning-bg)' : 'var(--color-error-bg)',
+              }}
+            >
+              <AlertTriangle
+                className="h-5 w-5"
+                style={{ color: hasRelatedData ? 'var(--color-warning)' : 'var(--color-error)' }}
+              />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900">
+              <DialogTitle className="font-[var(--font-display)] text-[20px] text-[var(--color-text-primary)]">
                 {hasRelatedData ? 'Xác nhận ngừng hợp tác' : 'Xác nhận xóa nhà cung cấp'}
-              </h3>
-              <p className="text-sm text-gray-500">
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-[var(--color-text-secondary)]">
                 {hasRelatedData ? 'Nhà cung cấp đã có phiếu nhập' : 'Hành động này không thể hoàn tác'}
-              </p>
+              </DialogDescription>
             </div>
           </div>
-        </div>
+        </DialogHeader>
 
-        {/* Content */}
-        <div className="px-6 py-4 space-y-4">
-          {/* Supplier Info */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-start justify-between mb-2">
-              <div>
-                <p className="text-sm text-gray-500">Mã nhà cung cấp</p>
-                <p className="font-medium text-gray-900">{supplier.maNcc}</p>
-              </div>
+        <div className="space-y-4 px-6 py-5">
+          <div className="rounded-[10px] border border-[var(--color-border)] bg-[var(--color-bg)] p-4">
+            <div className="mb-2">
+              <p className="text-sm text-[var(--color-text-secondary)]">Mã nhà cung cấp</p>
+              <p className="font-medium text-[var(--color-text-primary)]">{supplier.maNcc}</p>
             </div>
             <div className="mb-2">
-              <p className="text-sm text-gray-500">Tên nhà cung cấp</p>
-              <p className="font-medium text-gray-900">{supplier.tenNcc}</p>
+              <p className="text-sm text-[var(--color-text-secondary)]">Tên nhà cung cấp</p>
+              <p className="font-medium text-[var(--color-text-primary)]">{supplier.tenNcc}</p>
             </div>
-            {supplier.soDienThoai && (
-              <div className="mb-2">
-                <p className="text-sm text-gray-500">Số điện thoại</p>
-                <p className="font-medium text-gray-900">{supplier.soDienThoai}</p>
+            {supplier.soDienThoai ? (
+              <div>
+                <p className="text-sm text-[var(--color-text-secondary)]">Số điện thoại</p>
+                <p className="font-medium text-[var(--color-text-primary)]">{supplier.soDienThoai}</p>
               </div>
-            )}
+            ) : null}
           </div>
 
-          {/* Related Data Warning */}
-          {hasRelatedData && (
-            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg space-y-3">
-              <div className="flex items-center gap-2 text-yellow-800">
-                <AlertTriangle className="w-5 h-5" />
+          {hasRelatedData ? (
+            <div className="space-y-3 rounded-[10px] border border-[var(--color-warning)]/20 bg-[var(--color-warning-bg)] p-4">
+              <div className="flex items-center gap-2" style={{ color: 'var(--color-warning)' }}>
+                <AlertTriangle className="h-5 w-5" />
                 <p className="font-medium">Nhà cung cấp đã phát sinh dữ liệu</p>
               </div>
-              
-              <div className="space-y-2 text-sm text-yellow-700">
+
+              <div className="space-y-2 text-sm" style={{ color: '#92400E' }}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Package className="w-4 h-4" />
+                    <Package className="h-4 w-4" />
                     <span>Số phiếu nhập:</span>
                   </div>
                   <span className="font-medium">{supplier.soPhieuNhap}</span>
                 </div>
-                
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
+                    <TrendingUp className="h-4 w-4" />
                     <span>Tổng giá trị nhập:</span>
                   </div>
                   <span className="font-medium">{formatCurrency(supplier.tongGiaTriNhap)}</span>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-yellow-200">
-                <p className="text-sm text-yellow-800">
-                  <strong>Lưu ý:</strong> Hệ thống sẽ chuyển trạng thái nhà cung cấp sang{' '}
-                  <span className="font-semibold">"Ngừng hoạt động"</span> thay vì xóa hoàn toàn
-                  để đảm bảo tính toàn vẹn dữ liệu.
-                </p>
-              </div>
+              <p className="border-t border-[#FDE68A] pt-3 text-sm" style={{ color: '#7C2D12' }}>
+                <strong>Lưu ý:</strong> Hệ thống sẽ chuyển trạng thái nhà cung cấp sang <strong>"Ngừng hoạt động"</strong> thay vì xóa hoàn toàn để đảm bảo tính toàn vẹn dữ liệu.
+              </p>
             </div>
-          )}
-
-          {/* Delete Warning */}
-          {!hasRelatedData && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
-              <div className="flex items-center gap-2 text-red-800 mb-2">
-                <AlertTriangle className="w-5 h-5" />
+          ) : (
+            <div className="rounded-[10px] border border-[var(--color-error)]/20 bg-[var(--color-error-bg)] p-4">
+              <div className="mb-2 flex items-center gap-2 text-[var(--color-error)]">
+                <AlertTriangle className="h-5 w-5" />
                 <p className="font-medium">Cảnh báo</p>
               </div>
-              <p className="text-sm text-red-700">
-                Nhà cung cấp sẽ bị <strong>xóa vĩnh viễn</strong> khỏi hệ thống.
-                Hành động này không thể hoàn tác.
+              <p className="text-sm text-[#991B1B]">
+                Nhà cung cấp sẽ bị <strong>xóa vĩnh viễn</strong> khỏi hệ thống. Hành động này không thể hoàn tác.
               </p>
             </div>
           )}
 
-          {/* Confirmation Question */}
-          <div className="pt-2">
-            <p className="text-sm font-medium text-gray-900">
-              {hasRelatedData 
-                ? 'Bạn có chắc chắn muốn ngừng hợp tác với nhà cung cấp này?' 
-                : 'Bạn có chắc chắn muốn xóa nhà cung cấp này?'}
-            </p>
-          </div>
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">
+            {hasRelatedData
+              ? 'Bạn có chắc chắn muốn ngừng hợp tác với nhà cung cấp này?'
+              : 'Bạn có chắc chắn muốn xóa nhà cung cấp này?'}
+          </p>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-white transition-colors"
-          >
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
             Hủy
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onConfirm}
-            className={`px-4 py-2 rounded-lg text-white transition-colors ${
+            className={
               hasRelatedData
-                ? 'bg-yellow-600 hover:bg-yellow-700'
-                : 'bg-red-600 hover:bg-red-700'
-            }`}
+                ? 'bg-[#B45309] text-white hover:bg-[#92400E]'
+                : 'bg-[var(--color-error)] text-white hover:bg-[#B91C1C]'
+            }
           >
             {hasRelatedData ? 'Ngừng hợp tác' : 'Xóa vĩnh viễn'}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

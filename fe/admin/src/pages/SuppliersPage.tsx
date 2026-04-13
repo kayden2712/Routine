@@ -13,6 +13,25 @@ import {
   CheckCircle,
   XCircle,
 } from 'lucide-react';
+import { KPICard } from '@/components/shared/KPICard';
+import { Pagination } from '@/components/shared/Pagination';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { supplierApi } from '../lib/supplierApi';
 import type { SupplierListResponse, SupplierStatus } from '../types';
 import { showToast } from '../lib/toast';
@@ -33,8 +52,7 @@ export default function SuppliersPage() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(0);
-  const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(0);
+  const pageSize = 10;
   const [totalElements, setTotalElements] = useState(0);
 
   useEffect(() => {
@@ -52,9 +70,8 @@ export default function SuppliersPage() {
         sortBy: 'createdAt',
         sortDirection: 'DESC',
       });
-      
+
       setSuppliers(response.content);
-      setTotalPages(response.totalPages);
       setTotalElements(response.totalElements);
     } catch (error) {
       showToast.error('Không thể tải danh sách nhà cung cấp');
@@ -124,14 +141,20 @@ export default function SuppliersPage() {
   const getStatusBadge = (status: SupplierStatus) => {
     if (status === 'ACTIVE') {
       return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <span
+          className="inline-flex items-center gap-1 rounded-full px-[10px] py-[2px] text-xs font-medium"
+          style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}
+        >
           <CheckCircle className="w-3 h-3" />
           Đang hoạt động
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+      <span
+        className="inline-flex items-center gap-1 rounded-full px-[10px] py-[2px] text-xs font-medium"
+        style={{ backgroundColor: '#F3F2F0', color: 'var(--color-text-secondary)' }}
+      >
         <XCircle className="w-3 h-3" />
         Ngừng hoạt động
       </span>
@@ -139,297 +162,225 @@ export default function SuppliersPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex justify-between items-center">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Quản lý nhà cung cấp</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Quản lý thông tin nhà cung cấp và theo dõi lịch sử nhập hàng
+          <h1 className="font-[var(--font-display)] text-[26px] font-semibold text-[var(--color-text-primary)]">Quản lý nhà cung cấp</h1>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+            Quản lý thông tin nhà cung cấp và theo dõi hiệu suất nhập hàng.
           </p>
         </div>
-        <button
-          onClick={handleCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
+        <Button className="gap-2" onClick={handleCreate}>
+          <Plus className="w-4 h-4" />
           Thêm nhà cung cấp
-        </button>
+        </Button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Tổng nhà cung cấp</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{totalElements}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Package className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Đang hoạt động</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">
-                {suppliers.filter(s => s.trangThai === 'ACTIVE').length}
-              </p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Ngừng hoạt động</p>
-              <p className="text-2xl font-bold text-gray-600 mt-1">
-                {suppliers.filter(s => s.trangThai === 'INACTIVE').length}
-              </p>
-            </div>
-            <div className="p-3 bg-gray-100 rounded-lg">
-              <XCircle className="w-6 h-6 text-gray-600" />
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <KPICard label="Tổng nhà cung cấp" value={String(totalElements)} icon={Package} iconBg="var(--color-accent-light)" iconColor="var(--color-accent)" />
+        <KPICard
+          label="Đang hoạt động"
+          value={String(suppliers.filter((s) => s.trangThai === 'ACTIVE').length)}
+          icon={CheckCircle}
+          iconBg="var(--color-success-bg)"
+          iconColor="var(--color-success)"
+        />
+        <KPICard
+          label="Ngừng hoạt động"
+          value={String(suppliers.filter((s) => s.trangThai === 'INACTIVE').length)}
+          icon={XCircle}
+          iconBg="#F3F2F0"
+          iconColor="var(--color-text-secondary)"
+        />
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Tìm kiếm theo tên, SĐT, email..."
+      <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)]">
+        <div className="flex flex-wrap items-center gap-3 border-b border-[var(--color-border)] p-3">
+          <div className="relative min-w-[240px] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" size={16} />
+            <Input
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(0); // Reset to first page
+              placeholder="Tìm theo tên, điện thoại, email"
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(0);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="pl-9"
             />
           </div>
 
-          {/* Status Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <select
+          <div className="flex items-center gap-2">
+            <Filter className="text-[var(--color-text-muted)]" size={16} />
+            <Select
               value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value as SupplierStatus | 'ALL');
+              onValueChange={(value) => {
+                setStatusFilter(value as SupplierStatus | 'ALL');
                 setCurrentPage(0);
               }}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
             >
-              <option value="ALL">Tất cả trạng thái</option>
-              <option value="ACTIVE">Đang hoạt động</option>
-              <option value="INACTIVE">Ngừng hoạt động</option>
-            </select>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">Tất cả trạng thái</SelectItem>
+                <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                <SelectItem value="INACTIVE">Ngừng hoạt động</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+        <Table>
+          <TableHeader className="bg-[#F7F6F4]">
+            <TableRow className="border-b-2 border-[var(--color-border)] hover:bg-transparent">
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Mã NCC
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Tên nhà cung cấp
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Liên hệ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Địa chỉ
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Số phiếu nhập
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Tổng giá trị
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-3 text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Trạng thái
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              </TableHead>
+              <TableHead className="px-3 text-right text-[12px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)]">
                   Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
               {loading ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={8} className="h-[180px] text-center text-sm text-[var(--color-text-secondary)]">
                     <div className="flex items-center justify-center gap-2">
-                      <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--color-accent)] border-t-transparent" />
                       Đang tải...
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : suppliers.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    <Package className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                    <p className="text-lg font-medium">Không có nhà cung cấp nào</p>
-                    <p className="text-sm mt-1">Hãy thêm nhà cung cấp đầu tiên</p>
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={8} className="h-[180px] text-center text-sm text-[var(--color-text-secondary)]">
+                    Không có nhà cung cấp phù hợp với bộ lọc hiện tại.
+                  </TableCell>
+                </TableRow>
               ) : (
                 suppliers.map((supplier) => (
-                  <tr key={supplier.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{supplier.maNcc}</div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{supplier.tenNcc}</div>
+                  <TableRow key={supplier.id} className="h-[56px] border-b border-[var(--color-border)] hover:bg-[#FAFAF9]">
+                    <TableCell className="px-3 text-sm font-semibold text-[var(--color-text-primary)]">
+                      {supplier.maNcc}
+                    </TableCell>
+                    <TableCell className="px-3 py-2">
+                      <div className="text-sm font-medium text-[var(--color-text-primary)]">{supplier.tenNcc}</div>
                       {supplier.nguoiLienHe && (
-                        <div className="text-xs text-gray-500">Liên hệ: {supplier.nguoiLienHe}</div>
+                        <div className="text-xs text-[var(--color-text-secondary)]">Liên hệ: {supplier.nguoiLienHe}</div>
                       )}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 space-y-1">
+                    </TableCell>
+                    <TableCell className="px-3">
+                      <div className="space-y-1 text-sm text-[var(--color-text-primary)]">
                         {supplier.soDienThoai && (
                           <div className="flex items-center gap-1">
-                            <Phone className="w-3 h-3 text-gray-400" />
+                            <Phone className="h-3 w-3 text-[var(--color-text-muted)]" />
                             <span>{supplier.soDienThoai}</span>
                           </div>
                         )}
                         {supplier.email && (
                           <div className="flex items-center gap-1">
-                            <Mail className="w-3 h-3 text-gray-400" />
+                            <Mail className="h-3 w-3 text-[var(--color-text-muted)]" />
                             <span className="text-xs">{supplier.email}</span>
                           </div>
                         )}
                       </div>
-                    </td>
-                    <td className="px-6 py-4">
+                    </TableCell>
+                    <TableCell className="px-3">
                       {supplier.diaChi ? (
-                        <div className="flex items-start gap-1 text-sm text-gray-500">
-                          <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <div className="flex max-w-[260px] items-start gap-1 text-sm text-[var(--color-text-secondary)]">
+                          <MapPin className="mt-0.5 h-3 w-3 shrink-0" />
                           <span className="line-clamp-2">{supplier.diaChi}</span>
                         </div>
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-sm text-[var(--color-text-muted)]">-</span>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-1 text-sm text-gray-900">
-                        <TrendingUp className="w-4 h-4 text-blue-500" />
+                    </TableCell>
+                    <TableCell className="px-3 text-sm text-[var(--color-text-primary)]">
+                      <div className="flex items-center gap-1">
+                        <TrendingUp className="h-4 w-4 text-[var(--color-accent)]" />
                         {supplier.soPhieuNhap || 0}
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {formatCurrency(supplier.tongGiaTriNhap)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(supplier.trangThai)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end gap-2">
+                    </TableCell>
+                    <TableCell className="px-3 text-sm font-medium text-[var(--color-text-primary)]">
+                      {formatCurrency(supplier.tongGiaTriNhap)}
+                    </TableCell>
+                    <TableCell className="px-3">{getStatusBadge(supplier.trangThai)}</TableCell>
+                    <TableCell className="px-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         {supplier.trangThai === 'INACTIVE' && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => handleStatusChange(supplier.id, 'ACTIVE')}
-                            className="p-1.5 text-green-600 hover:bg-green-50 rounded transition-colors"
+                            className="text-[var(--color-success)] hover:bg-[var(--color-success-bg)]"
                             title="Kích hoạt"
                           >
                             <CheckCircle className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
                         {supplier.trangThai === 'ACTIVE' && (
-                          <button
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
                             onClick={() => handleStatusChange(supplier.id, 'INACTIVE')}
-                            className="p-1.5 text-gray-600 hover:bg-gray-50 rounded transition-colors"
+                            className="text-[var(--color-text-secondary)] hover:bg-[#F3F2F0]"
                             title="Ngừng hoạt động"
                           >
                             <XCircle className="w-4 h-4" />
-                          </button>
+                          </Button>
                         )}
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => handleEdit(supplier)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          className="text-[var(--color-accent)] hover:bg-[var(--color-accent-light)]"
                           title="Chỉnh sửa"
                         >
                           <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
                           onClick={() => handleDeleteClick(supplier)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded transition-colors"
+                          className="text-[var(--color-error)] hover:bg-[var(--color-error-bg)]"
                           title="Xóa"
                         >
                           <Trash2 className="w-4 h-4" />
-                        </button>
+                        </Button>
                       </div>
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))
               )}
-            </tbody>
-          </table>
-        </div>
+          </TableBody>
+        </Table>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-gray-700">
-                Hiển thị <span className="font-medium">{currentPage * pageSize + 1}</span> -{' '}
-                <span className="font-medium">
-                  {Math.min((currentPage + 1) * pageSize, totalElements)}
-                </span>{' '}
-                trong tổng số <span className="font-medium">{totalElements}</span> nhà cung cấp
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
-                  disabled={currentPage === 0}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Trước
-                </button>
-                <div className="flex items-center gap-2">
-                  {Array.from({ length: totalPages }, (_, i) => i).map((page) => (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`px-4 py-2 border rounded-lg transition-colors ${
-                        currentPage === page
-                          ? 'bg-blue-600 text-white border-blue-600'
-                          : 'border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {page + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  onClick={() => setCurrentPage(Math.min(totalPages - 1, currentPage + 1))}
-                  disabled={currentPage === totalPages - 1}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Sau
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+        <Pagination
+          page={currentPage + 1}
+          pageSize={pageSize}
+          total={totalElements}
+          onChange={(page) => setCurrentPage(page - 1)}
+        />
+      </section>
 
-      {/* Modals */}
       {showFormModal && (
         <SupplierFormModal
           supplier={editingSupplier}

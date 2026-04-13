@@ -4,6 +4,7 @@ import java.security.Principal;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,15 +15,23 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.be.dto.request.InventoryAdjustRequest;
-import com.example.be.dto.request.ImportReceiptRequest;
+import java.time.LocalDate;
+
 import com.example.be.dto.request.ExportReceiptRequest;
+import com.example.be.dto.request.ImportReceiptRequest;
+import com.example.be.dto.request.InventoryAdjustRequest;
+import com.example.be.dto.request.InventoryCheckConfirmRequest;
+import com.example.be.dto.request.InventoryCheckSubmitRequest;
 import com.example.be.dto.response.ApiResponse;
+import com.example.be.dto.response.ExportReceiptResponse;
+import com.example.be.dto.response.ImportReceiptResponse;
+import com.example.be.dto.response.InventoryCheckItemResponse;
+import com.example.be.dto.response.InventoryCheckListResponse;
+import com.example.be.dto.response.InventoryDiscrepancyReportResponse;
 import com.example.be.dto.response.InventoryHistoryResponse;
 import com.example.be.dto.response.InventoryReportResponse;
-import com.example.be.dto.response.ImportReceiptResponse;
-import com.example.be.dto.response.ExportReceiptResponse;
 import com.example.be.entity.enums.ReceiptStatus;
+import com.example.be.service.InventoryCheckService;
 import com.example.be.service.InventoryManagementService;
 import com.example.be.service.InventoryReceiptService;
 
@@ -36,6 +45,42 @@ public class InventoryController {
 
     private final InventoryManagementService inventoryManagementService;
     private final InventoryReceiptService inventoryReceiptService;
+    private final InventoryCheckService inventoryCheckService;
+
+    @GetMapping("/items")
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE')")
+    public ResponseEntity<ApiResponse<InventoryCheckListResponse>> getInventoryItemsForCheck(
+            Principal principal,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkDate) {
+        InventoryCheckListResponse response = inventoryCheckService.getInventoryItems(principal.getName(), checkDate);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/check")
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE')")
+    public ResponseEntity<ApiResponse<InventoryCheckItemResponse>> submitInventoryCheck(
+            @Valid @RequestBody InventoryCheckSubmitRequest request,
+            Principal principal) {
+        InventoryCheckItemResponse response = inventoryCheckService.submitCheck(principal.getName(), request);
+        return ResponseEntity.ok(ApiResponse.success("Inventory check submitted", response));
+    }
+
+    @GetMapping(value = "/report", params = "stocktakeId")
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE')")
+    public ResponseEntity<ApiResponse<InventoryDiscrepancyReportResponse>> getInventoryDiscrepancyReport(
+            @RequestParam Long stocktakeId) {
+        InventoryDiscrepancyReportResponse response = inventoryCheckService.getDiscrepancyReport(stocktakeId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PostMapping("/confirm")
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE')")
+    public ResponseEntity<ApiResponse<InventoryCheckItemResponse>> confirmInventoryCheck(
+            @Valid @RequestBody InventoryCheckConfirmRequest request,
+            Principal principal) {
+        InventoryCheckItemResponse response = inventoryCheckService.confirmCheck(principal.getName(), request);
+        return ResponseEntity.ok(ApiResponse.success("Inventory check confirmation updated", response));
+    }
 
     @GetMapping("/report")
     @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE', 'SALES')")

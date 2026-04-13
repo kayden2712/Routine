@@ -39,7 +39,8 @@ import { toast } from '@/lib/toast';
 import { formatRelativeTime } from '@/lib/utils';
 import { format } from 'date-fns';
 
-type StaffRole = 'manager' | 'sales' | 'warehouse' | 'accountant';
+type StaffRole = 'admin' | 'manager' | 'sales' | 'warehouse' | 'accountant';
+type StaffEmployeeType = 'fulltime' | 'parttime';
 type StaffStatus = 'active' | 'inactive';
 type StaffRoleFilter = 'all' | StaffRole;
 type StaffStatusFilter = 'all' | StaffStatus;
@@ -50,6 +51,8 @@ interface StaffMember {
   email: string;
   phone: string;
   role: StaffRole;
+  employeeType?: StaffEmployeeType;
+  baseSalary?: number;
   status: StaffStatus;
   branch: string;
   createdAt: Date;
@@ -63,12 +66,15 @@ interface StaffFormState {
   phone: string;
   password: string;
   role: StaffRole;
+  employeeType: StaffEmployeeType;
+  baseSalary: string;
   status: StaffStatus;
   branch: string;
 }
 
 const roleLabelMap: Record<StaffRole, string> = {
   manager: 'Quản lý',
+  admin: 'Quản lý',
   sales: 'Bán hàng',
   warehouse: 'Kho',
   accountant: 'Kế toán',
@@ -77,10 +83,20 @@ const roleLabelMap: Record<StaffRole, string> = {
 const roleFilterLabelMap: Record<StaffRoleFilter, string> = {
   all: 'Tất cả vai trò',
   manager: 'Quản lý',
+  admin: 'Quản lý',
   sales: 'Bán hàng',
   warehouse: 'Kho',
   accountant: 'Kế toán',
 };
+
+const employeeTypeLabelMap: Record<StaffEmployeeType, string> = {
+  fulltime: 'Toàn thời gian',
+  parttime: 'Bán thời gian',
+};
+
+function formatKValue(value: number): string {
+  return `${Math.round(value).toLocaleString('vi-VN')}k`;
+}
 
 const statusFilterLabelMap: Record<StaffStatusFilter, string> = {
   all: 'Tất cả trạng thái',
@@ -100,6 +116,8 @@ function createDefaultForm(): StaffFormState {
     phone: '',
     password: '',
     role: 'sales',
+    employeeType: 'fulltime',
+    baseSalary: '',
     status: 'active',
     branch: '',
   };
@@ -151,7 +169,9 @@ export function StaffPage() {
   const totalStaff = staffList.length;
   const activeStaff = staffList.filter((item) => item.status === 'active').length;
   const inactiveStaff = totalStaff - activeStaff;
-  const managerCount = staffList.filter((item) => item.role === 'manager').length;
+  const managerCount = staffList.filter((item) => item.role === 'manager' || item.role === 'admin').length;
+  const fulltimeCount = staffList.filter((item) => item.employeeType === 'fulltime').length;
+  const parttimeCount = staffList.filter((item) => item.employeeType === 'parttime').length;
 
   const thisMonth = new Date().getMonth();
   const thisYear = new Date().getFullYear();
@@ -192,6 +212,8 @@ export function StaffPage() {
       phone: staff.phone,
       password: '',
       role: staff.role,
+      employeeType: staff.employeeType ?? 'fulltime',
+      baseSalary: String(staff.baseSalary ?? 0),
       status: staff.status,
       branch: staff.branch,
     });
@@ -254,6 +276,8 @@ export function StaffPage() {
           email: formState.email.trim(),
           phone: formState.phone.trim(),
           role: formState.role,
+          employeeType: formState.employeeType,
+          baseSalary: Number(formState.baseSalary || 0),
           status: formState.status,
           branch: formState.branch.trim(),
         });
@@ -265,6 +289,8 @@ export function StaffPage() {
           phone: formState.phone.trim(),
           password: formState.password,
           role: formState.role,
+          employeeType: formState.employeeType,
+          baseSalary: Number(formState.baseSalary || 0),
           status: formState.status,
           branch: formState.branch.trim(),
         });
@@ -285,12 +311,14 @@ export function StaffPage() {
     exportRowsToExcel({
       fileName: 'nhan-vien',
       sheetName: 'NhanVien',
-      headers: ['Ho ten', 'Email', 'So dien thoai', 'Vai tro', 'Trang thai', 'Chi nhanh', 'Ngay tao'],
+      headers: ['Ho ten', 'Email', 'So dien thoai', 'Vai tro', 'Loai nhan vien', 'Luong/1h (k)', 'Trang thai', 'Chi nhanh', 'Ngay tao'],
       rows: filteredStaff.map((item) => [
         item.name,
         item.email,
         item.phone,
         roleLabelMap[item.role],
+        employeeTypeLabelMap[item.employeeType ?? 'fulltime'],
+        formatKValue(item.baseSalary ?? 0),
         item.status === 'active' ? 'Dang lam viec' : 'Tam khoa',
         item.branch,
         format(item.createdAt, 'dd/MM/yyyy'),
@@ -326,6 +354,24 @@ export function StaffPage() {
       cell: ({ row }) => (
         <span className="inline-flex rounded-full bg-[#F7F6F4] px-2.5 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
           {roleLabelMap[row.original.role]}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'employeeType',
+      header: 'LOẠI',
+      cell: ({ row }) => (
+        <span className="inline-flex rounded-full bg-[var(--color-accent-light)] px-2.5 py-1 text-xs font-medium text-[var(--color-accent)]">
+          {employeeTypeLabelMap[row.original.employeeType ?? 'fulltime']}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'baseSalary',
+      header: 'LƯƠNG/1H (K)',
+      cell: ({ row }) => (
+        <span className="font-[var(--font-mono)] text-[13px] text-[var(--color-text-secondary)]">
+          {formatKValue(row.original.baseSalary ?? 0)}
         </span>
       ),
     },
@@ -471,6 +517,18 @@ export function StaffPage() {
             <p className="text-[22px] font-semibold text-[var(--color-text-primary)]">{inactiveStaff}</p>
           </div>
         </div>
+
+          <div className="flex h-[88px] items-center gap-4 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] px-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[var(--color-success-bg)] text-[var(--color-success)]">
+              <Users size={18} />
+            </div>
+            <div>
+              <p className="text-xs text-[var(--color-text-secondary)]">Fulltime / Parttime</p>
+              <p className="text-[22px] font-semibold text-[var(--color-text-primary)]">
+                {fulltimeCount} / {parttimeCount}
+              </p>
+            </div>
+          </div>
       </section>
 
       <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
@@ -619,6 +677,34 @@ export function StaffPage() {
               </div>
 
               <div className="grid gap-2">
+                <Label>Loại nhân viên</Label>
+                <Select
+                  value={formState.employeeType}
+                  onValueChange={(value) => setFormState((prev) => ({ ...prev, employeeType: value as StaffEmployeeType }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue>{employeeTypeLabelMap[formState.employeeType]}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fulltime">Toàn thời gian</SelectItem>
+                    <SelectItem value="parttime">Bán thời gian</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="staff-base-salary">Lương/1h (k)</Label>
+                <Input
+                  id="staff-base-salary"
+                  value={formState.baseSalary}
+                  onChange={(event) => setFormState((prev) => ({ ...prev, baseSalary: event.target.value.replace(/[^0-9]/g, '') }))}
+                  placeholder="Ví dụ: 50"
+                />
+              </div>
+
+              <div className="grid gap-2">
                 <Label>Trạng thái</Label>
                 <Select
                   value={formState.status}
@@ -636,6 +722,10 @@ export function StaffPage() {
                 </Select>
               </div>
             </div>
+
+            <p className="text-xs text-[var(--color-text-muted)]">
+              Lương/1h nhập theo nghìn đồng (k). Ví dụ nhập 50 nghĩa là 50,000 VND/giờ.
+            </p>
 
             <div className="grid gap-2">
               <Label htmlFor="staff-branch">Chi nhánh</Label>

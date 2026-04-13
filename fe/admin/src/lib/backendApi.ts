@@ -1,5 +1,15 @@
 import { apiClient } from '@/lib/apiClient';
-import type { Customer, Order, Product, User, UserRole } from '@/types';
+import type {
+  Customer,
+  Order,
+  PayrollDto,
+  PayrollEmployee,
+  PayrollEntryPayload,
+  PayrollGenerateResult,
+  Product,
+  User,
+  UserRole,
+} from '@/types';
 
 interface BackendAuthResponse {
   token?: string;
@@ -103,6 +113,8 @@ export interface AdminStaffMember {
   email: string;
   phone: string;
   role: UserRole;
+  employeeType?: 'fulltime' | 'parttime';
+  baseSalary?: number;
   status: 'active' | 'inactive';
   branch: string;
   createdAt: Date;
@@ -110,6 +122,7 @@ export interface AdminStaffMember {
 }
 
 const roleMap: Record<string, UserRole> = {
+  ADMIN: 'manager',
   MANAGER: 'manager',
   SALES: 'sales',
   WAREHOUSE: 'warehouse',
@@ -117,6 +130,7 @@ const roleMap: Record<string, UserRole> = {
 };
 
 const roleReverseMap: Record<UserRole, string> = {
+  admin: 'MANAGER',
   manager: 'MANAGER',
   sales: 'SALES',
   warehouse: 'WAREHOUSE',
@@ -524,6 +538,8 @@ export async function fetchStaffApi(): Promise<AdminStaffMember[]> {
     email: string;
     phone: string;
     role: string;
+    employeeType?: string;
+    baseSalary?: number;
     isActive: boolean;
     branch: string;
     createdAt?: string;
@@ -536,6 +552,8 @@ export async function fetchStaffApi(): Promise<AdminStaffMember[]> {
     email: item.email,
     phone: item.phone,
     role: roleMap[item.role] ?? 'sales',
+    employeeType: item.employeeType?.toLowerCase() === 'parttime' ? 'parttime' : 'fulltime',
+    baseSalary: Math.round(Number(item.baseSalary ?? 0) / 1000),
     status: item.isActive ? 'active' : 'inactive',
     branch: item.branch,
     createdAt: parseDate(item.createdAt),
@@ -549,6 +567,8 @@ export async function createStaffApi(payload: {
   phone: string;
   password: string;
   role: UserRole;
+  employeeType: 'fulltime' | 'parttime';
+  baseSalary: number;
   status: 'active' | 'inactive';
   branch: string;
 }): Promise<void> {
@@ -558,6 +578,8 @@ export async function createStaffApi(payload: {
     phone: payload.phone,
     password: payload.password,
     role: roleReverseMap[payload.role],
+    employeeType: payload.employeeType.toUpperCase(),
+    baseSalary: payload.baseSalary * 1000,
     isActive: payload.status === 'active',
     branch: payload.branch,
   });
@@ -570,6 +592,8 @@ export async function updateStaffApi(
     email: string;
     phone: string;
     role: UserRole;
+    employeeType: 'fulltime' | 'parttime';
+    baseSalary: number;
     status: 'active' | 'inactive';
     branch: string;
   },
@@ -579,6 +603,8 @@ export async function updateStaffApi(
     email: payload.email,
     phone: payload.phone,
     role: roleReverseMap[payload.role],
+    employeeType: payload.employeeType.toUpperCase(),
+    baseSalary: payload.baseSalary * 1000,
     isActive: payload.status === 'active',
     branch: payload.branch,
   });
@@ -593,4 +619,137 @@ export async function changePasswordApi(payload: {
   newPassword: string;
 }): Promise<void> {
   await apiClient.patch('/auth/change-password', payload);
+}
+
+interface PayrollEmployeeApi {
+  id: number;
+  name: string;
+  type: string;
+  base_salary?: number;
+  dept?: string;
+  status: string;
+}
+
+interface PayrollEntryApi {
+  employee_id: number;
+  employee_name: string;
+  type: string;
+  base_salary?: number;
+  hours_worked?: number;
+  hourly_rate?: number;
+  gross_salary: number;
+  bonus: number;
+  penalty: number;
+  net_salary: number;
+}
+
+interface PayrollApi {
+  payroll_id: number;
+  month: number;
+  year: number;
+  status: string;
+  total_net: number;
+  entries: PayrollEntryApi[];
+}
+
+function mapPayrollStatus(status: string): 'draft' | 'approved' {
+  return status?.toLowerCase() === 'approved' ? 'approved' : 'draft';
+}
+
+function mapPayrollType(type: string): 'fulltime' | 'parttime' {
+  return type?.toLowerCase() === 'parttime' ? 'parttime' : 'fulltime';
+}
+
+export async function fetchPayrollEmployeesApi(month: number, year: number): Promise<PayrollEmployee[]> {
+  const response = await apiClient.get<{ employees: PayrollEmployeeApi[] }>(
+    `/employees?status=active&month=${month}&year=${year}`,
+  );
+
+  return (response.data?.employees ?? [])
+    .filter((employee) => employee.status?.toUpperCase() === 'ACTIVE')
+    .map((employee) => ({
+      id: employee.id,
+      name: employee.name,
+      type: mapPayrollType(employee.type),
+      baseSalary: Number(employee.base_salary ?? 0),
+      dept: employee.dept,
+      status: employee.status?.toUpperCase() === 'ACTIVE' ? 'ACTIVE' : 'LOCKED',
+    }));
+}
+
+export async function generatePayrollApi(payload: {
+  month: number;
+  year: number;
+  entries: PayrollEntryPayload[];
+  overwrite?: boolean;
+}): Promise<PayrollGenerateResult> {
+  const response = await apiClient.post<{ payroll_id: number; status: string; total_net: number }>('/payroll/generate', {
+    month: payload.month,
+    year: payload.year,
+    overwrite: payload.overwrite,
+    entries: payload.entries.map((entry) => ({
+      employee_id: entry.employee_id,
+      type: entry.type,
+      hours_worked: entry.hours_worked,
+      bonus: entry.bonus,
+      penalty: entry.penalty,
+    })),
+  });
+
+  return {
+    payroll_id: Number(response.data.payroll_id),
+    status: mapPayrollStatus(response.data.status),
+    total_net: Number(response.data.total_net ?? 0),
+  };
+}
+
+export async function updatePayrollApi(payrollId: number, payload: {
+  entries: PayrollEntryPayload[];
+}): Promise<PayrollGenerateResult> {
+  const response = await apiClient.put<{ payroll_id: number; status: string; total_net: number }>(`/payroll/${payrollId}`, {
+    entries: payload.entries.map((entry) => ({
+      employee_id: entry.employee_id,
+      type: entry.type,
+      hours_worked: entry.hours_worked,
+      bonus: entry.bonus,
+      penalty: entry.penalty,
+    })),
+  });
+
+  return {
+    payroll_id: Number(response.data.payroll_id),
+    status: mapPayrollStatus(response.data.status),
+    total_net: Number(response.data.total_net ?? 0),
+  };
+}
+
+export async function approvePayrollApi(payrollId: number): Promise<{ status: 'approved' }> {
+  const response = await apiClient.put<{ status: string }>(`/payroll/${payrollId}/approve`);
+  return {
+    status: mapPayrollStatus(response.data.status) === 'approved' ? 'approved' : 'approved',
+  };
+}
+
+export async function fetchPayrollApi(month?: number, year?: number): Promise<PayrollDto[]> {
+  const query = month && year ? `?month=${month}&year=${year}` : '';
+  const response = await apiClient.get<PayrollApi[]>(`/payroll${query}`);
+  return (response.data ?? []).map((payroll) => ({
+    payrollId: payroll.payroll_id,
+    month: payroll.month,
+    year: payroll.year,
+    status: mapPayrollStatus(payroll.status),
+    totalNet: Number(payroll.total_net ?? 0),
+    entries: (payroll.entries ?? []).map((entry) => ({
+      employeeId: entry.employee_id,
+      employeeName: entry.employee_name,
+      type: mapPayrollType(entry.type),
+      baseSalary: entry.base_salary,
+      hoursWorked: entry.hours_worked,
+      hourlyRate: entry.hourly_rate,
+      grossSalary: Number(entry.gross_salary ?? 0),
+      bonus: Number(entry.bonus ?? 0),
+      penalty: Number(entry.penalty ?? 0),
+      netSalary: Number(entry.net_salary ?? 0),
+    })),
+  }));
 }

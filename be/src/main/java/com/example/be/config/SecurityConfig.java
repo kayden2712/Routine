@@ -20,6 +20,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import com.example.be.security.JwtAuthenticationFilter;
+import com.example.be.security.PayrollRoleGuardFilter;
 
 import lombok.RequiredArgsConstructor;
 
@@ -30,6 +31,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final PayrollRoleGuardFilter payrollRoleGuardFilter;
     private final UserDetailsService userDetailsService;
 
     @Bean
@@ -47,12 +49,13 @@ public class SecurityConfig {
                         .requestMatchers("/categories/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**").permitAll()
-                        .requestMatchers("/auth/admin/register").hasRole("MANAGER")
-                        .requestMatchers("/admin/**").hasAnyRole("MANAGER", "SALES", "WAREHOUSE", "ACCOUNTANT")
+                        .requestMatchers("/auth/admin/register").hasAnyRole("MANAGER", "ADMIN")
+                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "MANAGER", "SALES", "WAREHOUSE", "ACCOUNTANT")
                         .requestMatchers("/customer/**", "/cart/**").hasRole("CUSTOMER")
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                    .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                    .addFilterAfter(payrollRoleGuardFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

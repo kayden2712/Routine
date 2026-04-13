@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
-import { AlertTriangle, Boxes, Download, Filter, PackagePlus, PackageMinus, RotateCcw, Search } from 'lucide-react';
+import { AlertTriangle, Boxes, ClipboardCheck, Download, Filter, PackagePlus, PackageMinus, RotateCcw, Search } from 'lucide-react';
 import { DataTable } from '@/components/shared/DataTable';
 import { KPICard } from '@/components/shared/KPICard';
 import { Button } from '@/components/ui/button';
@@ -354,6 +354,10 @@ export function InventoryPage() {
       <section className="flex items-center justify-between gap-3">
         <h1 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">Kho hàng</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" className="h-9 gap-2" onClick={() => navigate('/inventory/check')}>
+            <ClipboardCheck size={16} />
+            Kiem ke
+          </Button>
           <Button variant="outline" className="h-9 gap-2" onClick={() => goToCreateReceipt('import')}>
             <PackagePlus size={16} />
             Tao phieu nhap

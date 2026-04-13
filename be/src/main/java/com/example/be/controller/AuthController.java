@@ -31,7 +31,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/admin/register")
-    @PreAuthorize("hasRole('MANAGER')")
+    @PreAuthorize("hasAnyRole('MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<AuthResponse>> registerAdmin(@Valid @RequestBody RegisterUserRequest request) {
         AuthResponse response = authService.registerUser(request);
         return ResponseEntity.ok(ApiResponse.success("User registered successfully", response));

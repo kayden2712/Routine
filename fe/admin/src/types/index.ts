@@ -1,4 +1,4 @@
-export type UserRole = 'manager' | 'sales' | 'warehouse' | 'accountant';
+export type UserRole = 'admin' | 'manager' | 'sales' | 'warehouse' | 'accountant';
 
 export interface User {
   id: string;
@@ -113,6 +113,53 @@ export interface RevenuePoint {
   date: string;
   revenue: number;
   orders: number;
+}
+
+export type EmployeePayrollType = 'fulltime' | 'parttime';
+
+export interface PayrollEmployee {
+  id: number;
+  name: string;
+  type: EmployeePayrollType;
+  baseSalary?: number;
+  dept?: string;
+  status: 'ACTIVE' | 'LOCKED';
+}
+
+export interface PayrollEntryPayload {
+  employee_id: number;
+  type: EmployeePayrollType;
+  hours_worked?: number;
+  bonus: number;
+  penalty: number;
+}
+
+export interface PayrollGenerateResult {
+  payroll_id: number;
+  status: 'draft' | 'approved';
+  total_net: number;
+}
+
+export interface PayrollEntryDto {
+  employeeId: number;
+  employeeName: string;
+  type: EmployeePayrollType;
+  baseSalary?: number;
+  hoursWorked?: number;
+  hourlyRate?: number;
+  grossSalary: number;
+  bonus: number;
+  penalty: number;
+  netSalary: number;
+}
+
+export interface PayrollDto {
+  payrollId: number;
+  month: number;
+  year: number;
+  status: 'draft' | 'approved';
+  totalNet: number;
+  entries: PayrollEntryDto[];
 }
 
 export type PromotionType = 'GIAM_PHAN_TRAM' | 'GIAM_TIEN' | 'TANG_QUA';
@@ -401,4 +448,64 @@ export interface CreateExportReceiptRequest {
     soLuongXuat: number;
     ghiChu?: string;
   }>;
+}
+
+export type InventoryCheckStatus =
+  | 'PENDING'
+  | 'MATCH'
+  | 'DISCREPANCY'
+  | 'WARNING'
+  | 'CONFIRMED'
+  | 'RECHECK_REQUIRED';
+
+export interface InventoryCheckItem {
+  itemId: number;
+  name: string;
+  sku: string;
+  unit: string;
+  systemQty: number;
+  actualQty: number | null;
+  discrepancy: number | null;
+  status: InventoryCheckStatus;
+  warning: boolean;
+  checkedBy?: {
+    id: number;
+    username: string;
+    fullName: string;
+  } | null;
+  checkedAt?: string | null;
+  note?: string;
+}
+
+export interface InventoryCheckListData {
+  stocktakeId: number;
+  stocktakeCode: string;
+  checkDate: string;
+  warningThreshold: number;
+  items: InventoryCheckItem[];
+}
+
+export interface InventoryDiscrepancyReport {
+  stocktakeId: number;
+  stocktakeCode: string;
+  checkDate: string;
+  totalItems: number;
+  checkedItems: number;
+  discrepancyItems: number;
+  warningItems: number;
+  items: InventoryCheckItem[];
+}
+
+export interface InventoryCheckSubmitRequest {
+  stocktakeId: number;
+  itemId: number;
+  actualQty: number;
+  note?: string;
+}
+
+export interface InventoryCheckConfirmRequest {
+  stocktakeId: number;
+  itemId: number;
+  action: 'CONFIRM' | 'RECHECK';
+  note?: string;
 }

@@ -7,9 +7,10 @@ services:
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: 12345
+      MYSQL_ROOT_HOST: "%"
       MYSQL_DATABASE: routine_db
       MYSQL_USER: routine_user
-      MYSQL_PASSWORD: Routine@2026!
+      MYSQL_PASSWORD: 12345
       TZ: Asia/Ho_Chi_Minh
     ports:
       - "3306:3306"

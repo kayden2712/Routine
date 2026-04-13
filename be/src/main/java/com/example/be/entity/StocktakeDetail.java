@@ -46,7 +46,7 @@ public class StocktakeDetail extends BaseEntity {
     @Column(name = "so_luong_thuc_te")
     private Integer soLuongThucTe; // NV nhập sau khi đếm
 
-    @Column(name = "chenh_lech")
+    @Column(name = "chenh_lech", insertable = false, updatable = false)
     @SuppressWarnings("unused")
     private Integer chenhLech; // = thực tế - hệ thống
 

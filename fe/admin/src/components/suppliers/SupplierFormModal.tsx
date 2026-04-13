@@ -1,5 +1,23 @@
 import { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import { Building2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supplierApi } from '../../lib/supplierApi';
 import type { SupplierListResponse, SupplierRequest, SupplierStatus } from '../../types';
 import { showToast } from '../../lib/toast';
@@ -124,179 +142,128 @@ export default function SupplierFormModal({ supplier, onClose, onSuccess }: Prop
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
-          <h2 className="text-xl font-bold text-gray-900">
-            {isEdit ? 'Chỉnh Sửa Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp Mới'}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-h-[92vh] max-w-[760px] overflow-y-auto p-0" showCloseButton={false}>
+        <DialogHeader className="border-b border-[var(--color-border)] px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[10px] bg-[var(--color-accent-light)] text-[var(--color-accent)]">
+              <Building2 size={18} />
+            </div>
+            <div>
+              <DialogTitle className="font-[var(--font-display)] text-[20px] text-[var(--color-text-primary)]">
+                {isEdit ? 'Chỉnh sửa nhà cung cấp' : 'Thêm nhà cung cấp mới'}
+              </DialogTitle>
+              <DialogDescription className="text-[var(--color-text-secondary)]">
+                Cập nhật thông tin liên hệ và trạng thái hợp tác với nhà cung cấp.
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Tên nhà cung cấp */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tên nhà cung cấp <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+          <div className="grid gap-1.5">
+            <Label>Tên nhà cung cấp</Label>
+            <Input
               value={formData.tenNcc}
               onChange={(e) => setFormData({ ...formData, tenNcc: e.target.value })}
               required
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.tenNcc ? 'border-red-500' : 'border-gray-300'
-              }`}
               placeholder="VD: Công ty TNHH May Mặc ABC"
+              className={errors.tenNcc ? 'border-[var(--color-error)]' : undefined}
             />
-            {errors.tenNcc && (
-              <p className="mt-1 text-sm text-red-500">{errors.tenNcc}</p>
-            )}
+            {errors.tenNcc ? <p className="text-xs text-[var(--color-error)]">{errors.tenNcc}</p> : null}
           </div>
 
-          {/* Grid 2 cột */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Số điện thoại */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Số điện thoại
-              </label>
-              <input
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Số điện thoại</Label>
+              <Input
                 type="tel"
                 value={formData.soDienThoai}
                 onChange={(e) => setFormData({ ...formData, soDienThoai: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.soDienThoai ? 'border-red-500' : 'border-gray-300'
-                }`}
                 placeholder="VD: 0901234567"
+                className={errors.soDienThoai ? 'border-[var(--color-error)]' : undefined}
               />
-              {errors.soDienThoai && (
-                <p className="mt-1 text-sm text-red-500">{errors.soDienThoai}</p>
-              )}
+              {errors.soDienThoai ? <p className="text-xs text-[var(--color-error)]">{errors.soDienThoai}</p> : null}
             </div>
 
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
+            <div className="grid gap-1.5">
+              <Label>Email</Label>
+              <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.email ? 'border-red-500' : 'border-gray-300'
-                }`}
                 placeholder="VD: supplier@example.com"
+                className={errors.email ? 'border-[var(--color-error)]' : undefined}
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-500">{errors.email}</p>
-              )}
+              {errors.email ? <p className="text-xs text-[var(--color-error)]">{errors.email}</p> : null}
             </div>
           </div>
 
-          {/* Người liên hệ */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Người liên hệ
-            </label>
-            <input
-              type="text"
+          <div className="grid gap-1.5">
+            <Label>Người liên hệ</Label>
+            <Input
               value={formData.nguoiLienHe}
               onChange={(e) => setFormData({ ...formData, nguoiLienHe: e.target.value })}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.nguoiLienHe ? 'border-red-500' : 'border-gray-300'
-              }`}
               placeholder="VD: Nguyễn Văn A"
+              className={errors.nguoiLienHe ? 'border-[var(--color-error)]' : undefined}
             />
-            {errors.nguoiLienHe && (
-              <p className="mt-1 text-sm text-red-500">{errors.nguoiLienHe}</p>
-            )}
+            {errors.nguoiLienHe ? <p className="text-xs text-[var(--color-error)]">{errors.nguoiLienHe}</p> : null}
           </div>
 
-          {/* Địa chỉ */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Địa chỉ
-            </label>
+          <div className="grid gap-1.5">
+            <Label>Địa chỉ</Label>
             <textarea
               value={formData.diaChi}
               onChange={(e) => setFormData({ ...formData, diaChi: e.target.value })}
               rows={2}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.diaChi ? 'border-red-500' : 'border-gray-300'
+              className={`min-h-[72px] w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-accent)] ${
+                errors.diaChi ? 'border-[var(--color-error)]' : 'border-[var(--color-border)]'
               }`}
               placeholder="VD: 123 Đường ABC, Phường XYZ, Quận 1, TP.HCM"
             />
-            {errors.diaChi && (
-              <p className="mt-1 text-sm text-red-500">{errors.diaChi}</p>
-            )}
+            {errors.diaChi ? <p className="text-xs text-[var(--color-error)]">{errors.diaChi}</p> : null}
           </div>
 
-          {/* Ghi chú */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Ghi chú
-            </label>
+          <div className="grid gap-1.5">
+            <Label>Ghi chú</Label>
             <textarea
               value={formData.ghiChu}
               onChange={(e) => setFormData({ ...formData, ghiChu: e.target.value })}
               rows={3}
-              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.ghiChu ? 'border-red-500' : 'border-gray-300'
+              className={`min-h-[88px] w-full rounded-lg border px-3 py-2 text-sm outline-none transition-colors placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-accent)] ${
+                errors.ghiChu ? 'border-[var(--color-error)]' : 'border-[var(--color-border)]'
               }`}
               placeholder="Thông tin bổ sung về nhà cung cấp..."
             />
-            {errors.ghiChu && (
-              <p className="mt-1 text-sm text-red-500">{errors.ghiChu}</p>
-            )}
+            {errors.ghiChu ? <p className="text-xs text-[var(--color-error)]">{errors.ghiChu}</p> : null}
           </div>
 
-          {/* Trạng thái */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Trạng thái
-            </label>
-            <select
+          <div className="grid gap-1.5">
+            <Label>Trạng thái</Label>
+            <Select
               value={formData.trangThai}
-              onChange={(e) => setFormData({ ...formData, trangThai: e.target.value as SupplierStatus })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              onValueChange={(value) => setFormData({ ...formData, trangThai: value as SupplierStatus })}
             >
-              <option value="ACTIVE">Đang hoạt động</option>
-              <option value="INACTIVE">Ngừng hoạt động</option>
-            </select>
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">Đang hoạt động</SelectItem>
+                <SelectItem value="INACTIVE">Ngừng hoạt động</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              disabled={loading}
-            >
+          <DialogFooter className="mt-4">
+            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
               Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-            >
-              {loading && (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              )}
-              {isEdit ? 'Cập Nhật' : 'Thêm Mới'}
-            </button>
-          </div>
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? 'Đang lưu...' : isEdit ? 'Cập nhật' : 'Thêm mới'}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

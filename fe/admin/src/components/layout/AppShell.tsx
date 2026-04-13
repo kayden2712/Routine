@@ -18,6 +18,7 @@ const pageMeta: Record<string, { title: string; breadcrumb?: string[] }> = {
   '/inventory/import-receipts': { title: 'Phieu nhap kho', breadcrumb: ['Van hanh', 'Kho hang'] },
   '/inventory/export-receipts': { title: 'Phieu xuat kho', breadcrumb: ['Van hanh', 'Kho hang'] },
   '/staff': { title: 'Nhan vien', breadcrumb: ['Van hanh'] },
+  '/payroll': { title: 'Bang luong', breadcrumb: ['Tai chinh'] },
   '/reports': { title: 'Bao cao', breadcrumb: ['Thong ke'] },
   '/settings': { title: 'Cai dat', breadcrumb: ['He thong'] },
   '/invoices': { title: 'Hoa don', breadcrumb: ['Tai chinh'] },
