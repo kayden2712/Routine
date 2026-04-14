@@ -39,8 +39,12 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
 
-    public List<ProductResponse> getAllProducts() {
-        return productRepository.findAll().stream()
+    public List<ProductResponse> getAllProducts(boolean includeInactive) {
+        List<Product> products = includeInactive
+                ? productRepository.findAll()
+                : productRepository.findByStatusNot(ProductStatus.INACTIVE);
+
+        return products.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -158,7 +162,8 @@ public class ProductService {
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
-        productRepository.delete(product);
+        product.setStatus(ProductStatus.INACTIVE);
+        productRepository.save(product);
     }
 
     @Transactional

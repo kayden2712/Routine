@@ -1,70 +1,67 @@
 # Routine Storefront
 
-Ứng dụng khách hàng của Routine, phục vụ luồng mua sắm online từ duyệt sản phẩm đến theo dõi đơn hàng.
+Ứng dụng cho khách hàng mua sắm online của Routine.
 
-## Công nghệ chính
+## Chức năng chính
+
+- Duyệt sản phẩm, tìm kiếm và lọc.
+- Giỏ hàng và checkout.
+- Theo dõi lịch sử đơn hàng.
+- Nhận realtime cập nhật trạng thái đơn.
+- Gửi yêu cầu hủy/hoàn theo trạng thái hợp lệ.
+- Đánh giá sản phẩm sau mua, hỗ trợ đính kèm ảnh.
+
+## Công nghệ
 
 - React 18
-- TypeScript 5.9
+- TypeScript 5
 - Vite 8
 - Tailwind CSS 4
 - Zustand
 - React Router
-- STOMP client cho realtime order updates
+- STOMP client cho realtime
 
-## Kết nối backend
+## Cài đặt và chạy local
 
-Storefront gọi API qua biến môi trường `VITE_API_URL`.
+```bash
+cd fe/storefront
+npm install
+npm run dev -- --host 0.0.0.0 --port 5173
+```
 
-Mặc định local:
+Storefront mặc định chạy tại: `http://localhost:5173`
+
+## Build / Lint / Preview
+
+```bash
+cd fe/storefront
+npm run lint
+npm run build
+npm run preview
+```
+
+## Cấu hình môi trường
+
+Tạo `.env.local` nếu cần:
 
 ```env
 VITE_API_URL=http://localhost:8080/api
 ```
 
-Tạo file `.env.local` nếu cần đổi backend.
-
-## Chạy local
-
-```bat
-cd fe\storefront
-npm install
-npm run dev -- --host 0.0.0.0 --port 5173
-```
-
-## Build và preview
-
-```bat
-cd fe\storefront
-npm run build
-npm run preview
-```
-
-## Tính năng hiện có
-
-- Duyệt sản phẩm, tìm kiếm và lọc.
-- Giỏ hàng và checkout.
-- Lịch sử đơn hàng sắp xếp từ mới đến cũ.
-- Trạng thái đơn hàng tự cập nhật realtime qua WebSocket.
-- Xác nhận hoàn thành đơn khi đơn đang giao.
-- Gửi yêu cầu hủy đơn, hủy yêu cầu hủy và yêu cầu hoàn tiền theo trạng thái hợp lệ.
-- Đánh giá sản phẩm sau khi đơn thành công.
-- Đính kèm ảnh trong đánh giá với preview trước khi gửi.
-
 ## Cấu trúc thư mục
 
 ```text
 src/
-  app/         router và bootstrap app
-  components/  layout và shared UI
-  lib/         api client, mapping, utility
+  app/         router + bootstrap
+  components/  layout + shared UI
+  lib/         api client + utils
   pages/       màn hình khách hàng
   store/       Zustand stores
-  types/       kiểu dữ liệu
+  types/       typings
 ```
 
 ## Ghi chú
 
-- Khi backend không chạy, các luồng lấy dữ liệu sẽ báo lỗi network.
-- Nếu cần realtime ổn định, đảm bảo backend đang mở WebSocket endpoint `/api/ws`.
-- Nếu WebSocket không nhận được sự kiện, kiểm tra backend có publish vào `/topic/orders/status-changed` hay không.
+- Endpoint WebSocket backend: `/api/ws`.
+- Topic cập nhật trạng thái đơn: `/topic/orders/status-changed`.
+- Nếu dữ liệu không tải được, kiểm tra backend và `VITE_API_URL`.

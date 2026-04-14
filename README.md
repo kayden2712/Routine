@@ -1,100 +1,88 @@
 # Routine
 
-Routine là hệ thống quản lý bán lẻ gồm 3 phần chạy trong cùng workspace:
+Monorepo hệ thống bán lẻ Routine, gồm backend API, admin nội bộ và storefront cho khách hàng.
 
-- Backend API để xử lý nghiệp vụ và dữ liệu.
-- Admin app cho vận hành nội bộ.
-- Storefront app cho khách hàng mua sắm online.
+## Thành phần chính
 
-## Thành phần
-
-| Thành phần | Công nghệ chính | Vai trò |
+| Thư mục | Vai trò | Công nghệ chính |
 | --- | --- | --- |
-| be/ | Java 21, Spring Boot, JPA, Security, WebSocket, MySQL | API, nghiệp vụ, đồng bộ trạng thái đơn hàng |
-| fe/admin/ | React 18, Vite, TypeScript, Tailwind CSS, Zustand | POS, sản phẩm, kho, khách hàng, báo cáo |
-| fe/storefront/ | React 18, Vite, TypeScript, Tailwind CSS, Zustand | Duyệt sản phẩm, giỏ hàng, checkout, theo dõi đơn |
-| postman/ | Postman Collection | Kiểm thử API và dữ liệu mẫu |
+| `be/` | Backend API + nghiệp vụ | Java 21, Spring Boot, JPA, Security, WebSocket, MySQL |
+| `fe/admin/` | Ứng dụng quản trị nội bộ | React 18, TypeScript, Vite, Tailwind CSS, Zustand |
+| `fe/storefront/` | Ứng dụng mua sắm online | React 18, TypeScript, Vite, Tailwind CSS, Zustand |
+| `postman/` | Collection kiểm thử API | Postman |
 
 ## Yêu cầu môi trường
 
 - Java 21+
-- MySQL 8+
 - Node.js 20+
 - npm 10+
+- MySQL 8+
 
-## Thiết lập ban đầu
+## Thiết lập lần đầu
 
-1. Cài dependencies cho hai frontend.
+1. Cài package cho frontend:
 
 ```bash
-cd fe/storefront
-npm install
-
-cd ../admin
-npm install
+cd fe/admin && npm install
+cd ../storefront && npm install
 ```
 
-2. Tạo database cho backend.
+2. Khởi tạo database:
 
 ```bash
 mysql -u root -p < be/setup-database.sql
 ```
 
-3. Nếu muốn dùng database test, tạo thêm schema test.
+3. (Tuỳ chọn) khởi tạo test database:
 
 ```bash
 mysql -u root -p < be/setup-test-database.sql
 ```
 
-Chi tiết cho môi trường test nằm trong [be/TEST-DATABASE-SETUP.md](be/TEST-DATABASE-SETUP.md).
-
-## Chạy toàn hệ thống
+## Chạy nhanh toàn hệ thống
 
 ### Windows
 
-```bash
+```bat
 startAll.bat
 ```
 
-Chạy backend cùng cả hai frontend với database chính.
+Chạy với DB test:
 
-```bash
+```bat
 startAll-test.bat
 ```
 
-Chạy với database test; dữ liệu sẽ được reset theo cấu hình test.
+### Linux/macOS
 
-## Chạy từng phần
+```bash
+./startAll.sh
+```
+
+## Chạy từng service
 
 ### Backend
 
 ```bash
 cd be
-mvnw.cmd spring-boot:run
+./mvnw spring-boot:run
 ```
 
-Nếu muốn dùng profile dev/test:
-
-```bash
-set SPRING_PROFILES_ACTIVE=dev
-mvnw.cmd spring-boot:run
-```
-
-### Admin app
+### Admin
 
 ```bash
 cd fe/admin
 npm run dev -- --host 0.0.0.0 --port 5174
 ```
 
-### Storefront app
+### Storefront
 
 ```bash
 cd fe/storefront
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
-## Địa chỉ mặc định
+## URL mặc định
 
 | Dịch vụ | URL |
 | --- | --- |
@@ -104,61 +92,36 @@ npm run dev -- --host 0.0.0.0 --port 5173
 | Admin | http://localhost:5174 |
 | Storefront | http://localhost:5173 |
 
-## Build và kiểm tra
+## Build / Test
 
 ### Backend
 
 ```bash
 cd be
-mvnw.cmd clean test
-mvnw.cmd clean package
+./mvnw clean test
+./mvnw clean package
 ```
 
 ### Frontend
 
 ```bash
-cd fe/admin
-npm run build
-
-cd ../storefront
-npm run build
+cd fe/admin && npm run build
+cd ../storefront && npm run build
 ```
 
-## Cấu hình phổ biến
+## Cấu hình quan trọng
 
-- Backend dùng `be/src/main/resources/application.properties` cho môi trường mặc định.
-- Backend dev/test dùng `be/src/main/resources/application-dev.properties`.
-- Có thể override kết nối database bằng biến môi trường `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`.
-- Frontend gọi API qua biến `VITE_API_URL`.
-- Backend cho phép CORS với `http://localhost:5173` và `http://localhost:5174`.
+- Backend context path: `/api`
+- WebSocket endpoint: `/api/ws`
+- Topic realtime trạng thái đơn: `/topic/orders/status-changed`
+- CORS local mặc định: `http://localhost:5173`, `http://localhost:5174`
+- Biến DB backend: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`
+- Biến frontend gọi API: `VITE_API_URL` (mặc định `http://localhost:8080/api`)
 
 ## Tài liệu liên quan
 
 - [Backend README](be/README.md)
 - [Admin README](fe/admin/README.md)
 - [Storefront README](fe/storefront/README.md)
-- [Test Database Setup](be/TEST-DATABASE-SETUP.md)
-- [Error Codes](docs/error-codes.md)
-
-## Cấu trúc thư mục
-
-```text
-Routine/
-├── README.md
-├── startAll.bat
-├── startAll-test.bat
-├── be/
-├── fe/
-│   ├── admin/
-│   └── storefront/
-├── postman/
-├── testing/
-└── docs/
-```
-
-## Ghi chú
-
-- Repo này ưu tiên chạy bằng Maven Wrapper, không cần cài Maven global.
-- WebSocket backend handshake tại `/ws`, topic cập nhật trạng thái đơn là `/topic/orders/status-changed`.
-- Khi backend không lên, kiểm tra MySQL, profile đang dùng và biến `SPRING_PROFILES_ACTIVE`.
-
+- [Test DB setup](be/TEST-DATABASE-SETUP.md)
+- [Error codes](docs/error-codes.md)

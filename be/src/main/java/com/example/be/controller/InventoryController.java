@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import com.example.be.dto.request.ExportReceiptRequest;
 import com.example.be.dto.request.ImportReceiptRequest;
 import com.example.be.dto.request.InventoryAdjustRequest;
+import com.example.be.dto.request.InventoryCheckApproveRequest;
 import com.example.be.dto.request.InventoryCheckConfirmRequest;
 import com.example.be.dto.request.InventoryCheckSubmitRequest;
 import com.example.be.dto.response.ApiResponse;
@@ -27,6 +28,7 @@ import com.example.be.dto.response.ExportReceiptResponse;
 import com.example.be.dto.response.ImportReceiptResponse;
 import com.example.be.dto.response.InventoryCheckItemResponse;
 import com.example.be.dto.response.InventoryCheckListResponse;
+import com.example.be.dto.response.InventoryCheckSessionResponse;
 import com.example.be.dto.response.InventoryDiscrepancyReportResponse;
 import com.example.be.dto.response.InventoryHistoryResponse;
 import com.example.be.dto.response.InventoryReportResponse;
@@ -63,6 +65,22 @@ public class InventoryController {
             Principal principal) {
         InventoryCheckItemResponse response = inventoryCheckService.submitCheck(principal.getName(), request);
         return ResponseEntity.ok(ApiResponse.success("Inventory check submitted", response));
+    }
+
+    @PostMapping("/check/approve")
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE')")
+    public ResponseEntity<ApiResponse<InventoryCheckListResponse>> approveInventoryCheck(
+            @Valid @RequestBody InventoryCheckApproveRequest request,
+            Principal principal) {
+        InventoryCheckListResponse response = inventoryCheckService.approveStocktake(principal.getName(), request);
+        return ResponseEntity.ok(ApiResponse.success("Inventory check approved", response));
+    }
+
+    @GetMapping("/check-sessions")
+    @PreAuthorize("hasAnyRole('MANAGER', 'WAREHOUSE')")
+    public ResponseEntity<ApiResponse<List<InventoryCheckSessionResponse>>> getInventoryCheckSessions(Principal principal) {
+        List<InventoryCheckSessionResponse> response = inventoryCheckService.getInventorySessions(principal.getName());
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping(value = "/report", params = "stocktakeId")

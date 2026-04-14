@@ -1,89 +1,89 @@
 # Routine Backend
 
-Backend API của Routine phục vụ đồng thời cho admin app và storefront app.
+Backend API phục vụ cả Admin và Storefront.
 
-## Công nghệ chính
+## Công nghệ
 
 - Java 21
-- Spring Boot 3.5.13
+- Spring Boot 3.5.x
 - Spring Web, Spring Data JPA, Spring Security
-- JWT cho luồng admin và customer
-- Spring WebSocket với STOMP
+- JWT Authentication
+- Spring WebSocket (STOMP)
 - MySQL 8+
 - Maven Wrapper
 
-## Cấu trúc code
+## Cấu trúc chính
 
 ```text
 src/main/java/com/example/be/
-    controller/   REST controllers
-    service/      business logic
-    repository/   JPA repositories
-    entity/       domain entities
-    dto/          request/response models
-    security/     JWT filter and auth components
-    config/       security, CORS, websocket, init data
-    exception/    custom exceptions
+  controller/   REST endpoints
+  service/      business logic
+  repository/   JPA repository
+  entity/       domain models
+  dto/          request/response
+  security/     JWT + auth filters
+  config/       security, cors, websocket
+  exception/    error handling
 ```
 
 ## Chạy local
+
+### Linux/macOS
+
+```bash
+cd be
+./mvnw spring-boot:run
+```
+
+### Windows
 
 ```bat
 cd be
 mvnw.cmd spring-boot:run
 ```
 
-Mặc định backend chạy tại `http://localhost:8080/api` và dùng database `routine_db`.
+Backend chạy tại: `http://localhost:8080/api`
 
-### Chạy với profile dev/test
+## Cấu hình database
 
-```bat
-set SPRING_PROFILES_ACTIVE=dev
-mvnw.cmd spring-boot:run
-```
+File mặc định: `src/main/resources/application.properties`
 
-Profile `dev` dùng `routine_test_db` và phù hợp cho môi trường phát triển.
+Biến môi trường hỗ trợ:
 
-## Database
+- `DB_HOST` (default: `localhost`)
+- `DB_PORT` (default: `3306`)
+- `DB_USER` (default: `routine_user`)
+- `DB_PASSWORD` (default: `12345`)
 
-File cấu hình mặc định: `src/main/resources/application.properties`
-
-Giá trị quan trọng:
-
-- `spring.datasource.url`
-- `spring.datasource.username`
-- `spring.datasource.password`
-- `spring.jpa.hibernate.ddl-auto`
-
-Script khởi tạo database nằm ở:
+Script SQL:
 
 - `setup-database.sql`
 - `setup-test-database.sql`
 
-Chi tiết setup test database: [TEST-DATABASE-SETUP.md](TEST-DATABASE-SETUP.md)
+Chi tiết môi trường test: [TEST-DATABASE-SETUP.md](TEST-DATABASE-SETUP.md)
 
 ## API docs
 
 - Swagger UI: `http://localhost:8080/api/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8080/api/api-docs`
 
-## WebSocket realtime
+## Realtime
 
-- Handshake endpoint: `/ws`
-- Topic cập nhật trạng thái đơn: `/topic/orders/status-changed`
+- STOMP endpoint: `/api/ws`
+- Broker topic: `/topic/orders/status-changed`
+- App prefix: `/app`
 
-Admin và storefront có thể subscribe topic này để nhận cập nhật realtime.
+## Build / Test
 
-## CORS local
+### Linux/macOS
 
-Backend cho phép gọi từ:
+```bash
+cd be
+./mvnw clean test
+./mvnw clean package
+```
 
-- `http://localhost:5173`
-- `http://localhost:5174`
-
-Danh sách origin nằm tại `cors.allowed-origins` trong `application.properties`.
-
-## Build và test
+### Windows
 
 ```bat
 cd be
@@ -91,17 +91,8 @@ mvnw.cmd clean test
 mvnw.cmd clean package
 ```
 
-## Nghiệp vụ nổi bật
+## Ghi chú
 
-- Quản lý đơn hàng online và offline.
-- Kiểm tra tồn kho trước khi xác nhận đơn.
-- Theo dõi trạng thái đơn và lịch sử thay đổi.
-- Realtime cập nhật trạng thái đơn qua WebSocket.
-- Đánh giá sản phẩm sau khi hoàn tất đơn.
-- Hỗ trợ đính kèm ảnh trong đánh giá.
-
-## Lưu ý kỹ thuật
-
-- Dự án đang dùng `spring.jpa.hibernate.ddl-auto=update`.
-- Khi thay đổi entity, nên restart backend để Hibernate cập nhật schema.
-- Nếu frontend không kết nối được, kiểm tra port 8080, MySQL và biến môi trường JWT.
+- Context path backend là `/api`.
+- CORS local cho frontend: `http://localhost:5173`, `http://localhost:5174`.
+- Khi đổi entity, nên restart backend để Hibernate cập nhật schema.

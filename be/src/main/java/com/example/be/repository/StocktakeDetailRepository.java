@@ -56,6 +56,19 @@ public interface StocktakeDetailRepository extends JpaRepository<StocktakeDetail
         long countLargeDiscrepancy(@Param("kiemKeId") Long kiemKeId);
 
         /**
+         * Tổng hợp tiến độ kiểm kê theo danh sách phiên.
+         */
+        @Query("""
+                        SELECT ct.kiemKe.id, COUNT(ct),
+                               SUM(CASE WHEN ct.soLuongThucTe IS NOT NULL THEN 1 ELSE 0 END),
+                               SUM(CASE WHEN ct.soLuongThucTe IS NOT NULL THEN (ct.soLuongThucTe - ct.soLuongHeThong) ELSE 0 END)
+                        FROM StocktakeDetail ct
+                        WHERE ct.kiemKe.id IN :stocktakeIds
+                        GROUP BY ct.kiemKe.id
+                        """)
+        List<Object[]> summarizeProgressByStocktakeIds(@Param("stocktakeIds") List<Long> stocktakeIds);
+
+        /**
          * Xóa chi tiết theo kiểm kê
          */
         void deleteByKiemKeId(Long kiemKeId);

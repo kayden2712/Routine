@@ -4,9 +4,11 @@ import type {
   CreateImportReceiptRequest,
   ExportReceipt,
   ImportReceipt,
+  InventoryCheckApproveRequest,
   InventoryCheckConfirmRequest,
   InventoryCheckItem,
   InventoryCheckListData,
+  InventoryCheckSession,
   InventoryCheckSubmitRequest,
   InventoryDiscrepancyReport,
   InventoryAdjustRequest,
@@ -116,8 +118,18 @@ export const inventoryApi = {
     return response.data;
   },
 
+  getInventoryCheckSessions: async (): Promise<InventoryCheckSession[]> => {
+    const response = await apiClient.get<InventoryCheckSession[]>('/inventory/check-sessions');
+    return response.data ?? [];
+  },
+
   submitInventoryCheck: async (payload: InventoryCheckSubmitRequest): Promise<InventoryCheckItem> => {
     const response = await apiClient.post<InventoryCheckItem>('/inventory/check', payload);
+    return response.data;
+  },
+
+  approveInventoryCheck: async (payload: InventoryCheckApproveRequest): Promise<InventoryCheckListData> => {
+    const response = await apiClient.post<InventoryCheckListData>('/inventory/check/approve', payload);
     return response.data;
   },
 

@@ -322,7 +322,7 @@ export async function adminLogin(email: string, password: string): Promise<User>
 }
 
 export async function fetchProductsApi(): Promise<Product[]> {
-  const response = await apiClient.get<BackendProduct[]>('/products');
+  const response = await apiClient.get<BackendProduct[]>('/products?includeInactive=true');
   return (response.data ?? []).map(mapBackendProduct);
 }
 

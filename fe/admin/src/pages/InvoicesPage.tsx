@@ -36,13 +36,15 @@ interface InvoicesPageProps {
   pageTitle?: string;
   pageDescription?: string;
   showChannelTabs?: boolean;
+  lookbackDays?: number;
 }
 
 export function InvoicesPage({
   initialChannel = 'all',
   pageTitle = 'Hóa đơn',
-  pageDescription = 'Tất cả đơn hàng trong 3 ngày gần nhất',
+  pageDescription,
   showChannelTabs = true,
+  lookbackDays = 3,
 }: InvoicesPageProps) {
   const navigate = useNavigate();
   const { isLoading, ordersData, setOrdersData } = useInvoicesData();
@@ -50,7 +52,8 @@ export function InvoicesPage({
   const [filterChannel, setFilterChannel] = useState<OrderChannelFilter>(initialChannel);
   const [workflowFilter, setWorkflowFilter] = useState<OnlineWorkflowFilter>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const threeDaysAgo = useMemo(() => subDays(new Date(), 3), []);
+  const lookbackStart = useMemo(() => subDays(new Date(), lookbackDays), [lookbackDays]);
+  const resolvedPageDescription = pageDescription ?? `Tất cả đơn hàng trong ${lookbackDays} ngày gần nhất`;
 
   useEffect(() => {
     document.title = `${pageTitle} | Routine`;
@@ -62,10 +65,10 @@ export function InvoicesPage({
 
   const channelFilteredOrders = useMemo(() => {
     return ordersData
-      .filter((order) => getOrderActivityTime(order) >= threeDaysAgo)
+      .filter((order) => getOrderActivityTime(order) >= lookbackStart)
       .filter((order) => filterChannel === 'all' || order.channel === filterChannel)
       .sort((a, b) => getOrderActivityTime(b).getTime() - getOrderActivityTime(a).getTime());
-  }, [ordersData, threeDaysAgo, filterChannel]);
+  }, [ordersData, lookbackStart, filterChannel]);
 
   const filteredOrders = useMemo(() => {
     const baseOrders = filterChannel !== 'online'
@@ -74,6 +77,11 @@ export function InvoicesPage({
 
     return baseOrders.filter((order) => matchesOrderSearch(order, searchQuery));
   }, [channelFilteredOrders, filterChannel, workflowFilter, searchQuery]);
+
+  const onlineOrdersInLookbackCount = useMemo(
+    () => channelFilteredOrders.filter((order) => order.channel === 'online').length,
+    [channelFilteredOrders],
+  );
 
   const workflowFilterOptions = useMemo(() => {
     return buildWorkflowFilterOptions(channelFilteredOrders, workflowFilter);
@@ -192,7 +200,7 @@ export function InvoicesPage({
           <EmptyState
             icon={ShoppingBag}
             title="Không có đơn hàng"
-            description="Chưa có đơn hàng trong 3 ngày gần nhất."
+            description={`Chưa có đơn hàng trong ${lookbackDays} ngày gần nhất.`}
           />
         </div>
       </div>
@@ -213,11 +221,11 @@ export function InvoicesPage({
 
       <section className="flex flex-col gap-3 rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 md:flex-row md:items-center md:justify-between md:p-6">
         <div>
-          <h2 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">
-            {pageTitle}
-          </h2>
-          <p className="text-sm text-[var(--color-text-secondary)]">{pageDescription}</p>
-        </div>
+            <h2 className="font-[var(--font-display)] text-[24px] font-semibold text-[var(--color-text-primary)]">
+              {pageTitle}
+            </h2>
+            <p className="text-sm text-[var(--color-text-secondary)]">{resolvedPageDescription}</p>
+          </div>
         <div className="flex flex-col items-start gap-3 md:items-end">
           <div className="relative w-full md:w-[320px]">
             <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
@@ -231,7 +239,9 @@ export function InvoicesPage({
           </div>
           <div className="inline-flex items-center rounded-[8px] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)]">
             <ReceiptText size={16} className="mr-2" />
-            {filteredOrders.length} đơn hàng
+            {filterChannel === 'online'
+              ? `${onlineOrdersInLookbackCount} đơn online trong ${lookbackDays} ngày qua`
+              : `${filteredOrders.length} đơn hàng`}
           </div>
           {pendingCancelCount > 0 ? (
             <div className="inline-flex items-center rounded-[8px] bg-[var(--color-warning-bg)] px-3 py-2 text-xs font-medium text-[var(--color-warning)]">

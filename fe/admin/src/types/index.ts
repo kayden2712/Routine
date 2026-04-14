@@ -481,8 +481,19 @@ export interface InventoryCheckListData {
   stocktakeId: number;
   stocktakeCode: string;
   checkDate: string;
+  status: 'DANG_KIEM' | 'HOAN_THANH' | 'HUY';
   warningThreshold: number;
   items: InventoryCheckItem[];
+}
+
+export interface InventoryCheckSession {
+  stocktakeId: number;
+  stocktakeCode: string;
+  checkDate: string;
+  status: 'DANG_KIEM' | 'HOAN_THANH' | 'HUY';
+  totalItems: number;
+  checkedItems: number;
+  evaluation: 'CHUA_KIEM' | 'DU' | 'THUA' | 'THIEU';
 }
 
 export interface InventoryDiscrepancyReport {
@@ -501,6 +512,10 @@ export interface InventoryCheckSubmitRequest {
   itemId: number;
   actualQty: number;
   note?: string;
+}
+
+export interface InventoryCheckApproveRequest {
+  stocktakeId: number;
 }
 
 export interface InventoryCheckConfirmRequest {

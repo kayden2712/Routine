@@ -64,6 +64,22 @@ check_mysql() {
   exit 1
 }
 
+ensure_docker_mysql_credentials() {
+  if ! command -v docker >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! docker ps --filter "name=^/routine-mysql$" --filter "status=running" --format '{{.Names}}' | grep -qx 'routine-mysql'; then
+    return
+  fi
+
+  echo "Ensuring routine-mysql credentials (routine_user / routine_db) ..."
+  if ! docker exec routine-mysql mysql -uroot -p12345 -e "CREATE DATABASE IF NOT EXISTS routine_db; CREATE USER IF NOT EXISTS 'routine_user'@'localhost' IDENTIFIED BY '12345'; CREATE USER IF NOT EXISTS 'routine_user'@'%' IDENTIFIED BY '12345'; ALTER USER 'routine_user'@'localhost' IDENTIFIED BY '12345'; ALTER USER 'routine_user'@'%' IDENTIFIED BY '12345'; GRANT ALL PRIVILEGES ON routine_db.* TO 'routine_user'@'localhost'; GRANT ALL PRIVILEGES ON routine_db.* TO 'routine_user'@'%'; FLUSH PRIVILEGES;" >/dev/null 2>&1; then
+    echo "[WARN] Cannot auto-sync credentials in routine-mysql."
+    echo "[HINT] Verify root password in docker-compose.mysql.yml (MYSQL_ROOT_PASSWORD)."
+  fi
+}
+
 TERMINAL_EMULATOR=""
 if command -v foot >/dev/null 2>&1; then
   TERMINAL_EMULATOR="foot"
@@ -100,6 +116,7 @@ for port in 8080 5173 5174; do
 done
 
 check_mysql
+ensure_docker_mysql_credentials
 echo "Using MySQL host: $MYSQL_HOST"
 
 mkdir -p "$LOG_DIR"

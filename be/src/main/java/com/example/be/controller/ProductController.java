@@ -21,8 +21,9 @@ public class ProductController {
     private final ProductService productService;
     
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAllProducts() {
-        List<ProductResponse> products = productService.getAllProducts();
+    public ResponseEntity<ApiResponse<List<ProductResponse>>> getAllProducts(
+            @RequestParam(name = "includeInactive", defaultValue = "false") boolean includeInactive) {
+        List<ProductResponse> products = productService.getAllProducts(includeInactive);
         return ResponseEntity.ok(ApiResponse.success(products));
     }
     

@@ -43,6 +43,11 @@ public interface StocktakeRepository extends JpaRepository<Stocktake, Long> {
     Optional<Stocktake> findTopByNgayKiemKeOrderByCreatedAtDesc(LocalDate ngayKiemKe);
 
     /**
+     * Lấy danh sách phiên kiểm kê theo ngày giảm dần.
+     */
+    List<Stocktake> findAllByOrderByNgayKiemKeDescCreatedAtDesc();
+
+    /**
      * Tìm kiểm kê theo khoảng thời gian
      */
     @Query("SELECT k FROM Stocktake k WHERE k.ngayKiemKe BETWEEN :startDate AND :endDate ORDER BY k.ngayKiemKe DESC")

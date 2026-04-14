@@ -230,6 +230,7 @@ export function ProductsPage() {
   const { products, addProduct, updateProduct, removeProducts, fetchProducts } = useProductStore();
   const user = useAuthStore((state) => state.user);
   const isReadOnly = user?.role === 'sales';
+  const canDeleteProduct = user?.role === 'manager';
   const [isBootLoading, setIsBootLoading] = useState(true);
 
   useEffect(() => {
@@ -251,7 +252,7 @@ export function ProductsPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<ProductStatusFilter>('active');
   const [sortBy, setSortBy] = useState<SortMode>('newest');
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -300,7 +301,7 @@ export function ProductsPage() {
   const hasActiveFilters =
     searchTerm.trim().length > 0 ||
     categoryFilter !== 'all' ||
-    statusFilter !== 'all' ||
+    statusFilter !== 'active' ||
     sortBy !== 'newest';
 
   const allFilteredIds = filteredProducts.map((item) => item.id);
@@ -327,7 +328,7 @@ export function ProductsPage() {
   const resetFilters = () => {
     setSearchTerm('');
     setCategoryFilter('all');
-    setStatusFilter('all');
+    setStatusFilter('active');
     setSortBy('newest');
   };
 
@@ -559,29 +560,37 @@ export function ProductsPage() {
     }
   };
 
-  const deleteSingle = () => {
-    if (isReadOnly) {
-      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
+  const deleteSingle = async () => {
+    if (!canDeleteProduct) {
+      toast.error('Chỉ Manager mới có quyền xóa sản phẩm');
       return;
     }
 
     if (!deleteTarget) return;
-    void removeProducts([deleteTarget.id]);
-    setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
-    toast.success('Đã xóa sản phẩm');
-    setDeleteTarget(null);
+    try {
+      await removeProducts([deleteTarget.id]);
+      setSelectedIds((prev) => prev.filter((id) => id !== deleteTarget.id));
+      toast.success('Đã xóa sản phẩm');
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Xóa sản phẩm thất bại');
+    }
   };
 
-  const deleteBulk = () => {
-    if (isReadOnly) {
-      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
+  const deleteBulk = async () => {
+    if (!canDeleteProduct) {
+      toast.error('Chỉ Manager mới có quyền xóa sản phẩm');
       return;
     }
 
     if (selectedIds.length === 0) return;
-    void removeProducts(selectedIds);
-    toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
-    setSelectedIds([]);
+    try {
+      await removeProducts(selectedIds);
+      toast.success(`Đã xóa ${selectedIds.length} sản phẩm`);
+      setSelectedIds([]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Xóa sản phẩm thất bại');
+    }
   };
 
   const handleExportExcel = () => {
@@ -826,7 +835,7 @@ export function ProductsPage() {
             }}
             className="rounded-[6px] p-1.5 text-[var(--color-text-secondary)] hover:bg-[var(--color-error-bg)] hover:text-[var(--color-error)]"
             aria-label="Xóa"
-            disabled={isReadOnly}
+            disabled={!canDeleteProduct}
           >
             <Trash2 size={16} />
           </button>
@@ -950,12 +959,12 @@ export function ProductsPage() {
         }}
       />
 
-      {selectedIds.length > 0 && !isReadOnly ? (
+      {selectedIds.length > 0 && canDeleteProduct ? (
         <div className="fixed bottom-24 left-1/2 z-30 flex -translate-x-1/2 animate-[slideUp_0.2s_ease] items-center gap-3 rounded-[10px] bg-[#1A1A18] px-5 py-3 text-white shadow-lg">
           <span className="text-sm">{selectedIds.length} sản phẩm đã chọn</span>
           <button
             type="button"
-            onClick={deleteBulk}
+            onClick={() => void deleteBulk()}
             className="rounded-[6px] px-2 py-1 text-sm text-[#FCA5A5] hover:bg-white/10"
           >
             Xóa
@@ -1451,7 +1460,7 @@ export function ProductsPage() {
         description={`Bạn có chắc muốn xóa ${deleteTarget?.name ?? 'sản phẩm này'}? Hành động này không thể hoàn tác.`}
         confirmLabel="Xóa sản phẩm"
         variant="danger"
-        onConfirm={deleteSingle}
+        onConfirm={() => void deleteSingle()}
       />
 
       <style>{`

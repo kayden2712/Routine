@@ -2,7 +2,9 @@ package com.example.be.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -10,9 +12,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.be.dto.request.InventoryCheckConfirmRequest;
+import com.example.be.dto.request.InventoryCheckApproveRequest;
 import com.example.be.dto.request.InventoryCheckSubmitRequest;
 import com.example.be.dto.response.InventoryCheckItemResponse;
 import com.example.be.dto.response.InventoryCheckListResponse;
+import com.example.be.dto.response.InventoryCheckSessionResponse;
 import com.example.be.dto.response.InventoryDiscrepancyReportResponse;
 import com.example.be.dto.response.UserSimpleResponse;
 import com.example.be.entity.InventoryCheckAudit;
@@ -60,8 +64,38 @@ public class InventoryCheckService {
                 stocktake.getId(),
                 stocktake.getMaKiemKe(),
                 stocktake.getNgayKiemKe(),
+                stocktake.getTrangThai(),
                 warningThreshold,
                 items);
+    }
+
+    public List<InventoryCheckSessionResponse> getInventorySessions(String userEmail) {
+        User user = findUserByEmail(userEmail);
+
+        // Ensure day-to-day workflow always has a stocktake sheet for today.
+        getOrCreateStocktakeByDate(user, LocalDate.now());
+
+        List<Stocktake> stocktakes = stocktakeRepository.findAllByOrderByNgayKiemKeDescCreatedAtDesc();
+        if (stocktakes.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> stocktakeIds = stocktakes.stream().map(Stocktake::getId).toList();
+        Map<Long, ProgressAggregate> progressByStocktakeId = summarizeProgress(stocktakeIds);
+
+        return stocktakes.stream()
+                .map(stocktake -> {
+                    ProgressAggregate progress = progressByStocktakeId.getOrDefault(stocktake.getId(), ProgressAggregate.ZERO);
+                    return new InventoryCheckSessionResponse(
+                            stocktake.getId(),
+                            stocktake.getMaKiemKe(),
+                            stocktake.getNgayKiemKe(),
+                            stocktake.getTrangThai(),
+                            progress.totalItems(),
+                            progress.checkedItems(),
+                            resolveEvaluation(progress.checkedItems(), progress.totalDiscrepancy()));
+                })
+                .toList();
     }
 
     @Transactional
@@ -90,6 +124,35 @@ public class InventoryCheckService {
                 detail.getChenhLech(), status, user, detail.getGhiChu());
 
         return toItemResponse(stocktake.getId(), detail);
+    }
+
+    @Transactional
+    public InventoryCheckListResponse approveStocktake(String userEmail, InventoryCheckApproveRequest request) {
+        findUserByEmail(userEmail);
+        Stocktake stocktake = findStocktake(request.getStocktakeId());
+        ensureStocktakeActive(stocktake);
+
+        List<StocktakeDetail> details = stocktakeDetailRepository.findByStocktakeId(stocktake.getId());
+        long pendingCount = details.stream().filter(detail -> detail.getSoLuongThucTe() == null).count();
+        if (pendingCount > 0) {
+            throw new BadRequestException(String.format("Con %d san pham chua luu so luong thuc te", pendingCount));
+        }
+
+        stocktake.setTrangThai(StocktakeStatus.HOAN_THANH);
+        stocktake.setNgayHoanThanh(LocalDateTime.now());
+        stocktakeRepository.save(stocktake);
+
+        List<InventoryCheckItemResponse> items = details.stream()
+                .map(detail -> toItemResponse(stocktake.getId(), detail))
+                .toList();
+
+        return new InventoryCheckListResponse(
+                stocktake.getId(),
+                stocktake.getMaKiemKe(),
+                stocktake.getNgayKiemKe(),
+                stocktake.getTrangThai(),
+                warningThreshold,
+                items);
     }
 
     public InventoryDiscrepancyReportResponse getDiscrepancyReport(Long stocktakeId) {
@@ -235,6 +298,28 @@ public class InventoryCheckService {
         inventoryCheckAuditRepository.save(audit);
     }
 
+    private Map<Long, ProgressAggregate> summarizeProgress(List<Long> stocktakeIds) {
+        Map<Long, ProgressAggregate> progressByStocktakeId = new HashMap<>();
+        for (Object[] row : stocktakeDetailRepository.summarizeProgressByStocktakeIds(stocktakeIds)) {
+            Long stocktakeId = (Long) row[0];
+            long totalItems = (Long) row[1];
+            long checkedItems = row[2] == null ? 0L : (Long) row[2];
+            long totalDiscrepancy = row[3] == null ? 0L : (Long) row[3];
+            progressByStocktakeId.put(stocktakeId, new ProgressAggregate((int) totalItems, (int) checkedItems, (int) totalDiscrepancy));
+        }
+        return progressByStocktakeId;
+    }
+
+    private String resolveEvaluation(int checkedItems, int totalDiscrepancy) {
+        if (checkedItems == 0) {
+            return "CHUA_KIEM";
+        }
+        if (totalDiscrepancy == 0) {
+            return "DU";
+        }
+        return totalDiscrepancy > 0 ? "THUA" : "THIEU";
+    }
+
     private InventoryCheckItemResponse toItemResponse(Long stocktakeId, StocktakeDetail detail) {
         Optional<InventoryCheckAudit> latestAudit = inventoryCheckAuditRepository
                 .findTopByStocktakeIdAndItemIdOrderByCheckedAtDesc(stocktakeId, detail.getProduct().getId());
@@ -276,5 +361,9 @@ public class InventoryCheckService {
         String dateStamp = checkDate.toString().replace("-", "");
         long count = stocktakeRepository.count() + 1;
         return String.format("%s%s%03d", prefix, dateStamp, count);
+    }
+
+    private record ProgressAggregate(int totalItems, int checkedItems, int totalDiscrepancy) {
+        private static final ProgressAggregate ZERO = new ProgressAggregate(0, 0, 0);
     }
 }

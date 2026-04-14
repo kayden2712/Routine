@@ -95,6 +95,12 @@ public class PayrollService {
         validateMonthYear(request.getMonth(), request.getYear());
 
         Payroll existing = payrollRepository.findByMonthAndYear(request.getMonth(), request.getYear()).orElse(null);
+        if (existing != null && existing.getStatus() == PayrollStatus.APPROVED) {
+            throw new BadRequestException(
+                    ErrorCode.BAD_REQUEST,
+                    "Bảng lương tháng " + request.getMonth() + "/" + request.getYear()
+                            + " đã phê duyệt, không thể chỉnh sửa.");
+        }
         if (existing != null && !Boolean.TRUE.equals(request.getOverwrite())) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST,
                     "Bảng lương tháng " + request.getMonth() + "/" + request.getYear()
@@ -172,6 +178,7 @@ public class PayrollService {
         Long safePayrollId = Objects.requireNonNull(payrollId);
         Payroll payroll = payrollRepository.findWithEntriesById(safePayrollId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy bảng lương id=" + payrollId));
+        assertPayrollEditable(payroll);
 
         if (request.getEntries() == null || request.getEntries().isEmpty()) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST, "Danh sách entries không được để trống");
@@ -346,6 +353,12 @@ public class PayrollService {
         }
         if (year == null || year < 2000) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST, "Năm không hợp lệ");
+        }
+    }
+
+    private void assertPayrollEditable(Payroll payroll) {
+        if (payroll.getStatus() == PayrollStatus.APPROVED) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Bảng lương đã phê duyệt, không thể chỉnh sửa.");
         }
     }
 

@@ -8,6 +8,7 @@ interface InventoryCheckListProps {
   draftActual: Record<number, string>;
   draftNote: Record<number, string>;
   submittingItemId: number | null;
+  readOnly: boolean;
   onActualChange: (itemId: number, value: string) => void;
   onNoteChange: (itemId: number, value: string) => void;
   onSubmit: (item: InventoryCheckItem) => void;
@@ -40,6 +41,7 @@ export function InventoryCheckList({
   draftActual,
   draftNote,
   submittingItemId,
+  readOnly,
   onActualChange,
   onNoteChange,
   onSubmit,
@@ -81,6 +83,7 @@ export function InventoryCheckList({
                     }}
                     placeholder="Nhap so thuc te"
                     className="h-8"
+                    disabled={readOnly}
                   />
                 </td>
                 <td className="px-3 py-3 text-[var(--color-text-secondary)]">{item.discrepancy ?? '-'}</td>
@@ -91,16 +94,17 @@ export function InventoryCheckList({
                     onChange={(event) => onNoteChange(item.itemId, event.target.value)}
                     placeholder="Ghi chu"
                     className="h-8"
+                    disabled={readOnly}
                   />
                 </td>
                 <td className="px-3 py-3 text-right">
                   <Button
                     size="sm"
                     onClick={() => onSubmit(item)}
-                    disabled={!canSubmit || submittingItemId === item.itemId}
+                    disabled={readOnly || !canSubmit || submittingItemId === item.itemId}
                   >
                     <CheckCircle2 size={14} />
-                    {submittingItemId === item.itemId ? 'Dang gui...' : 'Luu'}
+                    {submittingItemId === item.itemId ? 'Dang gui...' : readOnly ? 'Da duyet' : 'Luu'}
                   </Button>
                 </td>
               </tr>

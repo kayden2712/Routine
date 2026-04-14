@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   mysql:
     image: mysql:8.0
@@ -17,7 +15,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p12345"]
+      test: ["CMD-SHELL", "mysql -h127.0.0.1 -uroutine_user -p12345 -e 'SELECT 1' routine_db >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 10

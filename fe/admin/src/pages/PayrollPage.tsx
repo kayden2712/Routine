@@ -69,6 +69,8 @@ export function PayrollPage() {
   const [payrollList, setPayrollList] = useState<PayrollDto[]>([]);
   const [currentPayrollId, setCurrentPayrollId] = useState<number | null>(null);
   const [currentPayrollStatus, setCurrentPayrollStatus] = useState<'draft' | 'approved' | null>(null);
+  const isApprovedPayroll = currentPayrollStatus === 'approved';
+  const canEditCurrentPayroll = canEdit && !isApprovedPayroll;
 
   const summary = useMemo(() => {
     const fulltime = rows.filter((row) => row.type === 'fulltime').length;
@@ -239,6 +241,10 @@ export function PayrollPage() {
   };
 
   const updateRow = (employeeId: number, field: 'hoursWorked' | 'bonus' | 'penalty', value: string) => {
+    if (!canEditCurrentPayroll) {
+      return;
+    }
+
     const hasInvalidChar = /[^0-9]/.test(value) || value.includes('-');
     if (hasInvalidChar) {
       toast.error('Không được nhập ký tự hoặc số âm');
@@ -315,6 +321,10 @@ export function PayrollPage() {
   const handleSubmit = async () => {
     if (!canEdit) {
       toast.error('Bạn không có quyền chỉnh sửa');
+      return;
+    }
+    if (isApprovedPayroll) {
+      toast.error('Bảng lương đã phê duyệt, không thể chỉnh sửa');
       return;
     }
 
@@ -404,8 +414,8 @@ export function PayrollPage() {
               Phê duyệt
             </Button>
           ) : null}
-          <Button onClick={handleSubmit} disabled={saving || loading || rows.length === 0 || !canEdit}>
-            {saving ? 'Đang lưu...' : currentPayrollId ? 'Cập nhật bảng lương' : 'Tạo bảng lương'}
+          <Button onClick={handleSubmit} disabled={saving || loading || rows.length === 0 || !canEditCurrentPayroll}>
+            {saving ? 'Đang lưu...' : isApprovedPayroll ? 'Bảng lương đã phê duyệt' : currentPayrollId ? 'Cập nhật bảng lương' : 'Tạo bảng lương'}
           </Button>
         </div>
       </div>
@@ -415,36 +425,15 @@ export function PayrollPage() {
           Bạn không có quyền chỉnh sửa
         </div>
       ) : null}
-
-      <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
-        <p className="mb-3 text-sm font-medium text-[var(--color-text-primary)]">Bước 1: Chọn tháng / năm</p>
-        <div className="grid gap-3 md:grid-cols-[140px_180px_auto]">
-          <Input
-            type="number"
-            min={1}
-            max={12}
-            value={month}
-            onChange={(event) => setMonth(onlyInteger(event.target.value))}
-            disabled={!canEdit}
-            className={!month ? 'border-[var(--color-error)]' : undefined}
-          />
-          <Input
-            type="number"
-            min={2000}
-            value={year}
-            onChange={(event) => setYear(onlyInteger(event.target.value))}
-            disabled={!canEdit}
-            className={!year ? 'border-[var(--color-error)]' : undefined}
-          />
-          <Button variant="outline" onClick={loadEmployees} disabled={loading}>
-            {loading ? 'Đang tải...' : 'Bước 2: Tải danh sách nhân viên'}
-          </Button>
+      {canEdit && isApprovedPayroll ? (
+        <div className="rounded-[10px] border border-[#BFDBFE] bg-[#EFF6FF] px-4 py-3 text-sm text-[#1D4ED8]">
+          Bảng lương này đã được phê duyệt nên không thể chỉnh sửa.
         </div>
-      </section>
+      ) : null}
 
       <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
-          <p className="text-sm font-medium text-[var(--color-text-primary)]">Danh sách bảng lương</p>
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">Danh sách bảng lương theo tháng</p>
           <Button variant="outline" size="sm" onClick={loadPayrollList} disabled={payrollListLoading}>
             {payrollListLoading ? 'Đang tải...' : 'Làm mới'}
           </Button>
@@ -478,6 +467,32 @@ export function PayrollPage() {
             })}
           </div>
         )}
+      </section>
+
+      <section className="rounded-[12px] border border-[var(--color-border)] bg-[var(--color-surface)] p-4">
+        <p className="mb-3 text-sm font-medium text-[var(--color-text-primary)]">Chọn tháng / năm</p>
+        <div className="grid gap-3 md:grid-cols-[140px_180px_auto]">
+          <Input
+            type="number"
+            min={1}
+            max={12}
+            value={month}
+            onChange={(event) => setMonth(onlyInteger(event.target.value))}
+            disabled={!canEdit}
+            className={!month ? 'border-[var(--color-error)]' : undefined}
+          />
+          <Input
+            type="number"
+            min={2000}
+            value={year}
+            onChange={(event) => setYear(onlyInteger(event.target.value))}
+            disabled={!canEdit}
+            className={!year ? 'border-[var(--color-error)]' : undefined}
+          />
+          <Button variant="outline" onClick={loadEmployees} disabled={loading}>
+            {loading ? 'Đang tải...' : 'Tải danh sách nhân viên'}
+          </Button>
+        </div>
       </section>
 
       <section className="grid grid-cols-1 gap-3 md:grid-cols-4">
@@ -545,7 +560,7 @@ export function PayrollPage() {
                     <Input
                       value={row.hoursWorked}
                       onChange={(event) => updateRow(row.employeeId, 'hoursWorked', event.target.value)}
-                      disabled={!canEdit}
+                      disabled={!canEditCurrentPayroll}
                       className={row.errors.hoursWorked ? 'border-[var(--color-error)]' : undefined}
                     />
                   </TableCell>
@@ -553,7 +568,7 @@ export function PayrollPage() {
                     <Input
                       value={row.bonus}
                       onChange={(event) => updateRow(row.employeeId, 'bonus', event.target.value)}
-                      disabled={!canEdit}
+                      disabled={!canEditCurrentPayroll}
                       className={row.errors.bonus ? 'border-[var(--color-error)]' : undefined}
                     />
                   </TableCell>
@@ -561,7 +576,7 @@ export function PayrollPage() {
                     <Input
                       value={row.penalty}
                       onChange={(event) => updateRow(row.employeeId, 'penalty', event.target.value)}
-                      disabled={!canEdit}
+                      disabled={!canEditCurrentPayroll}
                       className={row.errors.penalty ? 'border-[var(--color-error)]' : undefined}
                     />
                   </TableCell>

@@ -34,15 +34,38 @@ This module provides warehouse inventory check workflow.
 
 - Logic: discrepancy = `actualQty - systemQty`.
 - If discrepancy ratio exceeds configured threshold (`inventory.check.warning-threshold`, default `0.1`), status is `WARNING`.
+- Behavior: this is temporary save while stocktake is active (`DANG_KIEM`), so item values can still be updated.
 
-### 3) Get discrepancy report
+### 3) List stocktake sheets by date
+
+- Method: `GET`
+- URL: `/api/inventory/check-sessions`
+- Auth: `MANAGER`, `WAREHOUSE`
+- Response: list all stocktake sheets ordered by date (newest first), including progress per sheet (`checkedItems/totalItems`), status, and `evaluation` (`DU`, `THUA`, `THIEU`, `CHUA_KIEM`).
+
+### 4) Approve stocktake (lock for editing)
+
+- Method: `POST`
+- URL: `/api/inventory/check/approve`
+- Auth: `MANAGER`, `WAREHOUSE`
+- Body:
+
+```json
+{
+  "stocktakeId": 1
+}
+```
+
+- Behavior: requires all items in that day stocktake to have `actualQty`. After approval, stocktake status is `HOAN_THANH` and all edits are blocked.
+
+### 5) Get discrepancy report
 
 - Method: `GET`
 - URL: `/api/inventory/report?stocktakeId=1`
 - Auth: `MANAGER`, `WAREHOUSE`
 - Response: report summary + line items with status and warnings.
 
-### 4) Confirm or request recheck
+### 6) Confirm or request recheck
 
 - Method: `POST`
 - URL: `/api/inventory/confirm`

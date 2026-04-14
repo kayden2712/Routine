@@ -1,7 +1,6 @@
 package com.example.be.dto.response;
 
 import java.time.LocalDate;
-import java.util.List;
 
 import com.example.be.entity.enums.StocktakeStatus;
 
@@ -12,12 +11,13 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class InventoryCheckListResponse {
+public class InventoryCheckSessionResponse {
 
     private Long stocktakeId;
     private String stocktakeCode;
     private LocalDate checkDate;
     private StocktakeStatus status;
-    private double warningThreshold;
-    private List<InventoryCheckItemResponse> items;
+    private int totalItems;
+    private int checkedItems;
+    private String evaluation;
 }
