@@ -121,6 +121,7 @@ cd ../storefront && npm run build
 ## Tài liệu liên quan
 
 - [Backend README](be/README.md)
+- [DB setup (Docker/non-Docker)](docs/setupDB.md)
 - [Admin README](fe/admin/README.md)
 - [Storefront README](fe/storefront/README.md)
 - [Test DB setup](be/TEST-DATABASE-SETUP.md)
