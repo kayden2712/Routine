@@ -138,7 +138,8 @@ const roleReverseMap: Record<UserRole, string> = {
 };
 
 function parseDate(value?: string): Date {
-  return value ? new Date(value) : new Date();
+  const parsed = value ? new Date(value) : new Date();
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
 }
 
 function mapProductStatus(status?: string): Product['status'] {
@@ -548,14 +549,14 @@ export async function fetchStaffApi(): Promise<AdminStaffMember[]> {
 
   return (response.data ?? []).map((item) => ({
     id: String(item.id),
-    name: item.fullName,
-    email: item.email,
-    phone: item.phone,
-    role: roleMap[item.role] ?? 'sales',
+    name: String(item.fullName ?? ''),
+    email: String(item.email ?? ''),
+    phone: String(item.phone ?? ''),
+    role: roleMap[String(item.role ?? '').toUpperCase()] ?? 'sales',
     employeeType: item.employeeType?.toLowerCase() === 'parttime' ? 'parttime' : 'fulltime',
     baseSalary: Math.round(Number(item.baseSalary ?? 0) / 1000),
     status: item.isActive ? 'active' : 'inactive',
-    branch: item.branch,
+    branch: String(item.branch ?? ''),
     createdAt: parseDate(item.createdAt),
     lastActiveAt: item.isActive ? parseDate(item.updatedAt) : undefined,
   }));

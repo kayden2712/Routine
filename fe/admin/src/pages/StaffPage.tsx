@@ -123,15 +123,15 @@ function createDefaultForm(): StaffFormState {
   };
 }
 
-function normalize(value: string): string {
-  return value
+function normalize(value: unknown): string {
+  return String(value ?? '')
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toLowerCase();
 }
 
-function initialsOfName(name: string): string {
-  return name
+function initialsOfName(name: unknown): string {
+  return String(name ?? '')
     .split(' ')
     .filter(Boolean)
     .slice(0, 2)
@@ -176,7 +176,12 @@ export function StaffPage() {
   const thisMonth = new Date().getMonth();
   const thisYear = new Date().getFullYear();
   const createdThisMonth = staffList.filter((item) => {
-    const date = item.createdAt;
+    const date = item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
+
+    if (Number.isNaN(date.getTime())) {
+      return false;
+    }
+
     return date.getMonth() === thisMonth && date.getFullYear() === thisYear;
   }).length;
 

@@ -4,7 +4,6 @@ import {
   BadgeDollarSign,
   LayoutDashboard,
   LogOut,
-  Package,
   Receipt,
   Settings,
   ShoppingCart,
@@ -56,7 +55,6 @@ const roleSections: Record<UserRole, NavSection[]> = {
     {
       label: 'Van hanh',
       items: [
-        { label: 'San pham', to: '/products', icon: Package },
         { label: 'Khach hang', to: '/customers', icon: Users },
         { label: 'Khuyen mai', to: '/promotions', icon: Gift },
         { label: 'Nha cung cap', to: '/suppliers', icon: Truck },
@@ -82,7 +80,6 @@ const roleSections: Record<UserRole, NavSection[]> = {
       label: 'Ban hang',
       items: [
         { label: 'Tao hoa don', to: '/pos', icon: ShoppingCart },
-        { label: 'San pham', to: '/products', icon: Package },
         { label: 'Khach hang', to: '/customers', icon: Users },
         { label: 'Khuyen mai', to: '/promotions', icon: Gift },
         { label: 'Cai dat', to: '/settings', icon: Settings },
@@ -97,7 +94,6 @@ const roleSections: Record<UserRole, NavSection[]> = {
         { label: 'Kiem ke kho', to: '/inventory/check', icon: ClipboardCheck },
         { label: 'Phieu nhap kho', to: '/inventory/import-receipts', icon: Receipt },
         { label: 'Phieu xuat kho', to: '/inventory/export-receipts', icon: Receipt },
-        { label: 'San pham', to: '/products', icon: Package },
         { label: 'Cai dat', to: '/settings', icon: Settings },
       ],
     },

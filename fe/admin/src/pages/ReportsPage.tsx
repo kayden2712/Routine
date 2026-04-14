@@ -38,7 +38,9 @@ import {
   format,
   isAfter,
   isBefore,
+  isSameDay,
   startOfDay,
+  startOfMonth,
   subDays,
 } from 'date-fns';
 import jsPDF from 'jspdf';
@@ -72,9 +74,10 @@ interface DateRange {
   to: Date;
 }
 
-type RevenuePeriodMode = 'week' | 'month' | 'custom';
+type RevenuePeriodMode = 'day' | 'week' | 'month' | 'custom';
 type RevenueChannelMode = 'all' | 'online' | 'offline';
 type ProductChannelMode = 'all' | 'online' | 'offline';
+type OrderPeriodMode = 'day' | 'week' | 'month' | 'custom';
 
 interface RevenueRow {
   dateLabel: string;
@@ -135,6 +138,7 @@ export function ReportsPage() {
   const [revenueMode, setRevenueMode] = useState<RevenuePeriodMode>('week');
   const [revenueChannelMode, setRevenueChannelMode] = useState<RevenueChannelMode>('all');
   const [productChannelMode, setProductChannelMode] = useState<ProductChannelMode>('all');
+  const [orderMode, setOrderMode] = useState<OrderPeriodMode>('week');
   const {
     isLoading,
     canViewCustomers,
@@ -183,13 +187,28 @@ export function ReportsPage() {
       .sort((a, b) => a.parsedDate.getTime() - b.parsedDate.getTime());
   }, [dateRange, revenueByDay]);
 
+  const revenueModeSource = useMemo(() => {
+    if (revenueMode === 'day') {
+      return revenueByDay.filter((item) => isSameDay(item.parsedDate, today));
+    }
+
+    if (revenueMode === 'week') {
+      const weekStart = startOfDay(subDays(today, 6));
+      const weekEnd = startOfDay(today);
+      return revenueByDay.filter((item) => !isBefore(item.parsedDate, weekStart) && !isAfter(item.parsedDate, weekEnd));
+    }
+
+    if (revenueMode === 'month') {
+      const monthStart = startOfMonth(today);
+      const monthEnd = startOfDay(today);
+      return revenueByDay.filter((item) => !isBefore(item.parsedDate, monthStart) && !isAfter(item.parsedDate, monthEnd));
+    }
+
+    return filteredRevenueBase;
+  }, [filteredRevenueBase, revenueByDay, revenueMode, today]);
+
   const revenueSeries = useMemo<RevenueRow[]>(() => {
-    const source =
-      revenueMode === 'week'
-        ? filteredRevenueBase.slice(-7)
-        : revenueMode === 'month'
-          ? filteredRevenueBase.slice(-30)
-          : filteredRevenueBase;
+    const source = revenueModeSource;
 
     let cumulative = 0;
     return source.map((item, index) => {
@@ -207,18 +226,13 @@ export function ReportsPage() {
         changePct,
       };
     });
-  }, [filteredRevenueBase, revenueMode]);
+  }, [revenueModeSource]);
 
   const revenueDateKeys = useMemo(() => {
-    const source =
-      revenueMode === 'week'
-        ? filteredRevenueBase.slice(-7)
-        : revenueMode === 'month'
-          ? filteredRevenueBase.slice(-30)
-          : filteredRevenueBase;
+    const source = revenueModeSource;
 
     return new Set(source.map((item) => format(item.parsedDate, 'yyyy-MM-dd')));
-  }, [filteredRevenueBase, revenueMode]);
+  }, [revenueModeSource]);
 
   const revenueOrders = useMemo(() => {
     return ordersData.filter((order) => {
@@ -279,8 +293,30 @@ export function ReportsPage() {
   }, [averageOrderValue, revenueSeries]);
 
   const filteredOrders = useMemo(() => {
+    if (orderMode === 'day') {
+      return ordersData.filter((order) => isSameDay(order.createdAt, today));
+    }
+
+    if (orderMode === 'week') {
+      const weekStart = startOfDay(subDays(today, 6));
+      const weekEnd = startOfDay(today);
+      return ordersData.filter((order) => {
+        const orderDay = startOfDay(order.createdAt);
+        return !isBefore(orderDay, weekStart) && !isAfter(orderDay, weekEnd);
+      });
+    }
+
+    if (orderMode === 'month') {
+      const monthStart = startOfMonth(today);
+      const monthEnd = startOfDay(today);
+      return ordersData.filter((order) => {
+        const orderDay = startOfDay(order.createdAt);
+        return !isBefore(orderDay, monthStart) && !isAfter(orderDay, monthEnd);
+      });
+    }
+
     return ordersData.filter((order) => inRange(order.createdAt, dateRange));
-  }, [dateRange, ordersData]);
+  }, [dateRange, orderMode, ordersData, today]);
 
   const filteredProductOrders = useMemo(() => {
     return ordersData.filter((order) => {
@@ -376,18 +412,6 @@ export function ReportsPage() {
       }));
   }, [customersData]);
 
-  // Order Statistics
-  const todayOrders = useMemo(() => {
-    const todayStart = startOfDay(today);
-    const todayEnd = new Date(todayStart);
-    todayEnd.setDate(todayEnd.getDate() + 1);
-
-    return ordersData.filter((order) => {
-      const orderDay = startOfDay(order.createdAt);
-      return !isBefore(orderDay, todayStart) && isBefore(orderDay, todayEnd);
-    });
-  }, [ordersData, today]);
-
   const onlineOrders = useMemo(() => {
     return filteredOrders.filter((order) => order.channel === 'online');
   }, [filteredOrders]);
@@ -400,15 +424,23 @@ export function ReportsPage() {
     return filteredOrders.filter((order) => order.status === 'cancelled');
   }, [filteredOrders]);
 
-  const todayStats = useMemo(() => {
-    const total = todayOrders.length;
-    const revenue = todayOrders.reduce((sum, order) => sum + order.total, 0);
-    const online = todayOrders.filter((o) => o.channel === 'online').length;
-    const offline = todayOrders.filter((o) => o.channel === 'offline').length;
-    const cancelled = todayOrders.filter((o) => o.status === 'cancelled').length;
+  const orderStats = useMemo(() => {
+    const total = filteredOrders.length;
+    const revenue = filteredOrders.reduce((sum, order) => sum + order.total, 0);
+    const online = filteredOrders.filter((o) => o.channel === 'online').length;
+    const offline = filteredOrders.filter((o) => o.channel === 'offline').length;
+    const cancelled = filteredOrders.filter((o) => o.status === 'cancelled').length;
 
     return { total, revenue, online, offline, cancelled };
-  }, [todayOrders]);
+  }, [filteredOrders]);
+
+  const orderModeLabel = orderMode === 'day'
+    ? 'Hôm nay'
+    : orderMode === 'week'
+      ? '7 ngày gần nhất'
+      : orderMode === 'month'
+        ? 'Tháng hiện tại'
+        : 'Kỳ tùy chọn';
 
   const orderChannelPie = useMemo(() => {
     const onlineCount = onlineOrders.length;
@@ -961,6 +993,13 @@ export function ReportsPage() {
                 <div className="inline-flex items-center gap-2 rounded-full bg-[#F6F7FB] p-1">
                   <button
                     type="button"
+                    className={revenueMode === 'day' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                    onClick={() => setRevenueMode('day')}
+                  >
+                    Ngày
+                  </button>
+                  <button
+                    type="button"
                     className={revenueMode === 'week' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
                     onClick={() => setRevenueMode('week')}
                   >
@@ -971,7 +1010,7 @@ export function ReportsPage() {
                     className={revenueMode === 'month' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
                     onClick={() => setRevenueMode('month')}
                   >
-                    Tháng
+                    Tháng hiện tại
                   </button>
                   <button
                     type="button"
@@ -984,50 +1023,72 @@ export function ReportsPage() {
               </div>
             </div>
 
-            <div className="h-[340px] rounded-xl border border-[#EEF1F6] bg-[#FBFCFF] px-3 pt-3">
-              {isLoading ? (
-                <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Đang tải dữ liệu biểu đồ...</div>
-              ) : revenueSeries.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có dữ liệu doanh thu trong khoảng thời gian đã chọn.</div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                  <AreaChart data={revenueTrendSeries}>
-                    <defs>
-                      <linearGradient id="revenueAreaFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.04} />
-                      </linearGradient>
-                      <linearGradient id="baselineAreaFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
-                        <stop offset="100%" stopColor="#10B981" stopOpacity={0.03} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid vertical={false} stroke="#E6EAF2" />
-                    <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#7B8698' }} axisLine={false} tickLine={false} />
-                    <YAxis
-                      tick={{ fontSize: 12, fill: '#7B8698' }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(value: number) => `${Math.round(value / 1000000)}M`}
-                    />
-                    <Tooltip
-                      contentStyle={{ border: '1px solid #DCE3F0', borderRadius: '10px', background: '#111827', color: '#fff' }}
-                      formatter={(value, name, item) => {
-                        if (name === 'revenue') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Doanh thu'];
-                        if (name === 'baseline') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Mốc tham chiếu'];
-                        if (name === 'orderSignal') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Nhịp số đơn'];
-                        if (name === 'orders') return [item.payload?.orders ?? 0, 'Số đơn'];
-                        return [value, name];
-                      }}
-                    />
-                    <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 8 }} />
-                    <Area type="monotone" name="Doanh thu" dataKey="revenue" fill="url(#revenueAreaFill)" stroke="#3B82F6" strokeWidth={2.5} />
-                    <Area type="monotone" name="Mốc tham chiếu" dataKey="baseline" fill="url(#baselineAreaFill)" stroke="#10B981" strokeWidth={2} />
-                    <Line type="monotone" name="Nhịp số đơn" dataKey="orderSignal" stroke="#F59E0B" strokeWidth={2} dot={false} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              )}
-            </div>
+            {revenueMode === 'day' ? (
+              <div className="rounded-xl border border-[#EEF1F6] bg-[#FBFCFF] p-4 text-sm text-[var(--color-text-secondary)]">
+                <p>
+                  Chế độ <span className="font-semibold text-[var(--color-text-primary)]">Ngày</span> chỉ lấy dữ liệu hôm nay,
+                  nên không hiển thị biểu đồ so sánh.
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="h-[340px] rounded-xl border border-[#EEF1F6] bg-[#FBFCFF] px-3 pt-3">
+                  {isLoading ? (
+                    <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Đang tải dữ liệu biểu đồ...</div>
+                  ) : revenueSeries.length === 0 ? (
+                    <div className="flex h-full items-center justify-center text-sm text-[var(--color-text-muted)]">Chưa có dữ liệu doanh thu trong khoảng thời gian đã chọn.</div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                      <AreaChart data={revenueTrendSeries}>
+                        <defs>
+                          <linearGradient id="revenueAreaFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.3} />
+                            <stop offset="100%" stopColor="#3B82F6" stopOpacity={0.04} />
+                          </linearGradient>
+                          <linearGradient id="baselineAreaFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#10B981" stopOpacity={0.2} />
+                            <stop offset="100%" stopColor="#10B981" stopOpacity={0.03} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid vertical={false} stroke="#E6EAF2" />
+                        <XAxis dataKey="dateLabel" tick={{ fontSize: 12, fill: '#7B8698' }} axisLine={false} tickLine={false} />
+                        <YAxis
+                          tick={{ fontSize: 12, fill: '#7B8698' }}
+                          axisLine={false}
+                          tickLine={false}
+                          tickFormatter={(value: number) => `${Math.round(value / 1000000)}M`}
+                        />
+                        <Tooltip
+                          contentStyle={{ border: '1px solid #DCE3F0', borderRadius: '10px', background: '#111827', color: '#fff' }}
+                          formatter={(value, name, item) => {
+                            if (name === 'revenue') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Doanh thu'];
+                            if (name === 'baseline') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Mốc tham chiếu'];
+                            if (name === 'orderSignal') return [formatVND(typeof value === 'number' ? value : Number(value ?? 0)), 'Nhịp số đơn'];
+                            if (name === 'orders') return [item.payload?.orders ?? 0, 'Số đơn'];
+                            return [value, name];
+                          }}
+                        />
+                        <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ paddingBottom: 8 }} />
+                        <Area type="monotone" name="Doanh thu" dataKey="revenue" fill="url(#revenueAreaFill)" stroke="#3B82F6" strokeWidth={2.5} />
+                        <Area type="monotone" name="Mốc tham chiếu" dataKey="baseline" fill="url(#baselineAreaFill)" stroke="#10B981" strokeWidth={2} />
+                        <Line type="monotone" name="Nhịp số đơn" dataKey="orderSignal" stroke="#F59E0B" strokeWidth={2} dot={false} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </div>
+
+                <div className="mt-3 rounded-lg border border-[#E5EAF5] bg-[#F8FAFF] p-3 text-xs text-[var(--color-text-secondary)]">
+                  <p>
+                    <span className="font-semibold text-[var(--color-text-primary)]">Mốc tham chiếu</span>
+                    : là doanh thu của điểm liền trước, dùng làm nền để so sánh tăng/giảm doanh thu.
+                  </p>
+                  <p className="mt-1">
+                    <span className="font-semibold text-[var(--color-text-primary)]">Nhịp số đơn</span>
+                    : là tín hiệu quy đổi từ số đơn (số đơn x giá trị đơn trung bình), giúp nhìn nhịp tăng/giảm đơn song song với doanh thu.
+                  </p>
+                </div>
+              </>
+            )}
 
             <div className="mt-4">
               <DataTable data={revenueSeries} columns={revenueColumns} pageSize={7} />
@@ -1136,14 +1197,47 @@ export function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="orders" className="mt-4 space-y-4">
+          <section className="flex items-center justify-end">
+            <div className="inline-flex items-center gap-1 rounded-full bg-[#F6F7FB] p-1">
+              <button
+                type="button"
+                className={orderMode === 'day' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                onClick={() => setOrderMode('day')}
+              >
+                Ngày
+              </button>
+              <button
+                type="button"
+                className={orderMode === 'week' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                onClick={() => setOrderMode('week')}
+              >
+                Tuần
+              </button>
+              <button
+                type="button"
+                className={orderMode === 'month' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                onClick={() => setOrderMode('month')}
+              >
+                Tháng hiện tại
+              </button>
+              <button
+                type="button"
+                className={orderMode === 'custom' ? 'rounded-full bg-white px-3 py-1 text-xs font-medium text-[#1E3A8A] shadow-sm' : 'rounded-full px-3 py-1 text-xs text-[var(--color-text-secondary)]'}
+                onClick={() => setOrderMode('custom')}
+              >
+                Tùy chọn
+              </button>
+            </div>
+          </section>
+
           <section className="grid gap-3 md:grid-cols-4">
             <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
               <div className="flex items-center gap-2 mb-2">
                 <Clock size={16} className="text-[var(--color-accent)]" />
-                <p className="text-sm text-[var(--color-text-secondary)]">Hôm nay</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">{orderModeLabel}</p>
               </div>
-              <p className="font-[var(--font-display)] text-[24px] font-bold text-[var(--color-text-primary)]">{todayStats.total}</p>
-              <p className="text-xs text-[var(--color-text-muted)]">{formatVND(todayStats.revenue)} doanh thu</p>
+              <p className="font-[var(--font-display)] text-[24px] font-bold text-[var(--color-text-primary)]">{orderStats.total}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{formatVND(orderStats.revenue)} doanh thu</p>
             </div>
 
             <div className="rounded-[12px] border border-[var(--color-border)] bg-white p-5">
@@ -1245,7 +1339,7 @@ export function ReportsPage() {
           </section>
 
           <section className="rounded-[12px] border border-[var(--color-border)] bg-white p-4">
-            <h3 className="mb-3 text-base font-semibold">Đơn hàng trong kỳ</h3>
+            <h3 className="mb-3 text-base font-semibold">Đơn hàng trong kỳ ({orderModeLabel})</h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between p-2 bg-[#F7F6F4] rounded">
                 <span className="text-[var(--color-text-secondary)]">Tổng số đơn</span>

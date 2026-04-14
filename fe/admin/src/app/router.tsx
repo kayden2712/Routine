@@ -15,7 +15,6 @@ import { OnlineOrdersPage } from '../pages/OnlineOrdersPage';
 import { LoginPage } from '../pages/LoginPage';
 import { POSPage } from '../pages/POSPage';
 import { PayrollPage } from '../pages/PayrollPage';
-import { ProductsPage } from '../pages/ProductsPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { StaffPage } from '../pages/StaffPage';
@@ -30,7 +29,7 @@ function getRoleHome(role: UserRole) {
   if (role === 'admin') return '/dashboard';
   if (role === 'sales') return '/pos';
   if (role === 'accountant') return '/reports';
-  return '/products';
+  return '/inventory';
 }
 
 interface GuardProps {
@@ -99,15 +98,6 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['sales', 'manager']}>
             <POSPage />
-          </ProtectedRoute>
-        ),
-        errorElement: <RouteErrorBoundary />,
-      },
-      {
-        path: '/products',
-        element: (
-          <ProtectedRoute roles={['sales', 'manager']}>
-            <ProductsPage />
           </ProtectedRoute>
         ),
         errorElement: <RouteErrorBoundary />,
