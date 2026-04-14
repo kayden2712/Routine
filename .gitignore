@@ -36,10 +36,6 @@
 **/.project
 **/.settings
 
-# Maven wrapper
-**/.mvn
-!**/.mvn/wrapper/maven-wrapper.properties
-
 # ========================
 # IDE
 # ========================
