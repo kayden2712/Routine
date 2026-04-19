@@ -8,14 +8,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.example.be.dto.request.ChangePasswordRequest;
 import com.example.be.dto.request.LoginRequest;
 import com.example.be.dto.request.RefreshTokenRequest;
 import com.example.be.dto.response.AuthResponse;
@@ -36,6 +41,9 @@ class AuthServiceTest {
 
     @Mock
     private CustomerRepository customerRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     @Mock
     private AuthenticationManager authenticationManager;
@@ -127,5 +135,68 @@ class AuthServiceTest {
                 () -> authService.refreshToken(new RefreshTokenRequest("bad-token")));
 
         assertTrue(ex.getMessage().contains("Invalid refresh token"));
+    }
+
+    @Test
+    void changePasswordRejectsIncorrectCurrentPasswordForCustomer() {
+        String email = "customer@mail.vn";
+        ChangePasswordRequest request = new ChangePasswordRequest("Wrong@123", "NewPass@123");
+
+        Customer customer = new Customer();
+        customer.setEmail(email);
+        customer.setPasswordHash("encoded-current");
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(customerRepository.findByEmail(email)).thenReturn(Optional.of(customer));
+        when(passwordEncoder.matches("Wrong@123", "encoded-current")).thenReturn(false);
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> authService.changePassword(email, request));
+
+        assertEquals("Mật khẩu cũ không đúng", ex.getMessage());
+        verify(customerRepository, never()).save(customer);
+    }
+
+    @Test
+    void changePasswordRejectsNewPasswordSameAsCurrentForCustomer() {
+        String email = "customer@mail.vn";
+        ChangePasswordRequest request = new ChangePasswordRequest("Current@123", "Current@123");
+
+        Customer customer = new Customer();
+        customer.setEmail(email);
+        customer.setPasswordHash("encoded-current");
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(customerRepository.findByEmail(email)).thenReturn(Optional.of(customer));
+        when(passwordEncoder.matches("Current@123", "encoded-current")).thenReturn(true);
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> authService.changePassword(email, request));
+
+        assertEquals("Mật khẩu mới không được giống mật khẩu cũ", ex.getMessage());
+        verify(passwordEncoder, never()).encode(any(String.class));
+        verify(customerRepository, never()).save(customer);
+    }
+
+    @Test
+    void changePasswordUpdatesPasswordForCustomerWhenValid() {
+        String email = "customer@mail.vn";
+        ChangePasswordRequest request = new ChangePasswordRequest("Current@123", "NewPass@123");
+
+        Customer customer = new Customer();
+        customer.setEmail(email);
+        customer.setPasswordHash("encoded-current");
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(customerRepository.findByEmail(email)).thenReturn(Optional.of(customer));
+        when(passwordEncoder.matches("Current@123", "encoded-current")).thenReturn(true);
+        when(passwordEncoder.matches("NewPass@123", "encoded-current")).thenReturn(false);
+        when(passwordEncoder.encode("NewPass@123")).thenReturn("encoded-new");
+
+        authService.changePassword(email, request);
+
+        assertEquals("encoded-new", customer.getPasswordHash());
+        verify(passwordEncoder).encode(eq("NewPass@123"));
+        verify(customerRepository).save(customer);
     }
 }
