@@ -68,6 +68,11 @@ export interface StorefrontPromotion {
   name: string;
   type: StorefrontPromotionType;
   typeDisplayName: string;
+  description?: string;
+  discountValue?: number;
+  maxDiscountAmount?: number;
+  minOrderAmount?: number;
+  applyToAllProducts?: boolean;
 }
 
 export interface ApplyStorefrontPromotionPayload {
@@ -85,6 +90,18 @@ export interface ApplyStorefrontPromotionResult {
   discountAmount?: number;
   originalAmount?: number;
   finalAmount?: number;
+}
+
+export interface CheckStorefrontPromotionPayload {
+  orderAmount: number;
+  productIds: number[];
+  customerId?: number;
+}
+
+export interface CheckStorefrontPromotionResult {
+  hasApplicablePromotions: boolean;
+  applicablePromotions: StorefrontPromotion[];
+  message: string;
 }
 
 export interface StorefrontOrder {
@@ -293,6 +310,13 @@ export async function applyPromotionCodeApi(
   payload: ApplyStorefrontPromotionPayload,
 ): Promise<ApplyStorefrontPromotionResult> {
   const response = await apiClient.post<ApplyStorefrontPromotionResult>('/promotions/apply', payload);
+  return response.data;
+}
+
+export async function checkApplicablePromotionsApi(
+  payload: CheckStorefrontPromotionPayload,
+): Promise<CheckStorefrontPromotionResult> {
+  const response = await apiClient.post<CheckStorefrontPromotionResult>('/promotions/check', payload);
   return response.data;
 }
 

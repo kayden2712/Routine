@@ -32,7 +32,7 @@ import { toast } from '@/lib/toast';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/store/cartStore';
 import { useProductStore } from '@/store/productStore';
-import type { Customer, Order, Product, PromotionType } from '@/types';
+import type { Customer, Order, Product, Promotion, PromotionType } from '@/types';
 
 type CategoryKey = 'all' | 'ao' | 'quan' | 'vay' | 'ao-khoac' | 'phu-kien';
 type PaymentMethod = 'cash' | 'transfer';
@@ -271,6 +271,8 @@ export function POSPage() {
   const [discountInput, setDiscountInput] = useState('');
   const [discountInvalid, setDiscountInvalid] = useState(false);
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false);
+  const [availablePromotions, setAvailablePromotions] = useState<Promotion[]>([]);
+  const [isLoadingPromotions, setIsLoadingPromotions] = useState(false);
   const [appliedPromotionType, setAppliedPromotionType] = useState<PromotionType | null>(null);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
@@ -367,6 +369,57 @@ export function POSPage() {
 
   const resolvedCustomer = customer ?? customerResolvedFromSearch;
 
+  const productIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          items
+            .map((item) => Number.parseInt(item.product.id, 10))
+            .filter((id) => Number.isFinite(id)),
+        ),
+      ),
+    [items],
+  );
+
+  useEffect(() => {
+    if (!productIds.length) {
+      setAvailablePromotions([]);
+      return;
+    }
+
+    let stillMounted = true;
+
+    const loadApplicablePromotions = async () => {
+      setIsLoadingPromotions(true);
+
+      try {
+        const response = await promotionApi.check({
+          orderAmount: subtotal,
+          productIds,
+          customerId: resolvedCustomer ? Number.parseInt(resolvedCustomer.id, 10) : undefined,
+        });
+
+        if (stillMounted) {
+          setAvailablePromotions(response.applicablePromotions ?? []);
+        }
+      } catch {
+        if (stillMounted) {
+          setAvailablePromotions([]);
+        }
+      } finally {
+        if (stillMounted) {
+          setIsLoadingPromotions(false);
+        }
+      }
+    };
+
+    void loadApplicablePromotions();
+
+    return () => {
+      stillMounted = false;
+    };
+  }, [productIds, resolvedCustomer, subtotal]);
+
   const openAddCustomerDialog = () => {
     setCustomerForm({
       name: '',
@@ -417,6 +470,7 @@ export function POSPage() {
 
   const cashReceived = Number(cashReceivedInput || 0);
   const change = Math.max(0, cashReceived - total);
+  const selectedPromotionCode = discountInput.trim().toUpperCase();
 
   const addProductToCart = (product: Product) => {
     if (product.stock <= 0 || product.status === 'out_of_stock') {
@@ -449,8 +503,8 @@ export function POSPage() {
     }
   };
 
-  const handleApplyDiscount = async () => {
-    const code = discountInput.trim().toUpperCase();
+  const handleApplyDiscount = async (incomingCode?: string) => {
+    const code = (incomingCode ?? discountInput).trim().toUpperCase();
 
     if (!code) {
       applyDiscount('');
@@ -459,23 +513,16 @@ export function POSPage() {
       return;
     }
 
-    const orderAmount = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-    const productIds = Array.from(
-      new Set(
-        items
-          .map((item) => Number.parseInt(item.product.id, 10))
-          .filter((id) => Number.isFinite(id)),
-      ),
-    );
+    setDiscountInput(code);
 
     setIsApplyingDiscount(true);
     try {
       const promotion = await promotionApi.getByCode(code);
       const result = await promotionApi.apply({
         promotionCode: code,
-        orderAmount,
+        orderAmount: subtotal,
         productIds,
-        customerId: customer ? Number.parseInt(customer.id, 10) : undefined,
+        customerId: resolvedCustomer ? Number.parseInt(resolvedCustomer.id, 10) : undefined,
       });
 
       if (!result.applicable) {
@@ -510,6 +557,18 @@ export function POSPage() {
     } finally {
       setIsApplyingDiscount(false);
     }
+  };
+
+  const formatPromotionSummary = (promotion: Promotion): string => {
+    if (promotion.type === 'GIAM_PHAN_TRAM') {
+      return `Giảm ${promotion.discountValue}%`;
+    }
+
+    if (promotion.type === 'GIAM_TIEN') {
+      return `Giảm ${formatVND(promotion.discountValue)}`;
+    }
+
+    return 'Ưu đãi quà tặng';
   };
 
   const handleCheckoutClick = () => {
@@ -956,25 +1015,94 @@ export function POSPage() {
                 </div>
               </div>
 
-              <div className="mb-3 flex gap-2">
-                <Input
-                  value={discountInput}
-                  onChange={(event) => setDiscountInput(event.target.value)}
-                  placeholder="Mã giảm giá"
-                  className={cn(
-                    'h-9',
-                    discountInvalid &&
-                      'border-[var(--color-error)] ring-2 ring-[var(--color-error-bg)] animate-[shake_0.35s_ease]',
+              <div className="mb-3 rounded-[10px] border border-[var(--color-border)] bg-[#FBFAF8] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-medium text-[var(--color-text-muted)]">Mã giảm giá</p>
+                  {selectedPromotionCode ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiscountInput('');
+                        applyDiscount('');
+                        setAppliedPromotionType(null);
+                        setDiscountInvalid(false);
+                      }}
+                      className="text-[11px] font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                    >
+                      Xóa
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className="mt-2 flex gap-2">
+                  <Input
+                    value={discountInput}
+                    onChange={(event) => setDiscountInput(event.target.value.toUpperCase())}
+                    placeholder="Nhập hoặc chọn mã"
+                    className={cn(
+                      'h-9',
+                      discountInvalid &&
+                        'border-[var(--color-error)] ring-2 ring-[var(--color-error-bg)] animate-[shake_0.35s_ease]',
+                    )}
+                  />
+                  <Button
+                    variant="outline"
+                    className="h-9"
+                    onClick={() => void handleApplyDiscount()}
+                    disabled={isApplyingDiscount || items.length === 0}
+                  >
+                    {isApplyingDiscount ? 'Đang áp dụng...' : 'Áp dụng'}
+                  </Button>
+                </div>
+
+                <div className="mt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-medium text-[var(--color-text-muted)]">Mã có thể sử dụng</p>
+                    {!isLoadingPromotions && availablePromotions.length > 0 ? (
+                      <span className="text-[11px] text-[var(--color-text-muted)]">
+                        {availablePromotions.length} mã
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {isLoadingPromotions ? (
+                    <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">Đang tìm mã phù hợp...</p>
+                  ) : availablePromotions.length > 0 ? (
+                    <div className="mt-2 max-h-32 space-y-2 overflow-y-auto pr-1">
+                      {availablePromotions.map((promotion) => {
+                        const isSelected = selectedPromotionCode === promotion.code.toUpperCase();
+
+                        return (
+                          <button
+                            key={promotion.id}
+                            type="button"
+                            onClick={() => {
+                              void handleApplyDiscount(promotion.code);
+                            }}
+                            className={cn(
+                              'flex w-full items-center justify-between gap-3 rounded-[8px] border px-3 py-2 text-left transition-colors',
+                              isSelected
+                                ? 'border-[#1A1A18] bg-[#1A1A18] text-white'
+                                : 'border-[var(--color-border)] bg-white text-[var(--color-text-primary)] hover:bg-[#F7F6F4]',
+                            )}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-[11px] font-semibold">{promotion.code}</p>
+                              <p className={cn('truncate text-[10px]', isSelected ? 'text-white/75' : 'text-[var(--color-text-secondary)]')}>
+                                {formatPromotionSummary(promotion)}
+                              </p>
+                            </div>
+                            <span className={cn('shrink-0 text-[10px] font-medium', isSelected ? 'text-white' : 'text-[var(--color-text-muted)]')}>
+                              Chọn
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] text-[var(--color-text-muted)]">Hiện chưa có mã phù hợp với giỏ hàng này.</p>
                   )}
-                />
-                <Button
-                  variant="outline"
-                  className="h-9"
-                  onClick={() => void handleApplyDiscount()}
-                  disabled={isApplyingDiscount || items.length === 0}
-                >
-                  {isApplyingDiscount ? 'Đang áp dụng...' : 'Áp dụng'}
-                </Button>
+                </div>
               </div>
 
               {discountCode && appliedPromotionType === 'TANG_QUA' ? (

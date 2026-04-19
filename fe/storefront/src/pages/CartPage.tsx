@@ -1,8 +1,8 @@
 import { Heart, Lock, Minus, Plus, Trash2, X } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { applyPromotionCodeApi, fetchPromotionByCodeApi } from '@/lib/backendApi'
+import { applyPromotionCodeApi, checkApplicablePromotionsApi, fetchPromotionByCodeApi, type StorefrontPromotion } from '@/lib/backendApi'
 import { formatVnd } from '@/lib/utils'
 import { useCartStore } from '@/store/cartStore'
 import { useWishlistStore } from '@/store/wishlistStore'
@@ -29,6 +29,8 @@ export const CartPage = () => {
   const [appliedPromotion, setAppliedPromotion] = useState<AppliedPromotionState | null>(null)
   const [promoError, setPromoError] = useState('')
   const [isApplyingPromo, setIsApplyingPromo] = useState(false)
+  const [availablePromotions, setAvailablePromotions] = useState<StorefrontPromotion[]>([])
+  const [isLoadingPromotions, setIsLoadingPromotions] = useState(false)
 
   const subtotal = getSubtotal()
   const totalProducts = useMemo(() => items.reduce((total, item) => total + item.quantity, 0), [items])
@@ -39,8 +41,58 @@ export const CartPage = () => {
   const remainingForFreeShipping = Math.max(0, freeShippingTarget - subtotal)
   const shippingProgress = Math.min(100, (subtotal / freeShippingTarget) * 100)
 
-  const handleApplyPromotion = async () => {
-    const code = promoCode.trim().toUpperCase()
+  const productIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          items
+            .map((item) => Number.parseInt(item.productId, 10))
+            .filter((id) => Number.isFinite(id)),
+        ),
+      ),
+    [items],
+  )
+
+  useEffect(() => {
+    if (!productIds.length) {
+      setAvailablePromotions([])
+      return
+    }
+
+    let stillMounted = true
+
+    const fetchApplicablePromotions = async () => {
+      setIsLoadingPromotions(true)
+
+      try {
+        const response = await checkApplicablePromotionsApi({
+          orderAmount: subtotal,
+          productIds,
+        })
+
+        if (stillMounted) {
+          setAvailablePromotions(response.applicablePromotions ?? [])
+        }
+      } catch {
+        if (stillMounted) {
+          setAvailablePromotions([])
+        }
+      } finally {
+        if (stillMounted) {
+          setIsLoadingPromotions(false)
+        }
+      }
+    }
+
+    void fetchApplicablePromotions()
+
+    return () => {
+      stillMounted = false
+    }
+  }, [productIds, subtotal])
+
+  const handleApplyPromotion = async (incomingCode?: string) => {
+    const code = (incomingCode ?? promoCode).trim().toUpperCase()
 
     if (!code) {
       setAppliedPromotion(null)
@@ -48,13 +100,7 @@ export const CartPage = () => {
       return
     }
 
-    const productIds = Array.from(
-      new Set(
-        items
-          .map((item) => Number.parseInt(item.productId, 10))
-          .filter((id) => Number.isFinite(id)),
-      ),
-    )
+    setPromoCode(code)
 
     setIsApplyingPromo(true)
     setPromoError('')
@@ -86,6 +132,26 @@ export const CartPage = () => {
     } finally {
       setIsApplyingPromo(false)
     }
+  }
+
+  const formatPromotionSummary = (promotion: StorefrontPromotion): string => {
+    if (promotion.type === 'GIAM_PHAN_TRAM') {
+      const value = Number(promotion.discountValue ?? 0)
+      if (value <= 0) {
+        return 'Ưu đãi phần trăm'
+      }
+      return `Giảm ${value}%`
+    }
+
+    if (promotion.type === 'GIAM_TIEN') {
+      const value = Number(promotion.discountValue ?? 0)
+      if (value <= 0) {
+        return 'Ưu đãi tiền mặt'
+      }
+      return `Giảm ${formatVnd(value)}`
+    }
+
+    return 'Ưu đãi quà tặng'
   }
 
   if (!items.length) {
@@ -264,6 +330,39 @@ export const CartPage = () => {
             >
               {isApplyingPromo ? 'Đang áp dụng...' : 'Áp dụng'}
             </button>
+          </div>
+
+          <div className="mt-3">
+            <p className="text-[11px] font-medium text-[var(--text-secondary)]">Mã có thể sử dụng</p>
+
+            {isLoadingPromotions ? (
+              <p className="mt-1.5 text-[11px] text-[var(--text-secondary)]">Đang tìm mã phù hợp...</p>
+            ) : availablePromotions.length > 0 ? (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {availablePromotions.map((promotion) => {
+                  const isSelected = promoCode.trim().toUpperCase() === promotion.code.toUpperCase()
+                  return (
+                    <button
+                      key={promotion.id}
+                      type="button"
+                      onClick={() => {
+                        void handleApplyPromotion(promotion.code)
+                      }}
+                      className={[
+                        'rounded-full border px-3 py-1 text-[11px] transition-colors',
+                        isSelected
+                          ? 'border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--surface-elevated)]'
+                          : 'border-[var(--line)] text-[var(--text-primary)] hover:bg-[var(--line-soft)]',
+                      ].join(' ')}
+                    >
+                      {promotion.code} • {formatPromotionSummary(promotion)}
+                    </button>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-[var(--text-secondary)]">Hiện chưa có mã phù hợp với giỏ hàng này.</p>
+            )}
           </div>
 
           {promoError ? (

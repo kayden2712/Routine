@@ -45,6 +45,53 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
     usageLimit: '',
   });
 
+  const toDateTimeString = (dateValue: string, isEndDate: boolean): string => {
+    if (!dateValue) {
+      return '';
+    }
+
+    return `${dateValue}T${isEndDate ? '23:59:59' : '00:00:00'}`;
+  };
+
+  const getValidationError = () => {
+    if (!isEdit && !formData.code.trim()) {
+      return 'Vui lòng nhập mã khuyến mãi';
+    }
+
+    if (!formData.name.trim()) {
+      return 'Vui lòng nhập tên chương trình';
+    }
+
+    if (!formData.discountValue.trim()) {
+      return 'Vui lòng nhập giá trị ưu đãi';
+    }
+
+    if (!formData.startDate) {
+      return 'Vui lòng chọn thời gian bắt đầu';
+    }
+
+    if (!formData.endDate) {
+      return 'Vui lòng chọn thời gian kết thúc';
+    }
+
+    const startDate = new Date(`${formData.startDate}T00:00:00`);
+    const endDate = new Date(`${formData.endDate}T00:00:00`);
+
+    if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+      return 'Vui lòng nhập đúng định dạng thời gian';
+    }
+
+    if (endDate <= startDate) {
+      return 'Thời gian kết thúc phải sau thời gian bắt đầu';
+    }
+
+    if (formData.type === 'GIAM_PHAN_TRAM' && parseFloat(formData.discountValue) > 100) {
+      return 'Giá trị giảm phần trăm không được vượt quá 100%';
+    }
+
+    return null;
+  };
+
   useEffect(() => {
     if (promotion) {
       setFormData({
@@ -54,8 +101,8 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
         type: promotion.type,
         discountValue: promotion.discountValue.toString(),
         maxDiscountAmount: promotion.maxDiscountAmount?.toString() || '',
-        startDate: promotion.startDate.substring(0, 16),
-        endDate: promotion.endDate.substring(0, 16),
+        startDate: promotion.startDate.substring(0, 10),
+        endDate: promotion.endDate.substring(0, 10),
         minOrderAmount: promotion.minOrderAmount.toString(),
         applyToAllProducts: promotion.applyToAllProducts,
         usageLimit: promotion.usageLimit?.toString() || '',
@@ -66,13 +113,9 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-      showToast.error('Thời gian kết thúc phải sau thời gian bắt đầu');
-      return;
-    }
-
-    if (formData.type === 'GIAM_PHAN_TRAM' && parseFloat(formData.discountValue) > 100) {
-      showToast.error('Giá trị giảm phần trăm không được vượt quá 100%');
+    const validationError = getValidationError();
+    if (validationError) {
+      showToast.error(validationError);
       return;
     }
 
@@ -86,8 +129,8 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
         type: formData.type,
         discountValue: parseFloat(formData.discountValue),
         maxDiscountAmount: formData.maxDiscountAmount ? parseFloat(formData.maxDiscountAmount) : undefined,
-        startDate: formData.startDate,
-        endDate: formData.endDate,
+        startDate: toDateTimeString(formData.startDate, false),
+        endDate: toDateTimeString(formData.endDate, true),
         minOrderAmount: parseFloat(formData.minOrderAmount || '0'),
         applyToAllProducts: formData.applyToAllProducts,
         usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : undefined,
@@ -128,7 +171,7 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
+        <form noValidate onSubmit={handleSubmit} className="space-y-4 px-6 py-5">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="grid gap-1.5">
               <Label>Mã khuyến mãi</Label>
@@ -218,7 +261,7 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
             <div className="grid gap-1.5">
               <Label>Thời gian bắt đầu</Label>
               <Input
-                type="datetime-local"
+                type="date"
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 required
@@ -228,7 +271,7 @@ export default function PromotionFormModal({ promotion, onClose, onSuccess }: Pr
             <div className="grid gap-1.5">
               <Label>Thời gian kết thúc</Label>
               <Input
-                type="datetime-local"
+                type="date"
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 required

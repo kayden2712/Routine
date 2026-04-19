@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, CheckCircle2, ClipboardList, Download } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, ClipboardList, Download, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -100,8 +100,10 @@ export function StockReceiptWorkspace({ mode }: StockReceiptWorkspaceProps) {
   const [loading, setLoading] = useState(false);
   const [openCreate, setOpenCreate] = useState(false);
   const [supplierId, setSupplierId] = useState('');
+  const [supplierSearch, setSupplierSearch] = useState('');
   const [exportReason, setExportReason] = useState<ExportReason>('BAN_HANG');
   const [selectedProductId, setSelectedProductId] = useState('');
+  const [productSearch, setProductSearch] = useState('');
   const [lineQuantity, setLineQuantity] = useState('1');
   const [note, setNote] = useState('');
   const [draftLines, setDraftLines] = useState<ReceiptLine[]>([]);
@@ -145,10 +147,54 @@ export function StockReceiptWorkspace({ mode }: StockReceiptWorkspaceProps) {
     return map;
   }, [products]);
 
+  const filteredSuppliers = useMemo(() => {
+    const term = supplierSearch.trim().toLowerCase();
+    if (!term) {
+      return suppliers;
+    }
+
+    const result = suppliers.filter((supplier) => {
+      const searchable = `${supplier.maNcc ?? ''} ${supplier.tenNcc ?? ''} ${supplier.soDienThoai ?? ''} ${supplier.email ?? ''}`.toLowerCase();
+      return searchable.includes(term);
+    });
+
+    if (supplierId) {
+      const selectedSupplier = suppliers.find((supplier) => String(supplier.id) === supplierId);
+      if (selectedSupplier && !result.some((supplier) => supplier.id === selectedSupplier.id)) {
+        result.unshift(selectedSupplier);
+      }
+    }
+
+    return result;
+  }, [supplierId, supplierSearch, suppliers]);
+
+  const filteredProducts = useMemo(() => {
+    const term = productSearch.trim().toLowerCase();
+    if (!term) {
+      return products;
+    }
+
+    const result = products.filter((product) => {
+      const searchable = `${product.code ?? ''} ${product.name ?? ''}`.toLowerCase();
+      return searchable.includes(term);
+    });
+
+    if (selectedProductId) {
+      const selectedProduct = products.find((product) => String(product.id) === selectedProductId);
+      if (selectedProduct && !result.some((product) => product.id === selectedProduct.id)) {
+        result.unshift(selectedProduct);
+      }
+    }
+
+    return result;
+  }, [productSearch, products, selectedProductId]);
+
   const resetDraft = () => {
     setSupplierId('');
+    setSupplierSearch('');
     setExportReason('BAN_HANG');
     setSelectedProductId('');
+    setProductSearch('');
     setLineQuantity('1');
     setDraftLines([]);
     setNote('');
@@ -482,18 +528,30 @@ export function StockReceiptWorkspace({ mode }: StockReceiptWorkspaceProps) {
             {mode === 'import' ? (
               <div className="space-y-1.5">
                 <p className="text-xs font-medium uppercase tracking-[0.08em] text-[var(--color-text-muted)]">Nha cung cap</p>
+                <div className="relative">
+                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                  <Input
+                    value={supplierSearch}
+                    onChange={(event) => setSupplierSearch(event.target.value)}
+                    placeholder="Tim nha cung cap..."
+                    className="h-10 pl-9"
+                  />
+                </div>
                 <Select value={supplierId} onValueChange={(value) => setSupplierId(value ?? '')}>
                   <SelectTrigger className="h-10 w-full">
                     <SelectValue placeholder="Chon nha cung cap" />
                   </SelectTrigger>
                   <SelectContent>
-                    {suppliers.map((supplier) => (
+                    {filteredSuppliers.map((supplier) => (
                       <SelectItem key={supplier.id} value={String(supplier.id)}>
                         {supplier.maNcc} - {supplier.tenNcc}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {supplierSearch.trim() && filteredSuppliers.length === 0 ? (
+                  <p className="text-xs text-[var(--color-text-muted)]">Khong tim thay nha cung cap phu hop.</p>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-1.5">
@@ -514,18 +572,32 @@ export function StockReceiptWorkspace({ mode }: StockReceiptWorkspaceProps) {
             )}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1fr)_130px_auto]">
-              <Select value={selectedProductId} onValueChange={(value) => setSelectedProductId(value ?? '')}>
-                <SelectTrigger className="h-10 w-full">
-                  <SelectValue placeholder="Chon san pham" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={String(product.id)}>
-                      {product.code} - {product.name} ({mode === 'export' ? `Ton: ${product.stock}` : formatVND(product.costPrice)})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-1.5">
+                <div className="relative">
+                  <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" />
+                  <Input
+                    value={productSearch}
+                    onChange={(event) => setProductSearch(event.target.value)}
+                    placeholder="Tim san pham..."
+                    className="h-10 pl-9"
+                  />
+                </div>
+                <Select value={selectedProductId} onValueChange={(value) => setSelectedProductId(value ?? '')}>
+                  <SelectTrigger className="h-10 w-full">
+                    <SelectValue placeholder="Chon san pham" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredProducts.map((product) => (
+                      <SelectItem key={product.id} value={String(product.id)}>
+                        {product.code} - {product.name} ({mode === 'export' ? `Ton: ${product.stock}` : formatVND(product.costPrice)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {productSearch.trim() && filteredProducts.length === 0 ? (
+                  <p className="text-xs text-[var(--color-text-muted)]">Khong tim thay san pham phu hop.</p>
+                ) : null}
+              </div>
               <Input
                 type="text"
                 inputMode="numeric"
