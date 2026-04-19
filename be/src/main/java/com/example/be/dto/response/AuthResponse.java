@@ -1,5 +1,7 @@
 package com.example.be.dto.response;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +20,7 @@ public class AuthResponse {
     private String email;
     private String fullName;
     private String role;
+    private List<String> roles;
     private String phone;
     private String tier;
     private String branch;

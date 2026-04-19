@@ -1,6 +1,7 @@
 package com.example.be.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,6 +19,7 @@ public class AdminStaffResponse {
     private String phone;
     private String branch;
     private String role;
+    private List<String> roles;
     private String employeeType;
     private Long baseSalary;
     private Boolean isActive;

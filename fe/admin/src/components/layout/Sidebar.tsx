@@ -34,16 +34,6 @@ interface NavSection {
 }
 
 const roleSections: Record<UserRole, NavSection[]> = {
-  admin: [
-    {
-      label: 'Quan tri',
-      items: [
-        { label: 'Bang luong', to: '/payroll', icon: BadgeDollarSign },
-        { label: 'Bao cao', to: '/reports', icon: BarChart3 },
-        { label: 'Cai dat', to: '/settings', icon: Settings },
-      ],
-    },
-  ],
   manager: [
     {
       label: 'Tong quan',
@@ -114,7 +104,6 @@ const roleSections: Record<UserRole, NavSection[]> = {
 
 const roleLabelMap: Record<UserRole, string> = {
   manager: 'Quan ly',
-  admin: 'Quan ly',
   sales: 'Ban hang',
   warehouse: 'Kho',
   accountant: 'Ke toan',

@@ -20,7 +20,6 @@ import type { UserRole } from '@/types';
 
 const roleHome: Record<UserRole, string> = {
   manager: '/dashboard',
-  admin: '/dashboard',
   sales: '/pos',
   warehouse: '/inventory',
   accountant: '/reports',

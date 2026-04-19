@@ -6,7 +6,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.example.be.dto.request.SupplierRequest;
 import com.example.be.dto.request.SupplierSearchRequest;
@@ -119,9 +128,9 @@ public class SupplierController {
      * "maNcc": "NCC-001", // Optional, auto-gen nếu null
      * "tenNcc": "string", // Required, 2-200 ký tự
      * "diaChi": "string", // Optional, max 500 ký tự
-     * "soDienThoai": "0901234567", // Optional, format Việt Nam
-     * "email": "email@example.com", // Optional, format email
-     * "nguoiLienHe": "string", // Optional, max 100 ký tự
+    * "soDienThoai": "0901234567", // Required, format Việt Nam
+    * "email": "email@example.com", // Required, format email
+    * "nguoiLienHe": "string", // Required, max 100 ký tự
      * "ghiChu": "string", // Optional, max 1000 ký tự
      * "trangThai": "ACTIVE" // Optional, default ACTIVE
      * }

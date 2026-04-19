@@ -21,6 +21,7 @@ public class JwtTokenProvider {
 
     private static final String TOKEN_TYPE_CLAIM = "tokenType";
     private static final String ROLE_TYPE_CLAIM = "roleType";
+    private static final String SELECTED_ROLE_CLAIM = "selectedRole";
     private static final String ACCESS_TOKEN_TYPE = "ACCESS";
     private static final String REFRESH_TOKEN_TYPE = "REFRESH";
 
@@ -41,37 +42,54 @@ public class JwtTokenProvider {
     }
 
     public String generateAdminToken(Authentication authentication) {
-        return generateAccessToken(authentication.getName(), adminTokenExpiration, "ADMIN");
+        return generateAdminToken(authentication, null);
+    }
+
+    public String generateAdminToken(Authentication authentication, String selectedRole) {
+        return generateAccessToken(authentication.getName(), adminTokenExpiration, "ADMIN", selectedRole);
     }
 
     public String generateCustomerToken(Authentication authentication) {
-        return generateAccessToken(authentication.getName(), customerTokenExpiration, "CUSTOMER");
+        return generateAccessToken(authentication.getName(), customerTokenExpiration, "CUSTOMER", null);
     }
 
     public String generateRefreshToken(Authentication authentication) {
-        return generateRefreshTokenByEmail(authentication.getName());
+        return generateRefreshToken(authentication, null);
+    }
+
+    public String generateRefreshToken(Authentication authentication, String selectedRole) {
+        return generateRefreshTokenByEmail(authentication.getName(), selectedRole);
     }
 
     public String generateRefreshTokenByEmail(String email) {
-        return generateToken(email, refreshTokenExpiration, REFRESH_TOKEN_TYPE, "AUTH");
+        return generateRefreshTokenByEmail(email, null);
     }
 
-    private String generateAccessToken(String email, long expiration, String roleType) {
-        return generateToken(email, expiration, ACCESS_TOKEN_TYPE, roleType);
+    public String generateRefreshTokenByEmail(String email, String selectedRole) {
+        return generateToken(email, refreshTokenExpiration, REFRESH_TOKEN_TYPE, "AUTH", selectedRole);
     }
 
-    private String generateToken(String email, long expiration, String tokenType, String roleType) {
+    private String generateAccessToken(String email, long expiration, String roleType, String selectedRole) {
+        return generateToken(email, expiration, ACCESS_TOKEN_TYPE, roleType, selectedRole);
+    }
+
+    private String generateToken(String email, long expiration, String tokenType, String roleType, String selectedRole) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
 
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(email)
                 .claim(TOKEN_TYPE_CLAIM, tokenType)
                 .claim(ROLE_TYPE_CLAIM, roleType)
                 .issuedAt(now)
                 .expiration(expiryDate)
-                .signWith(getSigningKey())
-                .compact();
+                .signWith(getSigningKey());
+
+        if (selectedRole != null && !selectedRole.isBlank()) {
+            builder.claim(SELECTED_ROLE_CLAIM, selectedRole);
+        }
+
+        return builder.compact();
     }
 
     public String getEmailFromToken(String token) {
@@ -92,6 +110,26 @@ public class JwtTokenProvider {
                 .getPayload();
 
         return claims.get(TOKEN_TYPE_CLAIM, String.class);
+    }
+
+    public String getRoleTypeFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get(ROLE_TYPE_CLAIM, String.class);
+    }
+
+    public String getSelectedRoleFromToken(String token) {
+        Claims claims = Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        return claims.get(SELECTED_ROLE_CLAIM, String.class);
     }
 
     public boolean validateToken(String token) {

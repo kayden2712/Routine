@@ -26,7 +26,6 @@ import type { UserRole } from '@/types';
 
 function getRoleHome(role: UserRole) {
   if (role === 'manager') return '/dashboard';
-  if (role === 'admin') return '/dashboard';
   if (role === 'sales') return '/pos';
   if (role === 'accountant') return '/reports';
   return '/inventory';
@@ -114,7 +113,7 @@ export const router = createBrowserRouter([
       {
         path: '/payroll',
         element: (
-          <ProtectedRoute roles={['accountant', 'manager', 'admin']}>
+          <ProtectedRoute roles={['accountant', 'manager']}>
             <PayrollPage />
           </ProtectedRoute>
         ),
@@ -123,7 +122,7 @@ export const router = createBrowserRouter([
       {
         path: '/reports',
         element: (
-          <ProtectedRoute roles={['manager', 'accountant', 'admin']}>
+          <ProtectedRoute roles={['manager', 'accountant']}>
             <ReportsPage />
           </ProtectedRoute>
         ),

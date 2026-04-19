@@ -104,6 +104,8 @@ public class SupplierServiceImpl implements SupplierService {
     public SupplierResponse createSupplier(SupplierRequest request) {
         logger.info("Creating new supplier: {}", request.getTenNcc());
 
+        validateRequiredFields(request);
+
         // Validate dữ liệu trùng
         validateDuplicateOnCreate(request);
 
@@ -137,6 +139,8 @@ public class SupplierServiceImpl implements SupplierService {
         logger.info("Updating supplier id: {}", id);
 
         Supplier existing = findById(id);
+
+        validateRequiredFields(request);
 
         // Validate dữ liệu trùng (loại trừ chính nó)
         validateDuplicateOnUpdate(id, request);
@@ -199,6 +203,35 @@ public class SupplierServiceImpl implements SupplierService {
     private Supplier findById(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy nhà cung cấp với ID: " + id));
+    }
+
+    /**
+     * Validate các trường bắt buộc khi tạo/cập nhật
+     */
+    private void validateRequiredFields(SupplierRequest request) {
+        if (request == null) {
+            throw new BadRequestException("Dữ liệu nhà cung cấp không hợp lệ");
+        }
+
+        if (isBlank(request.getTenNcc())) {
+            throw new BadRequestException("Tên nhà cung cấp là bắt buộc");
+        }
+
+        if (isBlank(request.getSoDienThoai())) {
+            throw new BadRequestException("Số điện thoại là bắt buộc");
+        }
+
+        if (isBlank(request.getEmail())) {
+            throw new BadRequestException("Email là bắt buộc");
+        }
+
+        if (isBlank(request.getNguoiLienHe())) {
+            throw new BadRequestException("Người liên hệ là bắt buộc");
+        }
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
     /**

@@ -1,6 +1,12 @@
 package com.example.be.entity;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import com.example.be.entity.converter.UserRoleListConverter;
+
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -44,9 +50,9 @@ public class User extends BaseEntity {
     @Column(length = 100)
     private String branch;
     
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
+    @Convert(converter = UserRoleListConverter.class)
+    @Column(name = "role", nullable = false, length = 255)
+    private List<UserRole> roles = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "employee_type", nullable = false, length = 20)
@@ -60,4 +66,20 @@ public class User extends BaseEntity {
     
     @Column(name = "is_active")
     private Boolean isActive = true;
+
+    public UserRole getRole() {
+        return (roles == null || roles.isEmpty()) ? null : roles.get(0);
+    }
+
+    public void setRole(UserRole role) {
+        if (role == null) {
+            this.roles = new ArrayList<>();
+            return;
+        }
+        this.roles = new ArrayList<>(List.of(role));
+    }
+
+    public boolean hasRole(UserRole role) {
+        return role != null && roles != null && roles.contains(role);
+    }
 }

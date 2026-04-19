@@ -1,10 +1,11 @@
-export type UserRole = 'admin' | 'manager' | 'sales' | 'warehouse' | 'accountant';
+export type UserRole = 'manager' | 'sales' | 'warehouse' | 'accountant';
 
 export interface User {
   id: string;
   name: string;
   email: string;
   role: UserRole;
+  roles?: UserRole[];
   avatarInitials: string;
   token?: string;
   refreshToken?: string;

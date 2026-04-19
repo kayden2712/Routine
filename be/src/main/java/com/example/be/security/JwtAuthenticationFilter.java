@@ -1,9 +1,13 @@
 package com.example.be.security;
 
 import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
 import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -34,10 +38,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateAccessToken(jwt)) {
                 String email = tokenProvider.getEmailFromToken(jwt);
+                String roleType = tokenProvider.getRoleTypeFromToken(jwt);
+                String selectedRole = tokenProvider.getSelectedRoleFromToken(jwt);
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+                Collection<? extends GrantedAuthority> authorities = userDetails.getAuthorities();
+
+                if ("ADMIN".equalsIgnoreCase(roleType) && StringUtils.hasText(selectedRole)) {
+                    String expectedAuthority = "ROLE_" + selectedRole;
+                    boolean roleAllowed = authorities.stream()
+                            .anyMatch(authority -> expectedAuthority.equals(authority.getAuthority()));
+                    if (!roleAllowed) {
+                        throw new IllegalArgumentException("Selected role is not allowed for this account");
+                    }
+
+                    authorities = List.of(new SimpleGrantedAuthority(expectedAuthority));
+                }
+
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userDetails, null, userDetails.getAuthorities());
+                        userDetails, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);

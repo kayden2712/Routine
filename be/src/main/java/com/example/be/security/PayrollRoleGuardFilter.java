@@ -39,16 +39,15 @@ public class PayrollRoleGuardFilter extends OncePerRequestFilter {
         }
 
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-        boolean isAdmin = hasRole(authorities, "ROLE_ADMIN");
         boolean isAccountant = hasRole(authorities, "ROLE_ACCOUNTANT");
         boolean isManager = hasRole(authorities, "ROLE_MANAGER");
 
         if (uri.matches("^/api/payroll/\\d+/approve$")) {
-            if (!(isAdmin || isManager)) {
-                throw new AccessDeniedException("Chỉ MANAGER hoặc ADMIN được phê duyệt bảng lương");
+            if (!isManager) {
+                throw new AccessDeniedException("Chỉ MANAGER được phê duyệt bảng lương");
             }
         } else {
-            if (!(isAdmin || isAccountant || isManager)) {
+            if (!(isAccountant || isManager)) {
                 throw new AccessDeniedException("Chỉ ACCOUNTANT hoặc MANAGER được chỉnh sửa bảng lương");
             }
         }

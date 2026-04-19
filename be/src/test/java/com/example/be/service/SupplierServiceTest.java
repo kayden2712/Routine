@@ -1,20 +1,29 @@
 package com.example.be.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
-
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyDouble;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -287,11 +296,11 @@ class SupplierServiceTest {
                 request.setTenNcc("Công ty XYZ");
                 request.setSoDienThoai("0912345678");
                 request.setEmail("xyz@example.com");
+                request.setNguoiLienHe("Nguyễn Văn B");
 
                 when(repository.existsByNameAndPhone(anyString(), anyString())).thenReturn(false);
                 when(repository.existsByEmail(anyString())).thenReturn(false);
                 when(mapper.toEntity(any(SupplierRequest.class))).thenReturn(sampleSupplier);
-                when(repository.findAll()).thenReturn(Arrays.asList()); // No suppliers today
                 when(repository.save(any(Supplier.class))).thenReturn(sampleSupplier);
                 when(repository.countPurchaseReceiptsBySupplierId(anyLong())).thenReturn(0L);
                 when(repository.sumTotalPurchaseValueBySupplierId(anyLong())).thenReturn(0.0);
@@ -345,6 +354,7 @@ class SupplierServiceTest {
                 updateRequest.setTenNcc("Công ty ABC Updated");
                 updateRequest.setSoDienThoai("0901234567");
                 updateRequest.setEmail("newemail@abc.com");
+                updateRequest.setNguoiLienHe("Nguyễn Văn A Updated");
 
                 when(repository.findById(anyLong())).thenReturn(Optional.of(sampleSupplier));
                 when(repository.existsByNameAndPhoneAndIdNot(anyString(), anyString(), anyLong()))
@@ -378,6 +388,23 @@ class SupplierServiceTest {
                                 BadRequestException.class,
                                 () -> service.updateSupplier(1L, sampleRequest));
                 assertTrue(exception.getMessage().contains("đã tồn tại"));
+                verify(repository, never()).save(any(Supplier.class));
+        }
+
+        @Test
+        @DisplayName("Should throw exception when required supplier fields are missing")
+        void testCreateSupplier_MissingRequiredFields() {
+                // Arrange
+                SupplierRequest invalidRequest = new SupplierRequest();
+                invalidRequest.setTenNcc("Công ty XYZ");
+                invalidRequest.setSoDienThoai("0912345678");
+                invalidRequest.setNguoiLienHe("Người liên hệ");
+
+                // Act & Assert
+                BadRequestException exception = assertThrows(
+                                BadRequestException.class,
+                                () -> service.createSupplier(invalidRequest));
+                assertTrue(exception.getMessage().contains("Email"));
                 verify(repository, never()).save(any(Supplier.class));
         }
 

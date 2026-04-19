@@ -56,7 +56,7 @@ class AuthServiceTest {
 
     @Test
     void loginUserReturnsAccessAndRefreshToken() {
-        LoginRequest request = new LoginRequest("manager@routine.vn", "Password@123");
+        LoginRequest request = new LoginRequest("manager@routine.vn", "Password@123", UserRole.MANAGER);
         Authentication authentication = new UsernamePasswordAuthenticationToken(request.getEmail(), null);
 
         User user = new User();
@@ -69,8 +69,8 @@ class AuthServiceTest {
 
         when(authenticationManager.authenticate(any())).thenReturn(authentication);
         when(userRepository.findByEmail(request.getEmail())).thenReturn(Optional.of(user));
-        when(tokenProvider.generateAdminToken(authentication)).thenReturn("access-token");
-        when(tokenProvider.generateRefreshToken(authentication)).thenReturn("refresh-token");
+        when(tokenProvider.generateAdminToken(authentication, "MANAGER")).thenReturn("access-token");
+        when(tokenProvider.generateRefreshToken(authentication, "MANAGER")).thenReturn("refresh-token");
 
         AuthResponse response = authService.loginUser(request);
 
@@ -91,9 +91,10 @@ class AuthServiceTest {
 
         when(tokenProvider.validateRefreshToken("refresh-token")).thenReturn(true);
         when(tokenProvider.getEmailFromToken("refresh-token")).thenReturn("manager@routine.vn");
+        when(tokenProvider.getSelectedRoleFromToken("refresh-token")).thenReturn("MANAGER");
         when(userRepository.findByEmail("manager@routine.vn")).thenReturn(Optional.of(user));
-        when(tokenProvider.generateAdminToken(any(Authentication.class))).thenReturn("new-access");
-        when(tokenProvider.generateRefreshTokenByEmail("manager@routine.vn")).thenReturn("new-refresh");
+        when(tokenProvider.generateAdminToken(any(Authentication.class), eq("MANAGER"))).thenReturn("new-access");
+        when(tokenProvider.generateRefreshTokenByEmail("manager@routine.vn", "MANAGER")).thenReturn("new-refresh");
 
         AuthResponse response = authService.refreshToken(request);
 

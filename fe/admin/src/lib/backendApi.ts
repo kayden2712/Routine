@@ -18,6 +18,7 @@ interface BackendAuthResponse {
   email: string;
   fullName: string;
   role: string;
+  roles?: string[];
 }
 
 interface BackendProduct {
@@ -113,6 +114,7 @@ export interface AdminStaffMember {
   email: string;
   phone: string;
   role: UserRole;
+  roles: UserRole[];
   employeeType?: 'fulltime' | 'parttime';
   baseSalary?: number;
   status: 'active' | 'inactive';
@@ -122,7 +124,6 @@ export interface AdminStaffMember {
 }
 
 const roleMap: Record<string, UserRole> = {
-  ADMIN: 'manager',
   MANAGER: 'manager',
   SALES: 'sales',
   WAREHOUSE: 'warehouse',
@@ -130,7 +131,6 @@ const roleMap: Record<string, UserRole> = {
 };
 
 const roleReverseMap: Record<UserRole, string> = {
-  admin: 'MANAGER',
   manager: 'MANAGER',
   sales: 'SALES',
   warehouse: 'WAREHOUSE',
@@ -299,10 +299,11 @@ export function mapBackendOrder(item: BackendOrder): Order {
   };
 }
 
-export async function adminLogin(email: string, password: string): Promise<User> {
+export async function adminLogin(email: string, password: string, selectedRole: UserRole): Promise<User> {
   const response = await apiClient.post<BackendAuthResponse>('/auth/admin/login', {
     email,
     password,
+    selectedRole: roleReverseMap[selectedRole],
   });
 
   const data = response.data;
@@ -311,6 +312,7 @@ export async function adminLogin(email: string, password: string): Promise<User>
     name: data.fullName,
     email: data.email,
     role: roleMap[data.role] ?? 'sales',
+    roles: (data.roles ?? [data.role]).map((value) => roleMap[String(value).toUpperCase()] ?? 'sales'),
     avatarInitials: data.fullName
       .split(' ')
       .filter(Boolean)
@@ -539,6 +541,7 @@ export async function fetchStaffApi(): Promise<AdminStaffMember[]> {
     email: string;
     phone: string;
     role: string;
+    roles?: string[];
     employeeType?: string;
     baseSalary?: number;
     isActive: boolean;
@@ -553,6 +556,7 @@ export async function fetchStaffApi(): Promise<AdminStaffMember[]> {
     email: String(item.email ?? ''),
     phone: String(item.phone ?? ''),
     role: roleMap[String(item.role ?? '').toUpperCase()] ?? 'sales',
+    roles: (item.roles ?? [item.role]).map((value) => roleMap[String(value ?? '').toUpperCase()] ?? 'sales'),
     employeeType: item.employeeType?.toLowerCase() === 'parttime' ? 'parttime' : 'fulltime',
     baseSalary: Math.round(Number(item.baseSalary ?? 0) / 1000),
     status: item.isActive ? 'active' : 'inactive',
@@ -567,7 +571,7 @@ export async function createStaffApi(payload: {
   email: string;
   phone: string;
   password: string;
-  role: UserRole;
+  roles: UserRole[];
   employeeType: 'fulltime' | 'parttime';
   baseSalary: number;
   status: 'active' | 'inactive';
@@ -578,7 +582,8 @@ export async function createStaffApi(payload: {
     email: payload.email,
     phone: payload.phone,
     password: payload.password,
-    role: roleReverseMap[payload.role],
+    roles: payload.roles.map((role) => roleReverseMap[role]),
+    role: roleReverseMap[payload.roles[0]],
     employeeType: payload.employeeType.toUpperCase(),
     baseSalary: payload.baseSalary * 1000,
     isActive: payload.status === 'active',
@@ -592,7 +597,7 @@ export async function updateStaffApi(
     name: string;
     email: string;
     phone: string;
-    role: UserRole;
+    roles: UserRole[];
     employeeType: 'fulltime' | 'parttime';
     baseSalary: number;
     status: 'active' | 'inactive';
@@ -603,7 +608,8 @@ export async function updateStaffApi(
     fullName: payload.name,
     email: payload.email,
     phone: payload.phone,
-    role: roleReverseMap[payload.role],
+    roles: payload.roles.map((role) => roleReverseMap[role]),
+    role: roleReverseMap[payload.roles[0]],
     employeeType: payload.employeeType.toUpperCase(),
     baseSalary: payload.baseSalary * 1000,
     isActive: payload.status === 'active',

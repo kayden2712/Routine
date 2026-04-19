@@ -27,13 +27,15 @@ public class SupplierRequest {
     @Size(max = 500, message = "Địa chỉ không được vượt quá 500 ký tự")
     private String diaChi;
 
-    @VietnamesePhoneNumber(required = false, message = "Số điện thoại không đúng định dạng Việt Nam")
+    @VietnamesePhoneNumber(required = true, message = "Số điện thoại không đúng định dạng Việt Nam")
     private String soDienThoai;
 
+    @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không hợp lệ")
     @Size(max = 100, message = "Email không được vượt quá 100 ký tự")
     private String email;
 
+    @NotBlank(message = "Tên người liên hệ không được để trống")
     @Size(max = 100, message = "Tên người liên hệ không được vượt quá 100 ký tự")
     private String nguoiLienHe;
 

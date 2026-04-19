@@ -39,7 +39,7 @@ import { toast } from '@/lib/toast';
 import { formatRelativeTime } from '@/lib/utils';
 import { format } from 'date-fns';
 
-type StaffRole = 'admin' | 'manager' | 'sales' | 'warehouse' | 'accountant';
+type StaffRole = 'manager' | 'sales' | 'warehouse' | 'accountant';
 type StaffEmployeeType = 'fulltime' | 'parttime';
 type StaffStatus = 'active' | 'inactive';
 type StaffRoleFilter = 'all' | StaffRole;
@@ -51,6 +51,7 @@ interface StaffMember {
   email: string;
   phone: string;
   role: StaffRole;
+  roles: StaffRole[];
   employeeType?: StaffEmployeeType;
   baseSalary?: number;
   status: StaffStatus;
@@ -65,7 +66,7 @@ interface StaffFormState {
   email: string;
   phone: string;
   password: string;
-  role: StaffRole;
+  roles: StaffRole[];
   employeeType: StaffEmployeeType;
   baseSalary: string;
   status: StaffStatus;
@@ -74,7 +75,6 @@ interface StaffFormState {
 
 const roleLabelMap: Record<StaffRole, string> = {
   manager: 'Quản lý',
-  admin: 'Quản lý',
   sales: 'Bán hàng',
   warehouse: 'Kho',
   accountant: 'Kế toán',
@@ -83,7 +83,6 @@ const roleLabelMap: Record<StaffRole, string> = {
 const roleFilterLabelMap: Record<StaffRoleFilter, string> = {
   all: 'Tất cả vai trò',
   manager: 'Quản lý',
-  admin: 'Quản lý',
   sales: 'Bán hàng',
   warehouse: 'Kho',
   accountant: 'Kế toán',
@@ -115,12 +114,16 @@ function createDefaultForm(): StaffFormState {
     email: '',
     phone: '',
     password: '',
-    role: 'sales',
+    roles: ['sales'],
     employeeType: 'fulltime',
     baseSalary: '',
     status: 'active',
     branch: '',
   };
+}
+
+function formatRoles(roles: StaffRole[]): string {
+  return roles.map((role) => roleLabelMap[role]).join(', ');
 }
 
 function normalize(value: unknown): string {
@@ -169,7 +172,7 @@ export function StaffPage() {
   const totalStaff = staffList.length;
   const activeStaff = staffList.filter((item) => item.status === 'active').length;
   const inactiveStaff = totalStaff - activeStaff;
-  const managerCount = staffList.filter((item) => item.role === 'manager' || item.role === 'admin').length;
+  const managerCount = staffList.filter((item) => item.role === 'manager').length;
   const fulltimeCount = staffList.filter((item) => item.employeeType === 'fulltime').length;
   const parttimeCount = staffList.filter((item) => item.employeeType === 'parttime').length;
 
@@ -196,7 +199,7 @@ export function StaffPage() {
           normalize(staff.phone).includes(query) ||
           normalize(staff.email).includes(query);
 
-        const byRole = roleFilter === 'all' || staff.role === roleFilter;
+        const byRole = roleFilter === 'all' || staff.roles.includes(roleFilter);
         const byStatus = statusFilter === 'all' || staff.status === statusFilter;
 
         return bySearch && byRole && byStatus;
@@ -216,7 +219,7 @@ export function StaffPage() {
       email: staff.email,
       phone: staff.phone,
       password: '',
-      role: staff.role,
+      roles: staff.roles.length > 0 ? staff.roles : [staff.role],
       employeeType: staff.employeeType ?? 'fulltime',
       baseSalary: String(staff.baseSalary ?? 0),
       status: staff.status,
@@ -242,7 +245,7 @@ export function StaffPage() {
 
     toast.success(
       nextStatus === 'active' ? 'Đã kích hoạt nhân viên' : 'Đã tạm khóa nhân viên',
-      `${staff.name} - ${roleLabelMap[staff.role]}`,
+      `${staff.name} - ${formatRoles(staff.roles)}`,
     );
   };
 
@@ -272,6 +275,11 @@ export function StaffPage() {
       return;
     }
 
+    if (formState.roles.length === 0) {
+      toast.error('Vui lòng chọn ít nhất một vai trò cho nhân viên');
+      return;
+    }
+
     setSavingForm(true);
 
     try {
@@ -280,7 +288,7 @@ export function StaffPage() {
           name: formState.name.trim(),
           email: formState.email.trim(),
           phone: formState.phone.trim(),
-          role: formState.role,
+          roles: formState.roles,
           employeeType: formState.employeeType,
           baseSalary: Number(formState.baseSalary || 0),
           status: formState.status,
@@ -293,7 +301,7 @@ export function StaffPage() {
           email: formState.email.trim(),
           phone: formState.phone.trim(),
           password: formState.password,
-          role: formState.role,
+          roles: formState.roles,
           employeeType: formState.employeeType,
           baseSalary: Number(formState.baseSalary || 0),
           status: formState.status,
@@ -321,7 +329,7 @@ export function StaffPage() {
         item.name,
         item.email,
         item.phone,
-        roleLabelMap[item.role],
+        formatRoles(item.roles),
         employeeTypeLabelMap[item.employeeType ?? 'fulltime'],
         formatKValue(item.baseSalary ?? 0),
         item.status === 'active' ? 'Dang lam viec' : 'Tam khoa',
@@ -358,7 +366,7 @@ export function StaffPage() {
       header: 'VAI TRÒ',
       cell: ({ row }) => (
         <span className="inline-flex rounded-full bg-[#F7F6F4] px-2.5 py-1 text-xs font-medium text-[var(--color-text-secondary)]">
-          {roleLabelMap[row.original.role]}
+          {formatRoles(row.original.roles)}
         </span>
       ),
     },
@@ -665,20 +673,33 @@ export function StaffPage() {
             <div className="grid gap-2 md:grid-cols-2">
               <div className="grid gap-2">
                 <Label>Vai trò</Label>
-                <Select
-                  value={formState.role}
-                  onValueChange={(value) => setFormState((prev) => ({ ...prev, role: value as StaffRole }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue>{roleLabelMap[formState.role]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="manager">Quản lý</SelectItem>
-                    <SelectItem value="sales">Bán hàng</SelectItem>
-                    <SelectItem value="warehouse">Kho</SelectItem>
-                    <SelectItem value="accountant">Kế toán</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['sales', 'warehouse', 'accountant'] as StaffRole[]).map((role) => {
+                    const isSelected = formState.roles.includes(role);
+                    return (
+                      <Button
+                        key={role}
+                        type="button"
+                        variant={isSelected ? 'default' : 'outline'}
+                        className="justify-start"
+                        onClick={() => {
+                          setFormState((prev) => {
+                            const hasRole = prev.roles.includes(role);
+                            if (hasRole) {
+                              return { ...prev, roles: prev.roles.filter((item) => item !== role) };
+                            }
+                            return { ...prev, roles: [...prev.roles, role] };
+                          });
+                        }}
+                      >
+                        {roleLabelMap[role]}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-[var(--color-text-muted)]">
+                  Tài khoản có thể có nhiều vai trò. Khi đăng nhập, nhân viên sẽ chọn 1 vai trò để vào hệ thống.
+                </p>
               </div>
 
               <div className="grid gap-2">

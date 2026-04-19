@@ -66,7 +66,7 @@ class AuthControllerIntegrationTest {
                 mockMvc.perform(post("/auth/admin/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new LoginPayload("manager@routine.vn", "Password@123"))))
+                                                new LoginPayload("manager@routine.vn", "Password@123", "MANAGER"))))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.success").value(true))
                                 .andExpect(jsonPath("$.message").value("Login successful"))
@@ -81,7 +81,7 @@ class AuthControllerIntegrationTest {
         void loginAdminReturnsBadRequestWhenPayloadInvalid() throws Exception {
                 mockMvc.perform(post("/auth/admin/login")
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(new LoginPayload("", "123"))))
+                                .content(objectMapper.writeValueAsString(new LoginPayload("", "123", null))))
                                 .andExpect(status().isBadRequest())
                                 .andExpect(jsonPath("$.success").value(false))
                                 .andExpect(jsonPath("$.errorCode").value("VALIDATION_FAILED"))
@@ -109,7 +109,7 @@ class AuthControllerIntegrationTest {
                 mockMvc.perform(post("/auth/customer/login")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(
-                                                new LoginPayload("customer@routine.vn", "Password@123"))))
+                                                new LoginPayload("customer@routine.vn", "Password@123", null))))
                                 .andExpect(status().isOk())
                                 .andExpect(jsonPath("$.success").value(true))
                                 .andExpect(jsonPath("$.message").value("Login successful"))
@@ -207,7 +207,7 @@ class AuthControllerIntegrationTest {
                 verifyNoInteractions(authService);
         }
 
-        private record LoginPayload(String email, String password) {
+        private record LoginPayload(String email, String password, String selectedRole) {
         }
 
         private record RegisterCustomerPayload(String email, String password, String fullName, String phone) {

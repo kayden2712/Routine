@@ -1,6 +1,8 @@
 package com.example.be.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -13,6 +15,7 @@ import com.example.be.dto.request.AdminStaffRequest;
 import com.example.be.dto.response.AdminStaffResponse;
 import com.example.be.entity.EmployeeType;
 import com.example.be.entity.User;
+import com.example.be.entity.UserRole;
 import com.example.be.exception.BadRequestException;
 import com.example.be.exception.ErrorCode;
 import com.example.be.exception.ResourceNotFoundException;
@@ -100,7 +103,7 @@ public class AdminStaffService {
 
     private void applyRequest(User user, AdminStaffRequest request) {
         user.setFullName(request.getFullName());
-        user.setRole(normalizeStaffRole(request.getRole()));
+        user.setRoles(normalizeStaffRoles(request.getRoles(), request.getRole()));
         if (request.getEmployeeType() != null) {
             user.setEmployeeType(request.getEmployeeType());
         } else if (user.getEmployeeType() == null) {
@@ -126,6 +129,9 @@ public class AdminStaffService {
                 .phone(user.getPhone())
                 .branch(user.getBranch())
                 .role(user.getRole() != null ? user.getRole().name() : null)
+                .roles(user.getRoles() == null
+                        ? List.of()
+                        : user.getRoles().stream().map(UserRole::name).collect(Collectors.toList()))
                 .employeeType(user.getEmployeeType() != null ? user.getEmployeeType().name() : null)
                 .baseSalary(user.getBaseSalary() != null ? user.getBaseSalary().longValue() : 0L)
                 .isActive(user.getIsActive())
@@ -134,10 +140,36 @@ public class AdminStaffService {
                 .build();
     }
 
-    private com.example.be.entity.UserRole normalizeStaffRole(com.example.be.entity.UserRole role) {
+    private UserRole normalizeStaffRole(UserRole role) {
         if (role == null) {
             return null;
         }
-        return role == com.example.be.entity.UserRole.MANAGER ? com.example.be.entity.UserRole.MANAGER : role;
+        return role == UserRole.MANAGER ? UserRole.MANAGER : role;
+    }
+
+    private List<UserRole> normalizeStaffRoles(List<UserRole> roles, UserRole fallbackRole) {
+        List<UserRole> source = roles;
+        if ((source == null || source.isEmpty()) && fallbackRole != null) {
+            source = List.of(fallbackRole);
+        }
+        if (source == null || source.isEmpty()) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "At least one role is required");
+        }
+
+        LinkedHashSet<UserRole> uniqueRoles = source.stream()
+                .map(this::normalizeStaffRole)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (uniqueRoles.isEmpty() || uniqueRoles.contains(null)) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Invalid role list");
+        }
+
+        if (uniqueRoles.contains(UserRole.MANAGER)) {
+            throw new BadRequestException(
+                    ErrorCode.BAD_REQUEST,
+                    "Không được gán vai trò MANAGER khi thêm hoặc cập nhật nhân viên");
+        }
+
+        return new ArrayList<>(uniqueRoles);
     }
 }

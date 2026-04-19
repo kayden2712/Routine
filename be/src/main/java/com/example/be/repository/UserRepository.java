@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.be.entity.User;
@@ -20,9 +22,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     boolean existsByPhone(String phone);
     
-    List<User> findByRole(UserRole role);
+    @Query(value = "SELECT * FROM users u WHERE u.role LIKE CONCAT('%', :roleName, '%')", nativeQuery = true)
+    List<User> findByRolesContaining(@Param("roleName") String roleName);
     
     List<User> findByIsActiveTrue();
 
-    List<User> findByIsActiveTrueAndRoleNot(UserRole role);
+    @Query(value = "SELECT * FROM users u WHERE u.is_active = true AND u.role NOT LIKE CONCAT('%', :roleName, '%')", nativeQuery = true)
+    List<User> findByIsActiveTrueAndRolesNotContaining(@Param("roleName") String roleName);
+
+    default List<User> findByRole(UserRole role) {
+        return findByRolesContaining(role.name());
+    }
+
+    default List<User> findByIsActiveTrueAndRoleNot(UserRole role) {
+        return findByIsActiveTrueAndRolesNotContaining(role.name());
+    }
 }

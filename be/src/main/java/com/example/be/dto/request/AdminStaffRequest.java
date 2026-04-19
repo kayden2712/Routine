@@ -1,12 +1,13 @@
 package com.example.be.dto.request;
 
+import java.util.List;
+
 import com.example.be.entity.EmployeeType;
 import com.example.be.entity.UserRole;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -30,7 +31,9 @@ public class AdminStaffRequest {
 
     private String branch;
 
-    @NotNull(message = "Role is required")
+    private List<UserRole> roles;
+
+    // Backward compatibility for older payloads.
     private UserRole role;
 
     private EmployeeType employeeType;

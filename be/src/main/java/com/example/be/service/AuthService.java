@@ -1,15 +1,19 @@
 package com.example.be.service;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import com.example.be.dto.request.ChangePasswordRequest;
 import com.example.be.dto.request.LoginRequest;
@@ -21,6 +25,7 @@ import com.example.be.dto.response.AuthResponse;
 import com.example.be.entity.Customer;
 import com.example.be.entity.CustomerTier;
 import com.example.be.entity.User;
+import com.example.be.entity.UserRole;
 import com.example.be.exception.BadRequestException;
 import com.example.be.exception.ErrorCode;
 import com.example.be.exception.UnauthorizedException;
@@ -50,7 +55,7 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
-        user.setRole(normalizeStaffRole(request.getRole()));
+        user.setRoles(buildSingleRoleList(request.getRole()));
         user.setIsActive(true);
 
         userRepository.save(user);
@@ -59,21 +64,44 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
-        return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
-                tokenProvider.generateRefreshToken(authentication));
+        String selectedRole = resolvePrimaryRoleName(user);
+        return buildUserAuthResponse(
+            user,
+            selectedRole,
+            tokenProvider.generateAdminToken(authentication, selectedRole),
+            tokenProvider.generateRefreshToken(authentication, selectedRole));
     }
 
     public AuthResponse loginUser(LoginRequest request) {
+        if (request.getSelectedRole() == null) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Vui lòng chọn vai trò để đăng nhập");
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
 
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "User not found"));
 
-            return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
-                    tokenProvider.generateRefreshToken(authentication));
+            String selectedRole = normalizeStaffRole(request.getSelectedRole()).name();
+            if (!hasRole(user, request.getSelectedRole())) {
+            throw new UnauthorizedException(
+                ErrorCode.INVALID_CREDENTIALS,
+                "Tài khoản không có quyền " + selectedRole + ". Vui lòng chọn vai trò khác");
+            }
+
+            Authentication scopedAuthentication = new UsernamePasswordAuthenticationToken(
+                request.getEmail(),
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + selectedRole)));
+            SecurityContextHolder.getContext().setAuthentication(scopedAuthentication);
+
+            return buildUserAuthResponse(
+                user,
+                selectedRole,
+                tokenProvider.generateAdminToken(authentication, selectedRole),
+                tokenProvider.generateRefreshToken(authentication, selectedRole));
         } catch (BadCredentialsException e) {
             // Check if user exists to provide appropriate error message
             boolean userExists = userRepository.existsByEmail(request.getEmail());
@@ -135,9 +163,34 @@ public class AuthService {
         String email = tokenProvider.getEmailFromToken(request.getRefreshToken());
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
-            Authentication authentication = new UsernamePasswordAuthenticationToken(email, null);
-            return buildUserAuthResponse(user, tokenProvider.generateAdminToken(authentication),
-                    tokenProvider.generateRefreshTokenByEmail(email));
+            String selectedRole = tokenProvider.getSelectedRoleFromToken(request.getRefreshToken());
+            if (!StringUtils.hasText(selectedRole)) {
+            selectedRole = resolvePrimaryRoleName(user);
+            }
+
+            UserRole selectedUserRole;
+            try {
+                selectedUserRole = UserRole.valueOf(selectedRole);
+            } catch (IllegalArgumentException ex) {
+                throw new UnauthorizedException(
+                        ErrorCode.INVALID_CREDENTIALS,
+                        "Vai trò trong phiên đăng nhập không hợp lệ");
+            }
+            if (!hasRole(user, selectedUserRole)) {
+            throw new UnauthorizedException(
+                ErrorCode.INVALID_CREDENTIALS,
+                "Vai trò trong phiên đăng nhập không còn hiệu lực");
+            }
+
+            Authentication authentication = new UsernamePasswordAuthenticationToken(
+                email,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_" + selectedRole)));
+            return buildUserAuthResponse(
+                user,
+                selectedRole,
+                tokenProvider.generateAdminToken(authentication, selectedRole),
+                tokenProvider.generateRefreshTokenByEmail(email, selectedRole));
         }
 
         Customer customer = customerRepository.findByEmail(email)
@@ -151,7 +204,7 @@ public class AuthService {
     public AuthResponse getCurrentUser(String email) {
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
-            return buildUserAuthResponse(user, null, null);
+            return buildUserAuthResponse(user, resolvePrimaryRoleName(user), null, null);
         }
 
         Customer customer = customerRepository.findByEmail(email)
@@ -210,14 +263,17 @@ public class AuthService {
         customerRepository.save(customer);
     }
 
-    private AuthResponse buildUserAuthResponse(User user, String token, String refreshToken) {
+    private AuthResponse buildUserAuthResponse(User user, String selectedRole, String token, String refreshToken) {
         return AuthResponse.builder()
                 .token(token)
                 .refreshToken(refreshToken)
                 .id(user.getId())
                 .email(user.getEmail())
                 .fullName(user.getFullName())
-                .role(normalizeStaffRole(user.getRole()).name())
+                .role(selectedRole)
+                .roles(user.getRoles() == null
+                        ? List.of()
+                        : user.getRoles().stream().map(UserRole::name).toList())
                 .phone(user.getPhone())
                 .branch(user.getBranch())
                 .build();
@@ -244,5 +300,24 @@ public class AuthService {
             return null;
         }
         return role == com.example.be.entity.UserRole.MANAGER ? com.example.be.entity.UserRole.MANAGER : role;
+    }
+
+    private List<UserRole> buildSingleRoleList(UserRole role) {
+        UserRole normalized = normalizeStaffRole(role);
+        if (normalized == null) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Role is required");
+        }
+        return new ArrayList<>(List.of(normalized));
+    }
+
+    private boolean hasRole(User user, UserRole role) {
+        return user != null && role != null && user.getRoles() != null && user.getRoles().contains(role);
+    }
+
+    private String resolvePrimaryRoleName(User user) {
+        if (user == null || user.getRoles() == null || user.getRoles().isEmpty()) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "User has no role configured");
+        }
+        return normalizeStaffRole(user.getRoles().get(0)).name();
     }
 }
