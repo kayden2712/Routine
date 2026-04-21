@@ -88,7 +88,7 @@ public class AuthService {
             if (!hasRole(user, request.getSelectedRole())) {
             throw new UnauthorizedException(
                 ErrorCode.INVALID_CREDENTIALS,
-                "Tài khoản không có quyền " + selectedRole + ". Vui lòng chọn vai trò khác");
+                "Vai trò đã chọn không hợp lệ cho tài khoản này");
             }
 
             Authentication scopedAuthentication = new UsernamePasswordAuthenticationToken(
