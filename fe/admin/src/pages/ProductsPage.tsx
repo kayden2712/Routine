@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { ColumnDef } from '@tanstack/react-table';
 import {
   ArrowDownUp,
@@ -229,6 +230,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: 
 export function ProductsPage() {
   const { products, addProduct, updateProduct, removeProducts, fetchProducts } = useProductStore();
   const user = useAuthStore((state) => state.user);
+  const [searchParams, setSearchParams] = useSearchParams();
   const isReadOnly = user?.role === 'sales';
   const canDeleteProduct = user?.role === 'manager';
   const [isBootLoading, setIsBootLoading] = useState(true);
@@ -347,6 +349,31 @@ export function ProductsPage() {
     setVariantOpen(false);
     setFormOpen(true);
   };
+
+  useEffect(() => {
+    if (searchParams.get('create') !== '1') {
+      return;
+    }
+
+    if (isReadOnly) {
+      toast.error('Vai trò Sales chỉ có quyền xem sản phẩm');
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('create');
+        next.delete('source');
+        return next;
+      }, { replace: true });
+      return;
+    }
+
+    openCreateModal();
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('create');
+      next.delete('source');
+      return next;
+    }, { replace: true });
+  }, [isReadOnly, searchParams, setSearchParams, products]);
 
   const openEditModal = (product: Product) => {
     if (isReadOnly) {

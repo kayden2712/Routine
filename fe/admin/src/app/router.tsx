@@ -15,6 +15,7 @@ import { OnlineOrdersPage } from '../pages/OnlineOrdersPage';
 import { LoginPage } from '../pages/LoginPage';
 import { POSPage } from '../pages/POSPage';
 import { PayrollPage } from '../pages/PayrollPage';
+import { ProductsPage } from '../pages/ProductsPage';
 import { ReportsPage } from '../pages/ReportsPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { StaffPage } from '../pages/StaffPage';
@@ -106,6 +107,15 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['sales', 'manager']}>
             <CustomersPage />
+          </ProtectedRoute>
+        ),
+        errorElement: <RouteErrorBoundary />,
+      },
+      {
+        path: '/products',
+        element: (
+          <ProtectedRoute roles={['manager', 'warehouse']}>
+            <ProductsPage />
           </ProtectedRoute>
         ),
         errorElement: <RouteErrorBoundary />,
