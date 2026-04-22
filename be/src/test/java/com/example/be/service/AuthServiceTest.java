@@ -200,4 +200,25 @@ class AuthServiceTest {
         verify(passwordEncoder).encode(eq("NewPass@123"));
         verify(customerRepository).save(customer);
     }
+
+    @Test
+    void changePasswordAllowsCustomerWithoutCurrentPassword() {
+        String email = "customer@mail.vn";
+        ChangePasswordRequest request = new ChangePasswordRequest(null, "NewPass@123");
+
+        Customer customer = new Customer();
+        customer.setEmail(email);
+        customer.setPasswordHash("encoded-current");
+
+        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(customerRepository.findByEmail(email)).thenReturn(Optional.of(customer));
+        when(passwordEncoder.matches("NewPass@123", "encoded-current")).thenReturn(false);
+        when(passwordEncoder.encode("NewPass@123")).thenReturn("encoded-new");
+
+        authService.changePassword(email, request);
+
+        assertEquals("encoded-new", customer.getPasswordHash());
+        verify(passwordEncoder).encode(eq("NewPass@123"));
+        verify(customerRepository).save(customer);
+    }
 }

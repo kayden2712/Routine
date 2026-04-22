@@ -161,7 +161,7 @@ export interface UpdateCustomerProfilePayload {
 }
 
 export interface ChangeCustomerPasswordPayload {
-  currentPassword: string;
+  currentPassword?: string;
   newPassword: string;
 }
 

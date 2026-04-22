@@ -66,10 +66,10 @@ public class AuthService {
 
         String selectedRole = resolvePrimaryRoleName(user);
         return buildUserAuthResponse(
-            user,
-            selectedRole,
-            tokenProvider.generateAdminToken(authentication, selectedRole),
-            tokenProvider.generateRefreshToken(authentication, selectedRole));
+                user,
+                selectedRole,
+                tokenProvider.generateAdminToken(authentication, selectedRole),
+                tokenProvider.generateRefreshToken(authentication, selectedRole));
     }
 
     public AuthResponse loginUser(LoginRequest request) {
@@ -86,22 +86,22 @@ public class AuthService {
 
             String selectedRole = normalizeStaffRole(request.getSelectedRole()).name();
             if (!hasRole(user, request.getSelectedRole())) {
-            throw new UnauthorizedException(
-                ErrorCode.INVALID_CREDENTIALS,
-                "Vai tro khong khop voi tai khoan dang nhap");
+                throw new UnauthorizedException(
+                        ErrorCode.INVALID_CREDENTIALS,
+                        "Vai tro khong khop voi tai khoan dang nhap");
             }
 
             Authentication scopedAuthentication = new UsernamePasswordAuthenticationToken(
-                request.getEmail(),
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + selectedRole)));
+                    request.getEmail(),
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + selectedRole)));
             SecurityContextHolder.getContext().setAuthentication(scopedAuthentication);
 
             return buildUserAuthResponse(
-                user,
-                selectedRole,
-                tokenProvider.generateAdminToken(authentication, selectedRole),
-                tokenProvider.generateRefreshToken(authentication, selectedRole));
+                    user,
+                    selectedRole,
+                    tokenProvider.generateAdminToken(authentication, selectedRole),
+                    tokenProvider.generateRefreshToken(authentication, selectedRole));
         } catch (BadCredentialsException e) {
             // Check if user exists to provide appropriate error message
             boolean userExists = userRepository.existsByEmail(request.getEmail());
@@ -165,7 +165,7 @@ public class AuthService {
         if (user != null) {
             String selectedRole = tokenProvider.getSelectedRoleFromToken(request.getRefreshToken());
             if (!StringUtils.hasText(selectedRole)) {
-            selectedRole = resolvePrimaryRoleName(user);
+                selectedRole = resolvePrimaryRoleName(user);
             }
 
             UserRole selectedUserRole;
@@ -177,20 +177,20 @@ public class AuthService {
                         "Vai trò trong phiên đăng nhập không hợp lệ");
             }
             if (!hasRole(user, selectedUserRole)) {
-            throw new UnauthorizedException(
-                ErrorCode.INVALID_CREDENTIALS,
-                "Vai trò trong phiên đăng nhập không còn hiệu lực");
+                throw new UnauthorizedException(
+                        ErrorCode.INVALID_CREDENTIALS,
+                        "Vai trò trong phiên đăng nhập không còn hiệu lực");
             }
 
             Authentication authentication = new UsernamePasswordAuthenticationToken(
-                email,
-                null,
-                List.of(new SimpleGrantedAuthority("ROLE_" + selectedRole)));
+                    email,
+                    null,
+                    List.of(new SimpleGrantedAuthority("ROLE_" + selectedRole)));
             return buildUserAuthResponse(
-                user,
-                selectedRole,
-                tokenProvider.generateAdminToken(authentication, selectedRole),
-                tokenProvider.generateRefreshTokenByEmail(email, selectedRole));
+                    user,
+                    selectedRole,
+                    tokenProvider.generateAdminToken(authentication, selectedRole),
+                    tokenProvider.generateRefreshTokenByEmail(email, selectedRole));
         }
 
         Customer customer = customerRepository.findByEmail(email)
@@ -235,31 +235,34 @@ public class AuthService {
 
     @Transactional
     public void changePassword(String email, ChangePasswordRequest request) {
+        String currentPassword = request.getCurrentPassword() != null ? request.getCurrentPassword().trim() : "";
+        String newPassword = request.getNewPassword() != null ? request.getNewPassword().trim() : "";
+
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
-            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            if (!currentPassword.isEmpty() && !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
                 throw new BadRequestException(ErrorCode.CURRENT_PASSWORD_INCORRECT,
                         "Mật khẩu cũ không đúng");
             }
-            if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
                 throw new BadRequestException(ErrorCode.NEW_PASSWORD_MUST_DIFFERENT,
                         "Mật khẩu mới không được giống mật khẩu cũ");
             }
-            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+            user.setPasswordHash(passwordEncoder.encode(newPassword));
             userRepository.save(user);
             return;
         }
 
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "Current user not found"));
-        if (!passwordEncoder.matches(request.getCurrentPassword(), customer.getPasswordHash())) {
+        if (!currentPassword.isEmpty() && !passwordEncoder.matches(currentPassword, customer.getPasswordHash())) {
             throw new BadRequestException(ErrorCode.CURRENT_PASSWORD_INCORRECT, "Mật khẩu cũ không đúng");
         }
-        if (passwordEncoder.matches(request.getNewPassword(), customer.getPasswordHash())) {
+        if (passwordEncoder.matches(newPassword, customer.getPasswordHash())) {
             throw new BadRequestException(ErrorCode.NEW_PASSWORD_MUST_DIFFERENT,
                     "Mật khẩu mới không được giống mật khẩu cũ");
         }
-        customer.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        customer.setPasswordHash(passwordEncoder.encode(newPassword));
         customerRepository.save(customer);
     }
 

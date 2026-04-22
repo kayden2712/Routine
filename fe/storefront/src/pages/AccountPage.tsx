@@ -64,9 +64,7 @@ export const AccountPage = () => {
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMessage, setProfileMessage] = useState('')
   const [securityForm, setSecurityForm] = useState({
-    currentPassword: '',
     newPassword: '',
-    confirmPassword: '',
   })
   const [securitySaving, setSecuritySaving] = useState(false)
   const [securityMessage, setSecurityMessage] = useState('')
@@ -286,12 +284,10 @@ export const AccountPage = () => {
   }
 
   const handleChangePassword = async () => {
-    const currentPassword = securityForm.currentPassword.trim()
     const newPassword = securityForm.newPassword.trim()
-    const confirmPassword = securityForm.confirmPassword.trim()
 
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      setSecurityMessage('Vui lòng nhập đầy đủ thông tin mật khẩu.')
+    if (!newPassword) {
+      setSecurityMessage('Vui lòng nhập mật khẩu mới.')
       return
     }
 
@@ -300,29 +296,16 @@ export const AccountPage = () => {
       return
     }
 
-    if (newPassword !== confirmPassword) {
-      setSecurityMessage('Xác nhận mật khẩu mới không khớp.')
-      return
-    }
-
-    if (newPassword === currentPassword) {
-      setSecurityMessage('Mật khẩu mới phải khác mật khẩu hiện tại.')
-      return
-    }
-
     setSecuritySaving(true)
     setSecurityMessage('')
 
     try {
       await changeCustomerPasswordApi({
-        currentPassword,
         newPassword,
       })
 
       setSecurityForm({
-        currentPassword: '',
         newPassword: '',
-        confirmPassword: '',
       })
       setSecurityMessage('Đổi mật khẩu thành công.')
     } catch (error) {
@@ -474,30 +457,10 @@ export const AccountPage = () => {
             <div className="mt-4 max-w-[420px] space-y-2.5">
               <input
                 type="password"
-                placeholder="Mật khẩu hiện tại"
-                value={securityForm.currentPassword}
-                onChange={(event) => {
-                  setSecurityForm((prev) => ({ ...prev, currentPassword: event.target.value }))
-                  setSecurityMessage('')
-                }}
-                className="rf-input w-full rounded-lg px-3 py-2 text-sm"
-              />
-              <input
-                type="password"
                 placeholder="Mật khẩu mới"
                 value={securityForm.newPassword}
                 onChange={(event) => {
                   setSecurityForm((prev) => ({ ...prev, newPassword: event.target.value }))
-                  setSecurityMessage('')
-                }}
-                className="rf-input w-full rounded-lg px-3 py-2 text-sm"
-              />
-              <input
-                type="password"
-                placeholder="Xác nhận mật khẩu mới"
-                value={securityForm.confirmPassword}
-                onChange={(event) => {
-                  setSecurityForm((prev) => ({ ...prev, confirmPassword: event.target.value }))
                   setSecurityMessage('')
                 }}
                 className="rf-input w-full rounded-lg px-3 py-2 text-sm"
