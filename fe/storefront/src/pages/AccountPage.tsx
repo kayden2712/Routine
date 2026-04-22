@@ -288,6 +288,12 @@ export const AccountPage = () => {
   const handleChangePassword = async () => {
     const currentPassword = securityForm.currentPassword.trim()
     const newPassword = securityForm.newPassword.trim()
+    const confirmPassword = securityForm.confirmPassword.trim()
+
+    if (!currentPassword) {
+      setSecurityMessage('Vui lòng nhập mật khẩu cũ.')
+      return
+    }
 
     if (!newPassword) {
       setSecurityMessage('Vui lòng nhập mật khẩu mới.')
@@ -299,6 +305,16 @@ export const AccountPage = () => {
       return
     }
 
+    if (!confirmPassword) {
+      setSecurityMessage('Vui lòng xác nhận mật khẩu mới.')
+      return
+    }
+
+    if (confirmPassword !== newPassword) {
+      setSecurityMessage('Xác nhận mật khẩu mới không khớp.')
+      return
+    }
+
     setSecuritySaving(true)
     setSecurityMessage('')
 
@@ -306,6 +322,7 @@ export const AccountPage = () => {
       await changeCustomerPasswordApi({
         currentPassword,
         newPassword,
+        confirmPassword,
       })
 
       setSecurityForm({

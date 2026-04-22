@@ -622,8 +622,9 @@ export async function updateStaffStatusApi(id: string, isActive: boolean): Promi
 }
 
 export async function changePasswordApi(payload: {
-  currentPassword?: string;
+  currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }): Promise<void> {
   await apiClient.patch('/auth/change-password', payload);
 }

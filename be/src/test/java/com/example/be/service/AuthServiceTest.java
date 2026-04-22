@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -141,7 +142,7 @@ class AuthServiceTest {
     @Test
     void changePasswordRejectsIncorrectCurrentPasswordForCustomer() {
         String email = "customer@mail.vn";
-        ChangePasswordRequest request = new ChangePasswordRequest("Wrong@123", "NewPass@123");
+        ChangePasswordRequest request = new ChangePasswordRequest("Wrong@123", "NewPass@123", "NewPass@123");
 
         Customer customer = new Customer();
         customer.setEmail(email);
@@ -161,7 +162,7 @@ class AuthServiceTest {
     @Test
     void changePasswordRejectsNewPasswordSameAsCurrentForCustomer() {
         String email = "customer@mail.vn";
-        ChangePasswordRequest request = new ChangePasswordRequest("Current@123", "Current@123");
+        ChangePasswordRequest request = new ChangePasswordRequest("Current@123", "Current@123", "Current@123");
 
         Customer customer = new Customer();
         customer.setEmail(email);
@@ -180,9 +181,22 @@ class AuthServiceTest {
     }
 
     @Test
+    void changePasswordRejectsWhenConfirmPasswordDoesNotMatch() {
+        String email = "customer@mail.vn";
+        ChangePasswordRequest request = new ChangePasswordRequest("Current@123", "NewPass@123", "Different@123");
+
+        BadRequestException ex = assertThrows(BadRequestException.class,
+                () -> authService.changePassword(email, request));
+
+        assertEquals("Xác nhận mật khẩu mới không khớp.", ex.getMessage());
+        verify(userRepository, never()).findByEmail(anyString());
+        verify(customerRepository, never()).findByEmail(anyString());
+    }
+
+    @Test
     void changePasswordUpdatesPasswordForCustomerWhenValid() {
         String email = "customer@mail.vn";
-        ChangePasswordRequest request = new ChangePasswordRequest("Current@123", "NewPass@123");
+        ChangePasswordRequest request = new ChangePasswordRequest("Current@123", "NewPass@123", "NewPass@123");
 
         Customer customer = new Customer();
         customer.setEmail(email);
@@ -202,23 +216,15 @@ class AuthServiceTest {
     }
 
     @Test
-    void changePasswordAllowsCustomerWithoutCurrentPassword() {
+    void changePasswordRejectsCustomerWithoutCurrentPassword() {
         String email = "customer@mail.vn";
-        ChangePasswordRequest request = new ChangePasswordRequest(null, "NewPass@123");
+        ChangePasswordRequest request = new ChangePasswordRequest(null, "NewPass@123", "NewPass@123");
 
-        Customer customer = new Customer();
-        customer.setEmail(email);
-        customer.setPasswordHash("encoded-current");
+        BadRequestException ex = assertThrows(BadRequestException.class,
+            () -> authService.changePassword(email, request));
 
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
-        when(customerRepository.findByEmail(email)).thenReturn(Optional.of(customer));
-        when(passwordEncoder.matches("NewPass@123", "encoded-current")).thenReturn(false);
-        when(passwordEncoder.encode("NewPass@123")).thenReturn("encoded-new");
-
-        authService.changePassword(email, request);
-
-        assertEquals("encoded-new", customer.getPasswordHash());
-        verify(passwordEncoder).encode(eq("NewPass@123"));
-        verify(customerRepository).save(customer);
+        assertEquals("Vui lòng nhập mật khẩu cũ.", ex.getMessage());
+        verify(userRepository, never()).findByEmail(anyString());
+        verify(customerRepository, never()).findByEmail(anyString());
     }
 }

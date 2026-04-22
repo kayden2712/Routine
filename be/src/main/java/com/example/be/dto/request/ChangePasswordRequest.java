@@ -17,4 +17,6 @@ public class ChangePasswordRequest {
     @NotBlank(message = "New password is required")
     @StrongPassword
     private String newPassword;
+
+    private String confirmPassword;
 }

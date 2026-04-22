@@ -237,10 +237,23 @@ public class AuthService {
     public void changePassword(String email, ChangePasswordRequest request) {
         String currentPassword = request.getCurrentPassword() != null ? request.getCurrentPassword().trim() : "";
         String newPassword = request.getNewPassword() != null ? request.getNewPassword().trim() : "";
+        String confirmPassword = request.getConfirmPassword() != null ? request.getConfirmPassword().trim() : "";
+
+        if (currentPassword.isEmpty()) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Vui lòng nhập mật khẩu cũ.");
+        }
+
+        if (confirmPassword.isEmpty()) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Vui lòng xác nhận mật khẩu mới.");
+        }
+
+        if (!newPassword.equals(confirmPassword)) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Xác nhận mật khẩu mới không khớp.");
+        }
 
         User user = userRepository.findByEmail(email).orElse(null);
         if (user != null) {
-            if (!currentPassword.isEmpty() && !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
                 throw new BadRequestException(ErrorCode.CURRENT_PASSWORD_INCORRECT,
                         "Mật khẩu cũ không đúng");
             }
@@ -255,7 +268,7 @@ public class AuthService {
 
         Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new BadRequestException(ErrorCode.CURRENT_USER_NOT_FOUND, "Current user not found"));
-        if (!currentPassword.isEmpty() && !passwordEncoder.matches(currentPassword, customer.getPasswordHash())) {
+        if (!passwordEncoder.matches(currentPassword, customer.getPasswordHash())) {
             throw new BadRequestException(ErrorCode.CURRENT_PASSWORD_INCORRECT, "Mật khẩu cũ không đúng");
         }
         if (passwordEncoder.matches(newPassword, customer.getPasswordHash())) {

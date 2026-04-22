@@ -49,6 +49,7 @@ export function SettingsPage() {
       await changePasswordApi({
         currentPassword,
         newPassword,
+        confirmPassword: confirmNewPassword,
       });
       setCurrentPassword('');
       setNewPassword('');

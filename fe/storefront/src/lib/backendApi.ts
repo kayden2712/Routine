@@ -161,8 +161,9 @@ export interface UpdateCustomerProfilePayload {
 }
 
 export interface ChangeCustomerPasswordPayload {
-  currentPassword?: string;
+  currentPassword: string;
   newPassword: string;
+  confirmPassword: string;
 }
 
 const APPAREL_SIZES: Product['sizes'] = ['S', 'M', 'L', 'XL'];
